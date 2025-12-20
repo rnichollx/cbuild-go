@@ -1,3 +1,6 @@
 **/.idea/**
 **/cmake-build-*/**
 **/buildspaces/**
+./cbuild
+./csetup
+

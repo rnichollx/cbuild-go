@@ -1,0 +1,9 @@
+targets:
+  helloworld:
+    project_type: cmake
+    depends: ["hellohelper"]
+    cxx_version: 20
+  hellohelper:
+    project_type: cmake
+    cmake_package_name: HelloHelper
+    cxx_version: 20
