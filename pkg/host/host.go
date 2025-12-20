@@ -19,6 +19,16 @@ func DetectHostPlatform() string {
 	}
 }
 
+type HostArch int
+
+const (
+	ArchUnknown HostArch = iota
+	ArchX86_32
+	ArchX86_64
+	ArchARM_32
+	ArchARM_64
+)
+
 // DetectHostArch returns the host architecture name as used in toolchain definitions
 func DetectHostArch() string {
 	arch := runtime.GOARCH

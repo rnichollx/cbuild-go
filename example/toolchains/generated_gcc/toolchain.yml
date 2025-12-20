@@ -1,0 +1,8 @@
+cmake_toolchain:
+  host-linux-x64:
+    generate:
+      c_compiler: "/usr/bin/gcc"
+      cxx_compiler: "/usr/bin/g++"
+
+target_arch: "x64"
+target_system: "linux"

@@ -64,7 +64,7 @@ func main() {
 			curr := cwd
 			for {
 				if _, err := os.Stat(filepath.Join(curr, "cbuild_workspace.yml")); err == nil {
-					workspacePath = curr
+					workspacePath, _ = filepath.Abs(curr)
 					break
 				}
 				parent := filepath.Dir(curr)
@@ -73,6 +73,11 @@ func main() {
 				}
 				curr = parent
 			}
+		}
+	} else {
+		absPath, err := filepath.Abs(workspacePath)
+		if err == nil {
+			workspacePath = absPath
 		}
 	}
 

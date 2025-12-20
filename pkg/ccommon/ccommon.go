@@ -2,6 +2,7 @@ package ccommon
 
 import (
 	"bufio"
+	"cbuild-go/pkg/cmake"
 	"cbuild-go/pkg/host"
 	"fmt"
 	"io/ioutil"
@@ -13,12 +14,21 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+type CMakeToolchainOptions struct {
+	CMakeToolchainFile string                             `yaml:"cmake_toolchain_file"`
+	Generate           *CMakeGenerateToolchainFileOptions `yaml:"generate"`
+}
+
+type CMakeGenerateToolchainFileOptions struct {
+	CCompiler   string `yaml:"c_compiler"`
+	CXXCompiler string `yaml:"cxx_compiler"`
+	Linker      string `yaml:"linker"`
+}
+
 type Toolchain struct {
-	CMakeToolchain map[string]struct {
-		CMakeToolchainFile string `yaml:"cmake_toolchain_file"`
-	} `yaml:"cmake_toolchain"`
-	TargetArch   string `yaml:"target_arch"`
-	TargetSystem string `yaml:"target_system"`
+	CMakeToolchain map[string]CMakeToolchainOptions `yaml:"cmake_toolchain"`
+	TargetArch     string                           `yaml:"target_arch"`
+	TargetSystem   string                           `yaml:"target_system"`
 }
 
 type BuildParameters struct {
@@ -77,7 +87,17 @@ func (m *Target) CMakeConfigureArgs(workspace *Workspace, modname string, bp Bui
 		if err == nil {
 			hostPlatform := fmt.Sprintf("host-%s-%s", host.DetectHostPlatform(), host.DetectHostArch())
 			if tcf, ok := tc.CMakeToolchain[hostPlatform]; ok {
-				tcfPath := filepath.Join(tcPath, tcf.CMakeToolchainFile)
+				var tcfPath string
+				if tcf.Generate != nil {
+					tcfPath = filepath.Join(workspace.WorkspacePath, "buildspaces", bp.Toolchain, "generated_toolchain.cmake")
+					err := workspace.GenerateToolchainFile(tcf.Generate, tc.TargetSystem, tc.TargetArch, tcfPath)
+					if err != nil {
+						return nil, fmt.Errorf("failed to generate toolchain file: %w", err)
+					}
+				} else {
+					tcfPath = filepath.Join(tcPath, tcf.CMakeToolchainFile)
+				}
+
 				absTcfPath, err := filepath.Abs(tcfPath)
 				if err == nil {
 					tcfPath = absTcfPath
@@ -134,11 +154,11 @@ func (m *Target) CMakeConfigPath(workspace *Workspace, defaultRoot string, bp Bu
 }
 
 func (m *Target) CMakeBuildPath(workspace *Workspace, defaultRoot string, bp BuildParameters) (string, error) {
-	return filepath.Join(workspace.WorkspacePath, "buildspaces", defaultRoot, bp.Toolchain, bp.BuildType), nil
+	return filepath.Join(workspace.WorkspacePath, "buildspaces", bp.Toolchain, defaultRoot, bp.BuildType), nil
 }
 
 func (m *Target) CMakeExportPath(workspace *Workspace, defaultRoot string, bp BuildParameters) (string, error) {
-	return filepath.Join(workspace.WorkspacePath, "exports", defaultRoot, bp.Toolchain, bp.BuildType), nil
+	return filepath.Join(workspace.WorkspacePath, "exports", bp.Toolchain, defaultRoot, bp.BuildType), nil
 }
 
 // CMakeDependencyArgs returns the arguments to pass to cmake when configuring another module that depends on this module
@@ -208,6 +228,18 @@ func (w *Workspace) Save() error {
 	}
 
 	return nil
+}
+
+func (w *Workspace) GenerateToolchainFile(opts *CMakeGenerateToolchainFileOptions, systemName string, systemProcessor string, targetPath string) error {
+	return cmake.GenerateToolchainFile(cmake.GenerateToolchainFileOptions{
+		CCompiler:       opts.CCompiler,
+		CXXCompiler:     opts.CXXCompiler,
+		Linker:          opts.Linker,
+		SystemName:      systemName,
+		SystemProcessor: systemProcessor,
+		WorkspaceDir:    w.WorkspacePath,
+		OutputFile:      targetPath,
+	})
 }
 
 func (w *Workspace) LoadToolchain(toolchainName string) (*Toolchain, string, error) {
