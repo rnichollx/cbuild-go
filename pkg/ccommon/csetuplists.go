@@ -7,7 +7,8 @@ type SuggestedDepSource struct {
 }
 
 type CSetupLists struct {
-	Dependencies  []string                      `yaml:"dependencies"`
-	SuggestedDeps map[string]SuggestedDepSource `yaml:"suggested_dep_sources"`
-	CxxVersion    string                        `yaml:"cxx_version"`
+	Dependencies     []string                      `yaml:"dependencies"`
+	SuggestedDeps    map[string]SuggestedDepSource `yaml:"suggested_dep_sources"`
+	CxxVersion       string                        `yaml:"cxx_version"`
+	CMakePackageName string                        `yaml:"cmake_package_name,omitempty"`
 }

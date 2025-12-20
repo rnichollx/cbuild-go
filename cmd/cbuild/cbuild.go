@@ -32,11 +32,32 @@ func main() {
 
 	flag.Parse()
 
+	command := "build"
+	args := flag.Args()
+	if len(args) > 0 {
+		if args[0] == "clean" || args[0] == "build" {
+			command = args[0]
+		} else {
+			fmt.Fprintf(os.Stderr, "Unknown command: %s\n", args[0])
+			os.Exit(1)
+		}
+	}
+
 	ws := &ccommon.Workspace{}
 	err := ws.Load(workspacePath)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error loading configuration: %v\n", err)
 		os.Exit(1)
+	}
+
+	if command == "clean" {
+		err = ws.Clean(toolchain, dryRun)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error cleaning workspace: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Println("Clean completed successfully")
+		return
 	}
 
 	toolchains := []string{}

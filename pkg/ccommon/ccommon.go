@@ -39,7 +39,7 @@ type BuildParameters struct {
 }
 
 type Workspace struct {
-	WorkspacePath string
+	WorkspacePath string `yaml:"-"`
 
 	Targets map[string]*Target `yaml:"targets"`
 
@@ -50,7 +50,7 @@ type Workspace struct {
 type Target struct {
 	Depends                 []string `yaml:"depends"`
 	ProjectType             string   `yaml:"project_type"`
-	CMakePackageName        string   `yaml:"cmake_package_name"`
+	CMakePackageName        string   `yaml:"cmake_package_name,omitempty"`
 	FindPackageRoot         *string  `yaml:"find_package_root"`
 	ExternalSourceOverride  *string  `yaml:"external_source_override"`
 	OverrideCMakeConfigPath *string  `yaml:"override_cmake_config_path"`
@@ -284,6 +284,26 @@ func (w *Workspace) BuildTarget(targetName string, bp BuildParameters) error {
 	return w.buildModule(mod, targetName, builtModules, bp)
 }
 
+func (w *Workspace) Clean(toolchain string, dryRun bool) error {
+	cleanPath := filepath.Join(w.WorkspacePath, "buildspaces")
+	if toolchain != "all" && toolchain != "" {
+		cleanPath = filepath.Join(cleanPath, toolchain)
+	}
+
+	fmt.Printf("Cleaning: %s\n", cleanPath)
+
+	if dryRun {
+		return nil
+	}
+
+	err := os.RemoveAll(cleanPath)
+	if err != nil {
+		return fmt.Errorf("failed to clean: %w", err)
+	}
+
+	return nil
+}
+
 func (w *Workspace) Exec(command string, args []string, dryRun bool) error {
 	fmt.Printf("Executing: %s", command)
 	for _, arg := range args {
@@ -411,19 +431,20 @@ func (w *Workspace) ProcessCSetupFile(targetName string) error {
 		}
 
 		if !found {
-			fmt.Printf("Source '%s' declares dependency '%s', add it? [Y/n] ", targetName, dep)
-			response, _ := reader.ReadString('\n')
-			response = strings.ToLower(strings.TrimSpace(response))
-			if response == "" || response == "y" || response == "yes" {
-				target.Depends = append(target.Depends, dep)
-				fmt.Printf("Added dependency '%s' to target '%s'.\n", dep, targetName)
+			target.Depends = append(target.Depends, dep)
+			fmt.Printf("Added dependency '%s' to target '%s'.\n", dep, targetName)
 
-				// Also check if the dependency exists in the workspace
-				if _, exists := w.Targets[depTargetName]; !exists {
-					fmt.Printf("Warning: Dependency '%s' is not defined in the workspace.\n", depTargetName)
-				}
+			// Also check if the dependency exists in the workspace
+			if _, exists := w.Targets[depTargetName]; !exists {
+				fmt.Printf("Warning: Dependency '%s' is not defined in the workspace.\n", depTargetName)
 			}
 		}
+	}
+
+	// Process CMakePackageName
+	if csetup.CMakePackageName != "" {
+		target.CMakePackageName = csetup.CMakePackageName
+		fmt.Printf("Set CMake package name for target '%s' to '%s'.\n", targetName, csetup.CMakePackageName)
 	}
 
 	// Process Suggested Dependencies
@@ -448,6 +469,10 @@ func (w *Workspace) ProcessCSetupFile(targetName string) error {
 						ProjectType: "CMake",
 					}
 					fmt.Printf("Added target '%s' to workspace.\n", depName)
+
+					// Also add it as a dependency to the current target
+					target.Depends = append(target.Depends, depName)
+					fmt.Printf("Added dependency '%s' to target '%s'.\n", depName, targetName)
 
 					// Recursively process the new target's csetup file
 					err = w.ProcessCSetupFile(depName)
