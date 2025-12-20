@@ -2,48 +2,54 @@ package ccommon
 
 import (
 	"fmt"
-	"gopkg.in/yaml.v3"
 	"io/ioutil"
+	"os"
+	"os/exec"
 	"path/filepath"
+	"strings"
+
+	"gopkg.in/yaml.v3"
 )
 
-type Workspace struct {
-	SourcePath string `yaml:"source_path"`
-	BuildPath  string `yaml:"build_path"`
+type Toolchain struct {
+	CMakeToolchain map[string]struct {
+		CMakeToolchainFile string `yaml:"cmake_toolchain_file"`
+	} `yaml:"cmake_toolchain"`
+	TargetArch   string `yaml:"target_arch"`
+	TargetSystem string `yaml:"target_system"`
+}
 
-	Modules map[string]*Module `yaml:"modules"`
+type BuildParameters struct {
+	Toolchain     string
+	ToolchainPath string
+	BuildType     string
+	DryRun        bool
+}
+
+type Workspace struct {
+	WorkspacePath string
+
+	Targets map[string]*Target `yaml:"targets"`
 
 	CMakeBinary *string `yaml:"cmake_binary"`
 	BuildType   string  `yaml:"build_type"`
 	CXXVersion  string  `yaml:"cxx_version"`
 	Generator   *string `yaml:"generator"`
-
-	DryRun bool
 }
 
-type Module struct {
+type Target struct {
 	Depends                []string `yaml:"depends"`
+	ProjectType            string   `yaml:"project_type"`
+	CMakePackageName       string   `yaml:"cmake_package_name"`
 	FindPackageName        *string  `yaml:"find_package_name"`
 	FindPackageRoot        *string  `yaml:"find_package_root"`
-	BuildType              *string  `yaml:"build_type"`
 	SourceRoot             *string  `yaml:"source_root"`
-	BuildRoot              *string  `yaml:"build_root"`
 	ConfigPath             *string  `yaml:"config_path"`
 	CMakeAdditionalOptions []string `yaml:"cmake_additional_options"`
 }
 
-func (m *Module) CMakeBuildType(ws *Workspace) string {
-	if m.BuildType != nil {
-		return *m.BuildType
-	}
-	if ws.BuildType != "" {
-		return ws.BuildType
-	}
-	return ""
-}
-
 // CMakeConfigureArgs returns the arguments to pass to cmake when configuring the module
-func (m *Module) CMakeConfigureArgs(workspace *Workspace, modname string) ([]string, error) {
+func (m *Target) CMakeConfigureArgs(workspace *Workspace, modname string, bp BuildParameters) ([]string, error) {
 
 	args := []string{}
 
@@ -51,30 +57,51 @@ func (m *Module) CMakeConfigureArgs(workspace *Workspace, modname string) ([]str
 	if err != nil {
 		return nil, err
 	}
+	src, _ = filepath.Abs(src)
 
 	args = append(args, "-S")
 	args = append(args, src)
 
-	bld, err := m.CMakeBuildPath(workspace, modname)
+	bld, err := m.CMakeBuildPath(workspace, modname, bp)
 	if err != nil {
 		return nil, err
 	}
+	bld, _ = filepath.Abs(bld)
 
 	args = append(args, "-B")
 	args = append(args, bld)
 
-	args = append(args, fmt.Sprintf("-DCMAKE_BUILD_TYPE=%s", m.CMakeBuildType(workspace)))
+	args = append(args, fmt.Sprintf("-DCMAKE_BUILD_TYPE=%s", bp.BuildType))
+
+	if bp.ToolchainPath != "" {
+		tc, tcPath, err := workspace.LoadToolchain(bp.Toolchain)
+		if err == nil {
+			// TODO: detect host platform
+			hostPlatform := "host-linux-64"
+			if tcf, ok := tc.CMakeToolchain[hostPlatform]; ok {
+				tcfPath := filepath.Join(tcPath, tcf.CMakeToolchainFile)
+				absTcfPath, err := filepath.Abs(tcfPath)
+				if err == nil {
+					tcfPath = absTcfPath
+				}
+				args = append(args, fmt.Sprintf("-DCMAKE_TOOLCHAIN_FILE=%s", tcfPath))
+			}
+		}
+	}
 
 	if workspace.Generator != nil {
 		args = append(args, fmt.Sprintf("-G%s", *workspace.Generator))
 	}
 
 	for _, dep := range m.Depends {
-		mod, ok := workspace.Modules[dep]
+		parts := strings.SplitN(dep, "/", 2)
+		targetName := parts[0]
+
+		mod, ok := workspace.Targets[targetName]
 		if !ok {
-			return nil, fmt.Errorf("depend on unknown module %s", dep)
+			return nil, fmt.Errorf("depend on unknown target %s", targetName)
 		}
-		mod_args, err := mod.CMakeDependencyArgs(workspace, dep)
+		mod_args, err := mod.CMakeDependencyArgs(workspace, targetName, bp)
 		if err != nil {
 			return nil, err
 		}
@@ -85,30 +112,22 @@ func (m *Module) CMakeConfigureArgs(workspace *Workspace, modname string) ([]str
 
 }
 
-func (m *Module) CMakeSourcePath(workspace *Workspace, defaultRoot string) (string, error) {
-	var isAbs bool
-
+func (m *Target) CMakeSourcePath(workspace *Workspace, defaultRoot string) (string, error) {
 	path := m.SourceRoot
 	if path == nil {
-
-		return workspace.SourcePath + "/" + defaultRoot, nil
+		return filepath.Join(workspace.WorkspacePath, "sources", defaultRoot), nil
 	}
 
-	isAbs = filepath.IsAbs(*path)
-
-	var path_str string
-	if !isAbs {
-		path_str = filepath.Join(workspace.SourcePath, *path)
-	} else {
-		path_str = *path
+	if filepath.IsAbs(*path) {
+		return *path, nil
 	}
 
-	return path_str, nil
+	return filepath.Join(workspace.WorkspacePath, "sources", *path), nil
 }
 
-func (m *Module) CMakeConfigPath(workspace *Workspace, defaultRoot string) (string, error) {
+func (m *Target) CMakeConfigPath(workspace *Workspace, defaultRoot string, bp BuildParameters) (string, error) {
 
-	buildPath, err := m.CMakeBuildPath(workspace, defaultRoot)
+	buildPath, err := m.CMakeBuildPath(workspace, defaultRoot, bp)
 	if err != nil {
 		return "", err
 	}
@@ -120,38 +139,38 @@ func (m *Module) CMakeConfigPath(workspace *Workspace, defaultRoot string) (stri
 	return buildPath, nil
 }
 
-func (m *Module) CMakeBuildPath(workspace *Workspace, defaultRoot string) (string, error) {
-	var isAbs bool
+func (m *Target) CMakeBuildPath(workspace *Workspace, defaultRoot string, bp BuildParameters) (string, error) {
+	return filepath.Join(workspace.WorkspacePath, "buildspaces", defaultRoot, bp.Toolchain, bp.BuildType), nil
+}
 
-	path := m.BuildRoot
-	if path == nil {
-		return workspace.BuildPath + "/" + defaultRoot, nil
-	}
-
-	isAbs = filepath.IsAbs(*path)
-
-	var path_str string
-	if !isAbs {
-		path_str = filepath.Join(workspace.BuildPath, *path)
-	} else {
-		path_str = *path
-	}
-
-	return path_str, nil
+func (m *Target) CMakeExportPath(workspace *Workspace, defaultRoot string, bp BuildParameters) (string, error) {
+	return filepath.Join(workspace.WorkspacePath, "exports", defaultRoot, bp.Toolchain, bp.BuildType), nil
 }
 
 // CMakeDependencyArgs returns the arguments to pass to cmake when configuring another module that depends on this module
-func (m *Module) CMakeDependencyArgs(workspace *Workspace, modname string) ([]string, error) {
+func (m *Target) CMakeDependencyArgs(workspace *Workspace, modname string, bp BuildParameters) ([]string, error) {
 	args := []string{}
 
-	if m.FindPackageName != nil {
-		dirname := *m.FindPackageName + "_DIR"
+	packageName := m.CMakePackageName
+	if packageName == "" {
+		packageName = modname
+	}
 
-		configPath, err := m.CMakeConfigPath(workspace, modname)
+	if m.FindPackageName != nil {
+		packageName = *m.FindPackageName
+	}
+
+	if packageName != "" {
+		dirname := packageName + "_DIR"
+
+		configPath, err := m.CMakeConfigPath(workspace, modname, bp)
 		if err != nil {
 			return nil, err
 		}
-
+		configPath, err = filepath.Abs(configPath)
+		if err != nil {
+			return nil, err
+		}
 		args = append(args, fmt.Sprintf("-D%s=%s", dirname, configPath))
 	}
 
@@ -162,6 +181,7 @@ func (m *Module) CMakeDependencyArgs(workspace *Workspace, modname string) ([]st
 		if err != nil {
 			return nil, err
 		}
+		sourcePath, _ = filepath.Abs(sourcePath)
 
 		args = append(args, fmt.Sprintf("-D%s=%s", dirname, sourcePath))
 	}
@@ -169,9 +189,10 @@ func (m *Module) CMakeDependencyArgs(workspace *Workspace, modname string) ([]st
 	return args, nil
 }
 
-func (w *Workspace) LoadConfig(path string) error {
+func (w *Workspace) Load(path string) error {
+	w.WorkspacePath = path
 	// Load the configuration from the file
-	yamlFile, err := ioutil.ReadFile(path)
+	yamlFile, err := os.ReadFile(filepath.Join(path, "cbuild_workspace.yml"))
 	if err != nil {
 		return fmt.Errorf("failed to read config file: %w", err)
 	}
@@ -185,26 +206,80 @@ func (w *Workspace) LoadConfig(path string) error {
 	return nil
 }
 
-func (w *Workspace) Build() error {
+func (w *Workspace) Save() error {
+	yamlFile, err := yaml.Marshal(w)
+	if err != nil {
+		return fmt.Errorf("failed to marshal config: %w", err)
+	}
+
+	err = os.WriteFile(filepath.Join(w.WorkspacePath, "cbuild_workspace.yml"), yamlFile, 0644)
+	if err != nil {
+		return fmt.Errorf("failed to write config file: %w", err)
+	}
+
+	return nil
+}
+
+func (w *Workspace) LoadToolchain(toolchainName string) (*Toolchain, string, error) {
+	toolchainDir := filepath.Join(w.WorkspacePath, "toolchains", toolchainName)
+	toolchainFile := filepath.Join(toolchainDir, "toolchain.yml")
+
+	yamlFile, err := ioutil.ReadFile(toolchainFile)
+	if err != nil {
+		return nil, "", fmt.Errorf("failed to read toolchain file: %w", err)
+	}
+
+	tc := &Toolchain{}
+	err = yaml.Unmarshal(yamlFile, tc)
+	if err != nil {
+		return nil, "", fmt.Errorf("failed to parse toolchain file: %w", err)
+	}
+
+	return tc, toolchainDir, nil
+}
+
+func (w *Workspace) Build(bp BuildParameters) error {
 	var builtModules = make(map[string]bool)
 
-	for name, mod := range w.Modules {
-		err := w.buildModule(mod, name, builtModules)
+	for name, mod := range w.Targets {
+		err := w.buildModule(mod, name, builtModules, bp)
 		if err != nil {
 			return fmt.Errorf("failed to build module %s: %w", name, err)
 		}
 	}
 
 	return nil
-
 }
 
-func (w *Workspace) Exec(command string, args []string) error {
-	fmt.Printf("Executing: %s %s\n", command, args)
-	return nil
+func (w *Workspace) BuildTarget(targetName string, bp BuildParameters) error {
+	var builtModules = make(map[string]bool)
+
+	mod, ok := w.Targets[targetName]
+	if !ok {
+		return fmt.Errorf("unknown target %s", targetName)
+	}
+
+	return w.buildModule(mod, targetName, builtModules, bp)
 }
 
-func (w *Workspace) buildModule(mod *Module, modname string, builtModules map[string]bool) error {
+func (w *Workspace) Exec(command string, args []string, dryRun bool) error {
+	fmt.Printf("Executing: %s", command)
+	for _, arg := range args {
+		fmt.Printf(" %s", arg)
+	}
+	fmt.Println()
+
+	if dryRun {
+		return nil
+	}
+
+	cmd := exec.Command(command, args...)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	return cmd.Run()
+}
+
+func (w *Workspace) buildModule(mod *Target, modname string, builtModules map[string]bool, bp BuildParameters) error {
 
 	if builtModules[modname] {
 		return nil
@@ -212,13 +287,15 @@ func (w *Workspace) buildModule(mod *Module, modname string, builtModules map[st
 
 	// Check if mod has dependencies that need to build first
 	for _, dep := range mod.Depends {
-		depMod, ok := w.Modules[dep]
+		parts := strings.SplitN(dep, "/", 2)
+		targetName := parts[0]
+		depMod, ok := w.Targets[targetName]
 		if !ok {
-			return fmt.Errorf("depends on unknown module %s", dep)
+			return fmt.Errorf("depends on unknown target %s", targetName)
 		}
-		err := w.buildModule(depMod, dep, builtModules)
+		err := w.buildModule(depMod, targetName, builtModules, bp)
 		if err != nil {
-			return fmt.Errorf("failed to build dependency %s: %w", dep, err)
+			return fmt.Errorf("failed to build dependency %s: %w", targetName, err)
 		}
 	}
 
@@ -227,21 +304,33 @@ func (w *Workspace) buildModule(mod *Module, modname string, builtModules map[st
 		cmakeBinary = *w.CMakeBinary
 	}
 
-	cMakeConfigureArgs, err := mod.CMakeConfigureArgs(w, modname)
+	if mod.ProjectType != "" && !strings.EqualFold(mod.ProjectType, "CMake") {
+		return fmt.Errorf("unsupported project type: %s", mod.ProjectType)
+	}
+
+	cMakeConfigureArgs, err := mod.CMakeConfigureArgs(w, modname, bp)
 	if err != nil {
 		return fmt.Errorf("failed to get cmake configure args: %w", err)
 	}
 
-	w.Exec(cmakeBinary, cMakeConfigureArgs)
+	err = w.Exec(cmakeBinary, cMakeConfigureArgs, bp.DryRun)
+	if err != nil {
+		return fmt.Errorf("failed to configure module %s: %w", modname, err)
+	}
 
-	buildPath, err := mod.CMakeBuildPath(w, modname)
+	buildPath, err := mod.CMakeBuildPath(w, modname, bp)
 	if err != nil {
 		return fmt.Errorf("failed to get build path: %w", err)
 	}
+	buildPath, _ = filepath.Abs(buildPath)
+
 	// Build the module
 	buildCmd := []string{"--build", buildPath}
 
-	w.Exec(cmakeBinary, buildCmd)
+	err = w.Exec(cmakeBinary, buildCmd, bp.DryRun)
+	if err != nil {
+		return fmt.Errorf("failed to build module %s: %w", modname, err)
+	}
 
 	builtModules[modname] = true
 

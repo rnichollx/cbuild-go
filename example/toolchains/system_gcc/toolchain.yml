@@ -1,0 +1,6 @@
+cmake_toolchain:
+  host-linux-64:
+    cmake_toolchain_file: "system_gcc.cmake"
+
+target_arch: "x64"
+target_system: "linux"

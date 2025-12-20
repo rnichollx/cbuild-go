@@ -29,6 +29,11 @@ workspace/
   buildspaces/<sourcename>/<toolchain>/<config>
   exports/<sourcename>/<toolchain>/<config>
 ```
+
+## CSetup
+
+### `csetup git-clone <repo_url> <dest_name>` 
+
 ## cbuild conepts
 
 ### sources directory
