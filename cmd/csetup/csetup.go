@@ -57,6 +57,25 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Try to find the workspace by looking up from current directory
+	if workspacePath == "." {
+		cwd, err := os.Getwd()
+		if err == nil {
+			curr := cwd
+			for {
+				if _, err := os.Stat(filepath.Join(curr, "cbuild_workspace.yml")); err == nil {
+					workspacePath = curr
+					break
+				}
+				parent := filepath.Dir(curr)
+				if parent == curr {
+					break
+				}
+				curr = parent
+			}
+		}
+	}
+
 	switch subcommand {
 	case "init":
 		handleInit(workspacePath, subArgs)
@@ -111,7 +130,6 @@ func handleInit(workspacePath string, args []string) {
 	ws := &ccommon.Workspace{
 		WorkspacePath: targetPath,
 		Targets:       make(map[string]*ccommon.Target),
-		BuildType:     "Debug",
 		CXXVersion:    "20",
 	}
 
@@ -186,6 +204,13 @@ func handleGitClone(workspacePath string, args []string) {
 			os.Exit(1)
 		}
 		fmt.Printf("Added target %s to cbuild_workspace.yml.\n", destName)
+	}
+
+	// 4. Process csetup.yml if it exists
+	err = ws.ProcessCSetupFile(destName)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error processing csetup file: %v\n", err)
+		os.Exit(1)
 	}
 
 	fmt.Println("Repository cloned successfully.")

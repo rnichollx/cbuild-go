@@ -1,6 +1,7 @@
 package ccommon
 
 import (
+	"bufio"
 	"cbuild-go/pkg/host"
 	"fmt"
 	"io/ioutil"
@@ -33,9 +34,7 @@ type Workspace struct {
 	Targets map[string]*Target `yaml:"targets"`
 
 	CMakeBinary *string `yaml:"cmake_binary"`
-	BuildType   string  `yaml:"build_type"`
 	CXXVersion  string  `yaml:"cxx_version"`
-	Generator   *string `yaml:"generator"`
 }
 
 type Target struct {
@@ -86,10 +85,6 @@ func (m *Target) CMakeConfigureArgs(workspace *Workspace, modname string, bp Bui
 				args = append(args, fmt.Sprintf("-DCMAKE_TOOLCHAIN_FILE=%s", tcfPath))
 			}
 		}
-	}
-
-	if workspace.Generator != nil {
-		args = append(args, fmt.Sprintf("-G%s", *workspace.Generator))
 	}
 
 	for _, dep := range m.Depends {
@@ -330,4 +325,107 @@ func (w *Workspace) buildModule(mod *Target, modname string, builtModules map[st
 	builtModules[modname] = true
 
 	return nil
+}
+
+func (w *Workspace) ProcessCSetupFile(targetName string) error {
+	target, ok := w.Targets[targetName]
+	if !ok {
+		return fmt.Errorf("target %s not found in workspace", targetName)
+	}
+
+	sourcePath, err := target.CMakeSourcePath(w, targetName)
+	if err != nil {
+		return fmt.Errorf("failed to get source path for target %s: %w", targetName, err)
+	}
+
+	csetupFiles := []string{"csetup.yml", "csetuplists.yml", "CSetup.yml", "CSetupLists.yml"}
+	var csetupFile string
+	for _, f := range csetupFiles {
+		path := filepath.Join(sourcePath, f)
+		if _, err := os.Stat(path); err == nil {
+			csetupFile = path
+			break
+		}
+	}
+
+	if csetupFile == "" {
+		return nil // No csetup file to process
+	}
+
+	data, err := os.ReadFile(csetupFile)
+	if err != nil {
+		return fmt.Errorf("failed to read csetup file %s: %w", csetupFile, err)
+	}
+
+	var csetup CSetupLists
+	err = yaml.Unmarshal(data, &csetup)
+	if err != nil {
+		return fmt.Errorf("failed to parse csetup file %s: %w", csetupFile, err)
+	}
+
+	reader := bufio.NewReader(os.Stdin)
+
+	// Process Dependencies
+	for _, dep := range csetup.Dependencies {
+		parts := strings.SplitN(dep, "/", 2)
+		depTargetName := parts[0]
+
+		found := false
+		for _, existingDep := range target.Depends {
+			if existingDep == dep {
+				found = true
+				break
+			}
+		}
+
+		if !found {
+			fmt.Printf("Source '%s' declares dependency '%s', add it? [Y/n] ", targetName, dep)
+			response, _ := reader.ReadString('\n')
+			response = strings.ToLower(strings.TrimSpace(response))
+			if response == "" || response == "y" || response == "yes" {
+				target.Depends = append(target.Depends, dep)
+				fmt.Printf("Added dependency '%s' to target '%s'.\n", dep, targetName)
+
+				// Also check if the dependency exists in the workspace
+				if _, exists := w.Targets[depTargetName]; !exists {
+					fmt.Printf("Warning: Dependency '%s' is not defined in the workspace.\n", depTargetName)
+				}
+			}
+		}
+	}
+
+	// Process Suggested Dependencies
+	for depName, sdep := range csetup.SuggestedDeps {
+		if _, exists := w.Targets[depName]; !exists {
+			fmt.Printf("Dependency '%s' is not present in sources, module '%s' suggests getting it from '%s', download it? [Y/n] ", depName, targetName, sdep.URL)
+			response, _ := reader.ReadString('\n')
+			response = strings.ToLower(strings.TrimSpace(response))
+			if response == "" || response == "y" || response == "yes" {
+				fmt.Printf("Downloading '%s' from '%s'...\n", depName, sdep.URL)
+
+				destDir := filepath.Join(w.WorkspacePath, "sources", depName)
+				cmd := exec.Command("git", "clone", sdep.URL, destDir)
+				cmd.Stdout = os.Stdout
+				cmd.Stderr = os.Stderr
+				err := cmd.Run()
+				if err != nil {
+					fmt.Printf("Failed to download '%s': %v\n", depName, err)
+				} else {
+					// Add to workspace targets
+					w.Targets[depName] = &Target{
+						ProjectType: "CMake",
+					}
+					fmt.Printf("Added target '%s' to workspace.\n", depName)
+
+					// Recursively process the new target's csetup file
+					err = w.ProcessCSetupFile(depName)
+					if err != nil {
+						fmt.Printf("Error processing csetup file for %s: %v\n", depName, err)
+					}
+				}
+			}
+		}
+	}
+
+	return w.Save()
 }
