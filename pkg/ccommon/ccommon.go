@@ -1,6 +1,7 @@
 package ccommon
 
 import (
+	"cbuild-go/pkg/host"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -38,14 +39,13 @@ type Workspace struct {
 }
 
 type Target struct {
-	Depends                []string `yaml:"depends"`
-	ProjectType            string   `yaml:"project_type"`
-	CMakePackageName       string   `yaml:"cmake_package_name"`
-	FindPackageName        *string  `yaml:"find_package_name"`
-	FindPackageRoot        *string  `yaml:"find_package_root"`
-	SourceRoot             *string  `yaml:"source_root"`
-	ConfigPath             *string  `yaml:"config_path"`
-	CMakeAdditionalOptions []string `yaml:"cmake_additional_options"`
+	Depends                 []string `yaml:"depends"`
+	ProjectType             string   `yaml:"project_type"`
+	CMakePackageName        string   `yaml:"cmake_package_name"`
+	FindPackageRoot         *string  `yaml:"find_package_root"`
+	ExternalSourceOverride  *string  `yaml:"external_source_override"`
+	OverrideCMakeConfigPath *string  `yaml:"override_cmake_config_path"`
+	CMakeAdditionalOptions  []string `yaml:"cmake_additional_options"`
 }
 
 // CMakeConfigureArgs returns the arguments to pass to cmake when configuring the module
@@ -76,8 +76,7 @@ func (m *Target) CMakeConfigureArgs(workspace *Workspace, modname string, bp Bui
 	if bp.ToolchainPath != "" {
 		tc, tcPath, err := workspace.LoadToolchain(bp.Toolchain)
 		if err == nil {
-			// TODO: detect host platform
-			hostPlatform := "host-linux-64"
+			hostPlatform := fmt.Sprintf("host-%s-%s", host.DetectHostPlatform(), host.DetectHostArch())
 			if tcf, ok := tc.CMakeToolchain[hostPlatform]; ok {
 				tcfPath := filepath.Join(tcPath, tcf.CMakeToolchainFile)
 				absTcfPath, err := filepath.Abs(tcfPath)
@@ -113,7 +112,7 @@ func (m *Target) CMakeConfigureArgs(workspace *Workspace, modname string, bp Bui
 }
 
 func (m *Target) CMakeSourcePath(workspace *Workspace, defaultRoot string) (string, error) {
-	path := m.SourceRoot
+	path := m.ExternalSourceOverride
 	if path == nil {
 		return filepath.Join(workspace.WorkspacePath, "sources", defaultRoot), nil
 	}
@@ -132,8 +131,8 @@ func (m *Target) CMakeConfigPath(workspace *Workspace, defaultRoot string, bp Bu
 		return "", err
 	}
 
-	if m.ConfigPath != nil {
-		return filepath.Join(buildPath, *m.ConfigPath), nil
+	if m.OverrideCMakeConfigPath != nil {
+		return filepath.Join(buildPath, *m.OverrideCMakeConfigPath), nil
 	}
 
 	return buildPath, nil
@@ -154,10 +153,6 @@ func (m *Target) CMakeDependencyArgs(workspace *Workspace, modname string, bp Bu
 	packageName := m.CMakePackageName
 	if packageName == "" {
 		packageName = modname
-	}
-
-	if m.FindPackageName != nil {
-		packageName = *m.FindPackageName
 	}
 
 	if packageName != "" {
