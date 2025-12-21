@@ -104,6 +104,10 @@ func main() {
 		err = handleDisableStaging(workspacePath, subArgs)
 	case "list-sources":
 		err = handleListSources(workspacePath, subArgs)
+	case "get-args":
+		err = handleGetArgs(workspacePath, subArgs)
+	case "detect-toolchains":
+		err = handleDetectToolchains(workspacePath, subArgs)
 	default:
 		fmt.Fprintf(os.Stderr, "Unknown subcommand: %s\n", subcommand)
 		printUsage()
@@ -128,4 +132,6 @@ func printUsage() {
 	fmt.Println("  enable-staging <source>")
 	fmt.Println("  disable-staging <source>")
 	fmt.Println("  list-sources")
+	fmt.Println("  get-args <target> [--toolchain <toolchain>] [--build-type <type>]")
+	fmt.Println("  detect-toolchains")
 }

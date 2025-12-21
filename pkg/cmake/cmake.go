@@ -11,6 +11,7 @@ type GenerateToolchainFileOptions struct {
 	CCompiler       string
 	CXXCompiler     string
 	Linker          string
+	ExtraCXXFlags   []string
 	SystemName      string
 	SystemProcessor string
 	WorkspaceDir    string
@@ -71,8 +72,15 @@ func GenerateToolchainFile(opts GenerateToolchainFileOptions) error {
 	// We use -fdebug-prefix-map=OLD=NEW for GCC/Clang
 	// We want to map the absolute workspace directory to something relative or just "."
 	debugMapFlag := fmt.Sprintf("-fdebug-prefix-map=%s=.", absWorkspaceDir)
-	sb.WriteString(fmt.Sprintf("set(CMAKE_C_FLAGS_INIT \"%s\")\n", debugMapFlag))
-	sb.WriteString(fmt.Sprintf("set(CMAKE_CXX_FLAGS_INIT \"%s\")\n", debugMapFlag))
+	cFlags := debugMapFlag
+	cxxFlags := debugMapFlag
+
+	if len(opts.ExtraCXXFlags) > 0 {
+		cxxFlags += " " + strings.Join(opts.ExtraCXXFlags, " ")
+	}
+
+	sb.WriteString(fmt.Sprintf("set(CMAKE_C_FLAGS_INIT \"%s\")\n", cFlags))
+	sb.WriteString(fmt.Sprintf("set(CMAKE_CXX_FLAGS_INIT \"%s\")\n", cxxFlags))
 
 	sb.WriteString("set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)\n")
 	sb.WriteString("set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)\n")

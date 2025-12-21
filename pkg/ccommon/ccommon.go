@@ -15,14 +15,15 @@ import (
 )
 
 type CMakeToolchainOptions struct {
-	CMakeToolchainFile string                             `yaml:"cmake_toolchain_file"`
-	Generate           *CMakeGenerateToolchainFileOptions `yaml:"generate"`
+	CMakeToolchainFile string                             `yaml:"cmake_toolchain_file,omitempty"`
+	Generate           *CMakeGenerateToolchainFileOptions `yaml:"generate,omitempty"`
 }
 
 type CMakeGenerateToolchainFileOptions struct {
-	CCompiler   string `yaml:"c_compiler"`
-	CXXCompiler string `yaml:"cxx_compiler"`
-	Linker      string `yaml:"linker"`
+	CCompiler     string   `yaml:"c_compiler"`
+	CXXCompiler   string   `yaml:"cxx_compiler"`
+	Linker        string   `yaml:"linker,omitempty"`
+	ExtraCXXFlags []string `yaml:"extra_cxx_flags,omitempty"`
 }
 
 type Toolchain struct {
@@ -355,6 +356,7 @@ func (w *Workspace) GenerateToolchainFile(opts *CMakeGenerateToolchainFileOption
 		CCompiler:       opts.CCompiler,
 		CXXCompiler:     opts.CXXCompiler,
 		Linker:          opts.Linker,
+		ExtraCXXFlags:   opts.ExtraCXXFlags,
 		SystemName:      systemName,
 		SystemProcessor: systemProcessor,
 		WorkspaceDir:    w.WorkspacePath,
@@ -381,53 +383,49 @@ func (w *Workspace) LoadToolchain(toolchainName string) (*Toolchain, string, err
 }
 
 func (w *Workspace) ToolchainFilePath(mod *Target, bp BuildParameters) (string, error) {
-	if bp.Toolchain != "default" {
-		tc, tcPath, err := w.LoadToolchain(bp.Toolchain)
-		if err == nil {
-			hostPlatform := fmt.Sprintf("host-%s-%s", host.DetectHostPlatform(), host.DetectHostArch())
-			if tcf, ok := tc.CMakeToolchain[hostPlatform]; ok {
-				var tcfPath string
-				if tcf.Generate != nil {
-					tcfPath = filepath.Join(w.WorkspacePath, "buildspaces", bp.Toolchain, "generated_toolchain.cmake")
-				} else {
-					tcfPath = filepath.Join(tcPath, tcf.CMakeToolchainFile)
-				}
+	tc, tcPath, err := w.LoadToolchain(bp.Toolchain)
+	if err != nil {
+		return "", fmt.Errorf("failed to load toolchain: %w", err)
+	}
 
-				absTcfPath, err := filepath.Abs(tcfPath)
-				if err != nil {
-					return "", err
-				}
-				tcfPath = absTcfPath
-				return tcfPath, nil
-			}
+	hostPlatform := fmt.Sprintf("host-%s-%s", host.DetectHostPlatform(), host.DetectHostArch())
+	if tcf, ok := tc.CMakeToolchain[hostPlatform]; ok {
+		var tcfPath string
+		if tcf.Generate != nil {
+			tcfPath = filepath.Join(w.WorkspacePath, "buildspaces", bp.Toolchain, "generated_toolchain.cmake")
 		} else {
-			return "", fmt.Errorf("failed to load toolchain: %w", err)
+			tcfPath = filepath.Join(tcPath, tcf.CMakeToolchainFile)
 		}
+
+		absTcfPath, err := filepath.Abs(tcfPath)
+		if err != nil {
+			return "", err
+		}
+		tcfPath = absTcfPath
+		return tcfPath, nil
 	}
 	return "", nil
 }
 
 func (w *Workspace) Prebuild(bp BuildParameters) (string, error) {
-	if bp.Toolchain != "default" {
-		tc, _, err := w.LoadToolchain(bp.Toolchain)
-		if err == nil {
-			hostPlatform := fmt.Sprintf("host-%s-%s", host.DetectHostPlatform(), host.DetectHostArch())
-			if tcf, ok := tc.CMakeToolchain[hostPlatform]; ok {
-				tcfPath, err := w.ToolchainFilePath(nil, bp)
-				if err != nil {
-					return "", err
-				}
-				if tcf.Generate != nil {
-					err := w.GenerateToolchainFile(tcf.Generate, tc.TargetSystem, tc.TargetArch, tcfPath)
-					if err != nil {
-						return "", fmt.Errorf("failed to generate toolchain file: %w", err)
-					}
-				}
-				return tcfPath, nil
-			}
-		} else {
-			return "", fmt.Errorf("failed to load toolchain: %w", err)
+	tc, _, err := w.LoadToolchain(bp.Toolchain)
+	if err != nil {
+		return "", fmt.Errorf("failed to load toolchain: %w", err)
+	}
+
+	hostPlatform := fmt.Sprintf("host-%s-%s", host.DetectHostPlatform(), host.DetectHostArch())
+	if tcf, ok := tc.CMakeToolchain[hostPlatform]; ok {
+		tcfPath, err := w.ToolchainFilePath(nil, bp)
+		if err != nil {
+			return "", err
 		}
+		if tcf.Generate != nil {
+			err := w.GenerateToolchainFile(tcf.Generate, tc.TargetSystem, tc.TargetArch, tcfPath)
+			if err != nil {
+				return "", fmt.Errorf("failed to generate toolchain file: %w", err)
+			}
+		}
+		return tcfPath, nil
 	}
 	return "", nil
 }

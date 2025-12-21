@@ -65,9 +65,8 @@ func main() {
 		toolchainDir := filepath.Join(ws.WorkspacePath, "toolchains")
 		files, err := os.ReadDir(toolchainDir)
 		if err != nil {
-			// If toolchains directory doesn't exist, use default
-			fmt.Println("No toolchains directory found, using 'default'")
-			toolchains = append(toolchains, "default")
+			fmt.Fprintf(os.Stderr, "Error reading toolchains directory: %v\n", err)
+			os.Exit(1)
 		} else {
 			for _, file := range files {
 				if file.IsDir() {
@@ -75,8 +74,8 @@ func main() {
 				}
 			}
 			if len(toolchains) == 0 {
-				fmt.Println("No toolchains found in toolchains directory, using 'default'")
-				toolchains = append(toolchains, "default")
+				fmt.Fprintf(os.Stderr, "No toolchains found in toolchains directory\n")
+				os.Exit(1)
 			}
 		}
 	} else {
