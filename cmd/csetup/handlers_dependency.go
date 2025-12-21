@@ -3,13 +3,11 @@ package main
 import (
 	"cbuild-go/pkg/ccommon"
 	"fmt"
-	"os"
 )
 
-func handleAddDependency(workspacePath string, args []string) {
+func handleAddDependency(workspacePath string, args []string) error {
 	if len(args) < 2 {
-		fmt.Println("Usage: csetup add-dependency <source> <depname>")
-		os.Exit(1)
+		return fmt.Errorf("usage: csetup add-dependency <source> <depname>")
 	}
 
 	source := args[0]
@@ -18,38 +16,35 @@ func handleAddDependency(workspacePath string, args []string) {
 	ws := &ccommon.Workspace{}
 	err := ws.Load(workspacePath)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error loading workspace: %v\n", err)
-		os.Exit(1)
+		return fmt.Errorf("error loading workspace: %w", err)
 	}
 
 	target, ok := ws.Targets[source]
 	if !ok {
-		fmt.Fprintf(os.Stderr, "Error: source %s not found in workspace\n", source)
-		os.Exit(1)
+		return fmt.Errorf("source %s not found in workspace", source)
 	}
 
 	// Check if dependency already exists
 	for _, d := range target.Depends {
 		if d == depname {
 			fmt.Printf("Dependency %s already exists for %s\n", depname, source)
-			return
+			return nil
 		}
 	}
 
 	target.Depends = append(target.Depends, depname)
 	err = ws.Save()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error saving workspace: %v\n", err)
-		os.Exit(1)
+		return fmt.Errorf("error saving workspace: %w", err)
 	}
 
 	fmt.Printf("Added dependency %s to %s\n", depname, source)
+	return nil
 }
 
-func handleRemoveDependency(workspacePath string, args []string) {
+func handleRemoveDependency(workspacePath string, args []string) error {
 	if len(args) < 2 {
-		fmt.Println("Usage: csetup remove-dependency <source> <depname>")
-		os.Exit(1)
+		return fmt.Errorf("usage: csetup remove-dependency <source> <depname>")
 	}
 
 	source := args[0]
@@ -58,14 +53,12 @@ func handleRemoveDependency(workspacePath string, args []string) {
 	ws := &ccommon.Workspace{}
 	err := ws.Load(workspacePath)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error loading workspace: %v\n", err)
-		os.Exit(1)
+		return fmt.Errorf("error loading workspace: %w", err)
 	}
 
 	target, ok := ws.Targets[source]
 	if !ok {
-		fmt.Fprintf(os.Stderr, "Error: source %s not found in workspace\n", source)
-		os.Exit(1)
+		return fmt.Errorf("source %s not found in workspace", source)
 	}
 
 	newDepends := []string{}
@@ -80,15 +73,15 @@ func handleRemoveDependency(workspacePath string, args []string) {
 
 	if !found {
 		fmt.Printf("Dependency %s not found for %s\n", depname, source)
-		return
+		return nil
 	}
 
 	target.Depends = newDepends
 	err = ws.Save()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error saving workspace: %v\n", err)
-		os.Exit(1)
+		return fmt.Errorf("error saving workspace: %w", err)
 	}
 
 	fmt.Printf("Removed dependency %s from %s\n", depname, source)
+	return nil
 }

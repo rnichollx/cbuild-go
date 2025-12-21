@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-func handleInit(workspacePath string, args []string) {
+func handleInit(workspacePath string, args []string) error {
 	var reinit bool
 	workspaceName := ""
 
@@ -21,8 +21,7 @@ func handleInit(workspacePath string, args []string) {
 	}
 
 	if workspaceName == "" {
-		fmt.Println("Usage: csetup init <workspace name> [--reinit]")
-		os.Exit(1)
+		return fmt.Errorf("usage: csetup init <workspace name> [--reinit]")
 	}
 
 	// Use workspaceName as the workspacePath for init
@@ -30,15 +29,13 @@ func handleInit(workspacePath string, args []string) {
 
 	// Create directory if it doesn't exist
 	if err := os.MkdirAll(targetPath, 0755); err != nil {
-		fmt.Fprintf(os.Stderr, "Error creating workspace directory: %v\n", err)
-		os.Exit(1)
+		return fmt.Errorf("error creating workspace directory: %w", err)
 	}
 
 	workspaceConfig := filepath.Join(targetPath, "cbuild_workspace.yml")
 	if _, err := os.Stat(workspaceConfig); err == nil {
 		if !reinit {
-			fmt.Fprintf(os.Stderr, "Error: %s already exists. Use --reinit to overwrite.\n", workspaceConfig)
-			os.Exit(1)
+			return fmt.Errorf("%s already exists. Use --reinit to overwrite", workspaceConfig)
 		} else {
 			// Delete toolchains, sources and buildspaces
 			dirsToDelete := []string{"toolchains", "sources", "buildspaces"}
@@ -58,9 +55,9 @@ func handleInit(workspacePath string, args []string) {
 
 	err := ws.Save()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error saving workspace: %v\n", err)
-		os.Exit(1)
+		return fmt.Errorf("error saving workspace: %w", err)
 	}
 
 	fmt.Printf("Initialized empty workspace in %s\n", targetPath)
+	return nil
 }

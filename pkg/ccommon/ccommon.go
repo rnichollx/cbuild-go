@@ -119,7 +119,10 @@ func (m *Target) CMakeConfigureArgs(workspace *Workspace, modname string, bp Bui
 	if err != nil {
 		return nil, err
 	}
-	src, _ = filepath.Abs(src)
+	src, err = filepath.Abs(src)
+	if err != nil {
+		return nil, err
+	}
 
 	args = append(args, "-S")
 	args = append(args, src)
@@ -128,7 +131,10 @@ func (m *Target) CMakeConfigureArgs(workspace *Workspace, modname string, bp Bui
 	if err != nil {
 		return nil, err
 	}
-	bld, _ = filepath.Abs(bld)
+	bld, err = filepath.Abs(bld)
+	if err != nil {
+		return nil, err
+	}
 
 	args = append(args, "-B")
 	args = append(args, bld)
@@ -172,7 +178,10 @@ func (m *Target) CMakeConfigureArgs(workspace *Workspace, modname string, bp Bui
 			if err != nil {
 				return nil, err
 			}
-			stagingPath, _ = filepath.Abs(stagingPath)
+			stagingPath, err = filepath.Abs(stagingPath)
+			if err != nil {
+				return nil, err
+			}
 			stagedPaths = append(stagedPaths, stagingPath)
 		}
 	}
@@ -299,7 +308,10 @@ func (m *Target) CMakeDependencyArgs(workspace *Workspace, modname string, bp Bu
 		if err != nil {
 			return nil, err
 		}
-		sourcePath, _ = filepath.Abs(sourcePath)
+		sourcePath, err = filepath.Abs(sourcePath)
+		if err != nil {
+			return nil, err
+		}
 
 		args = append(args, fmt.Sprintf("-D%s=%s", dirname, sourcePath))
 	}
@@ -382,9 +394,10 @@ func (w *Workspace) ToolchainFilePath(mod *Target, bp BuildParameters) (string, 
 				}
 
 				absTcfPath, err := filepath.Abs(tcfPath)
-				if err == nil {
-					tcfPath = absTcfPath
+				if err != nil {
+					return "", err
 				}
+				tcfPath = absTcfPath
 				return tcfPath, nil
 			}
 		} else {
@@ -533,7 +546,10 @@ func (w *Workspace) buildModule(mod *Target, modname string, builtModules map[st
 	if err != nil {
 		return fmt.Errorf("failed to get build path: %w", err)
 	}
-	buildPath, _ = filepath.Abs(buildPath)
+	buildPath, err = filepath.Abs(buildPath)
+	if err != nil {
+		return fmt.Errorf("failed to get absolute build path: %w", err)
+	}
 
 	// Build the module
 	buildCmd := []string{"--build", buildPath, "-j"}
@@ -548,7 +564,10 @@ func (w *Workspace) buildModule(mod *Target, modname string, builtModules map[st
 		if err != nil {
 			return fmt.Errorf("failed to get staging path: %w", err)
 		}
-		stagingPath, _ = filepath.Abs(stagingPath)
+		stagingPath, err = filepath.Abs(stagingPath)
+		if err != nil {
+			return fmt.Errorf("failed to get absolute staging path: %w", err)
+		}
 
 		installCmd := []string{"--install", buildPath, "--prefix", stagingPath}
 		err = w.Exec(cmakeBinary, installCmd, bp.DryRun)
@@ -634,7 +653,10 @@ func (w *Workspace) ProcessCSetupFile(targetName string) error {
 	for depName, sdep := range csetup.SuggestedDeps {
 		if _, exists := w.Targets[depName]; !exists {
 			fmt.Printf("Dependency '%s' is not present in sources, module '%s' suggests getting it from '%s', download it? [Y/n] ", depName, targetName, sdep.URL)
-			response, _ := reader.ReadString('\n')
+			response, err := reader.ReadString('\n')
+			if err != nil {
+				return fmt.Errorf("error reading input: %w", err)
+			}
 			response = strings.ToLower(strings.TrimSpace(response))
 			if response == "" || response == "y" || response == "yes" {
 				fmt.Printf("Downloading '%s' from '%s'...\n", depName, sdep.URL)
@@ -645,7 +667,7 @@ func (w *Workspace) ProcessCSetupFile(targetName string) error {
 				cmd.Stderr = os.Stderr
 				err := cmd.Run()
 				if err != nil {
-					fmt.Printf("Failed to download '%s': %v\n", depName, err)
+					return fmt.Errorf("failed to download '%s': %w", depName, err)
 				} else {
 					// Add to workspace targets
 					w.Targets[depName] = &Target{
@@ -660,7 +682,7 @@ func (w *Workspace) ProcessCSetupFile(targetName string) error {
 					// Recursively process the new target's csetup file
 					err = w.ProcessCSetupFile(depName)
 					if err != nil {
-						fmt.Printf("Error processing csetup file for %s: %v\n", depName, err)
+						return fmt.Errorf("error processing csetup file for %s: %w", depName, err)
 					}
 				}
 			}

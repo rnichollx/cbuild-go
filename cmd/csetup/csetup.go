@@ -62,7 +62,12 @@ func main() {
 			curr := cwd
 			for {
 				if _, err := os.Stat(filepath.Join(curr, "cbuild_workspace.yml")); err == nil {
-					workspacePath, _ = filepath.Abs(curr)
+					absPath, err := filepath.Abs(curr)
+					if err != nil {
+						fmt.Fprintf(os.Stderr, "Error: failed to get absolute path: %v\n", err)
+						os.Exit(1)
+					}
+					workspacePath = absPath
 					break
 				}
 				parent := filepath.Dir(curr)
@@ -79,28 +84,34 @@ func main() {
 		}
 	}
 
+	var err error
 	switch subcommand {
 	case "init":
-		handleInit(workspacePath, subArgs)
+		err = handleInit(workspacePath, subArgs)
 	case "git-clone":
-		handleGitClone(workspacePath, subArgs)
+		err = handleGitClone(workspacePath, subArgs)
 	case "add-dependency":
-		handleAddDependency(workspacePath, subArgs)
+		err = handleAddDependency(workspacePath, subArgs)
 	case "remove-dependency":
-		handleRemoveDependency(workspacePath, subArgs)
+		err = handleRemoveDependency(workspacePath, subArgs)
 	case "remove-source":
-		handleRemoveSource(workspacePath, subArgs)
+		err = handleRemoveSource(workspacePath, subArgs)
 	case "set-cxx-version":
-		handleSetCXXVersion(workspacePath, subArgs)
+		err = handleSetCXXVersion(workspacePath, subArgs)
 	case "enable-staging":
-		handleEnableStaging(workspacePath, subArgs)
+		err = handleEnableStaging(workspacePath, subArgs)
 	case "disable-staging":
-		handleDisableStaging(workspacePath, subArgs)
+		err = handleDisableStaging(workspacePath, subArgs)
 	case "list-sources":
-		handleListSources(workspacePath, subArgs)
+		err = handleListSources(workspacePath, subArgs)
 	default:
 		fmt.Fprintf(os.Stderr, "Unknown subcommand: %s\n", subcommand)
 		printUsage()
+		os.Exit(1)
+	}
+
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
 	}
 }

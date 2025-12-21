@@ -3,13 +3,11 @@ package main
 import (
 	"cbuild-go/pkg/ccommon"
 	"fmt"
-	"os"
 )
 
-func handleSetCXXVersion(workspacePath string, args []string) {
+func handleSetCXXVersion(workspacePath string, args []string) error {
 	if len(args) < 2 {
-		fmt.Println("Usage: csetup set-cxx-version <source> <version>")
-		os.Exit(1)
+		return fmt.Errorf("usage: csetup set-cxx-version <source> <version>")
 	}
 
 	source := args[0]
@@ -18,24 +16,22 @@ func handleSetCXXVersion(workspacePath string, args []string) {
 	ws := &ccommon.Workspace{}
 	err := ws.Load(workspacePath)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error loading workspace: %v\n", err)
-		os.Exit(1)
+		return fmt.Errorf("error loading workspace: %w", err)
 	}
 
 	ws.CXXVersion = version
 	err = ws.Save()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error saving workspace: %v\n", err)
-		os.Exit(1)
+		return fmt.Errorf("error saving workspace: %w", err)
 	}
 
 	fmt.Printf("Set CXX version to %s (source argument %s was ignored as it is currently global)\n", version, source)
+	return nil
 }
 
-func handleEnableStaging(workspacePath string, args []string) {
+func handleEnableStaging(workspacePath string, args []string) error {
 	if len(args) < 1 {
-		fmt.Println("Usage: csetup enable-staging <source>")
-		os.Exit(1)
+		return fmt.Errorf("usage: csetup enable-staging <source>")
 	}
 
 	source := args[0]
@@ -43,14 +39,12 @@ func handleEnableStaging(workspacePath string, args []string) {
 	ws := &ccommon.Workspace{}
 	err := ws.Load(workspacePath)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error loading workspace: %v\n", err)
-		os.Exit(1)
+		return fmt.Errorf("error loading workspace: %w", err)
 	}
 
 	target, ok := ws.Targets[source]
 	if !ok {
-		fmt.Fprintf(os.Stderr, "Error: source %s not found in workspace\n", source)
-		os.Exit(1)
+		return fmt.Errorf("source %s not found in workspace", source)
 	}
 
 	staged := true
@@ -58,17 +52,16 @@ func handleEnableStaging(workspacePath string, args []string) {
 
 	err = ws.Save()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error saving workspace: %v\n", err)
-		os.Exit(1)
+		return fmt.Errorf("error saving workspace: %w", err)
 	}
 
 	fmt.Printf("Enabled staging for %s\n", source)
+	return nil
 }
 
-func handleDisableStaging(workspacePath string, args []string) {
+func handleDisableStaging(workspacePath string, args []string) error {
 	if len(args) < 1 {
-		fmt.Println("Usage: csetup disable-staging <source>")
-		os.Exit(1)
+		return fmt.Errorf("usage: csetup disable-staging <source>")
 	}
 
 	source := args[0]
@@ -76,14 +69,12 @@ func handleDisableStaging(workspacePath string, args []string) {
 	ws := &ccommon.Workspace{}
 	err := ws.Load(workspacePath)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error loading workspace: %v\n", err)
-		os.Exit(1)
+		return fmt.Errorf("error loading workspace: %w", err)
 	}
 
 	target, ok := ws.Targets[source]
 	if !ok {
-		fmt.Fprintf(os.Stderr, "Error: source %s not found in workspace\n", source)
-		os.Exit(1)
+		return fmt.Errorf("source %s not found in workspace", source)
 	}
 
 	staged := false
@@ -91,9 +82,9 @@ func handleDisableStaging(workspacePath string, args []string) {
 
 	err = ws.Save()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error saving workspace: %v\n", err)
-		os.Exit(1)
+		return fmt.Errorf("error saving workspace: %w", err)
 	}
 
 	fmt.Printf("Disabled staging for %s\n", source)
+	return nil
 }

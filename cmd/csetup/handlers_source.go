@@ -9,19 +9,17 @@ import (
 	"strings"
 )
 
-func handleListSources(workspacePath string, args []string) {
+func handleListSources(workspacePath string, args []string) error {
 	ws := &ccommon.Workspace{}
 	err := ws.Load(workspacePath)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error loading workspace: %v\n", err)
-		os.Exit(1)
+		return fmt.Errorf("error loading workspace: %w", err)
 	}
 
 	sourcesDir := filepath.Join(workspacePath, "sources")
 	dirEntries, err := os.ReadDir(sourcesDir)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error reading sources directory: %v\n", err)
-		os.Exit(1)
+		return fmt.Errorf("error reading sources directory: %w", err)
 	}
 
 	trackedDirs := make(map[string]bool)
@@ -67,12 +65,12 @@ func handleListSources(workspacePath string, args []string) {
 			}
 		}
 	}
+	return nil
 }
 
-func handleRemoveSource(workspacePath string, args []string) {
+func handleRemoveSource(workspacePath string, args []string) error {
 	if len(args) < 1 {
-		fmt.Println("Usage: csetup remove-source <source> [-D|--delete]")
-		os.Exit(1)
+		return fmt.Errorf("usage: csetup remove-source <source> [-D|--delete]")
 	}
 
 	source := ""
@@ -87,27 +85,23 @@ func handleRemoveSource(workspacePath string, args []string) {
 	}
 
 	if source == "" {
-		fmt.Println("Usage: csetup remove-source <source> [-D|--delete]")
-		os.Exit(1)
+		return fmt.Errorf("usage: csetup remove-source <source> [-D|--delete]")
 	}
 
 	ws := &ccommon.Workspace{}
 	err := ws.Load(workspacePath)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error loading workspace: %v\n", err)
-		os.Exit(1)
+		return fmt.Errorf("error loading workspace: %w", err)
 	}
 
 	if _, ok := ws.Targets[source]; !ok {
-		fmt.Fprintf(os.Stderr, "Error: source %s not found in workspace\n", source)
-		os.Exit(1)
+		return fmt.Errorf("source %s not found in workspace", source)
 	}
 
 	delete(ws.Targets, source)
 	err = ws.Save()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error saving workspace: %v\n", err)
-		os.Exit(1)
+		return fmt.Errorf("error saving workspace: %w", err)
 	}
 
 	fmt.Printf("Removed source %s from workspace\n", source)
@@ -118,8 +112,7 @@ func handleRemoveSource(workspacePath string, args []string) {
 			fmt.Printf("Deleting source folder: %s\n", sourceDir)
 			err = os.RemoveAll(sourceDir)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "Error deleting source folder: %v\n", err)
-				os.Exit(1)
+				return fmt.Errorf("error deleting source folder: %w", err)
 			}
 		} else {
 			fmt.Printf("Source folder %s not found, skipping deletion.\n", sourceDir)
@@ -127,12 +120,12 @@ func handleRemoveSource(workspacePath string, args []string) {
 	} else {
 		fmt.Printf("Note: files in sources/%s were NOT deleted. Use -R to delete them.\n", source)
 	}
+	return nil
 }
 
-func handleGitClone(workspacePath string, args []string) {
+func handleGitClone(workspacePath string, args []string) error {
 	if len(args) < 1 {
-		fmt.Println("Usage: csetup git-clone <repo_url> [dest_name]")
-		os.Exit(1)
+		return fmt.Errorf("usage: csetup git-clone <repo_url> [dest_name]")
 	}
 
 	repoURL := args[0]
@@ -148,8 +141,7 @@ func handleGitClone(workspacePath string, args []string) {
 	// 1. Check if cbuild_workspace.yml exists
 	workspaceConfig := filepath.Join(workspacePath, "cbuild_workspace.yml")
 	if _, err := os.Stat(workspaceConfig); os.IsNotExist(err) {
-		fmt.Fprintf(os.Stderr, "Error: %s not found. csetup must be run in a cbuild workspace.\n", workspaceConfig)
-		os.Exit(1)
+		return fmt.Errorf("%s not found. csetup must be run in a cbuild workspace", workspaceConfig)
 	}
 
 	// 2. Clone into sources/<destName>
@@ -163,16 +155,14 @@ func handleGitClone(workspacePath string, args []string) {
 
 	err := cmd.Run()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error cloning repository: %v\n", err)
-		os.Exit(1)
+		return fmt.Errorf("error cloning repository: %w", err)
 	}
 
 	// 3. Update cbuild_workspace.yml
 	ws := &ccommon.Workspace{}
 	err = ws.Load(workspacePath)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error loading workspace for update: %v\n", err)
-		os.Exit(1)
+		return fmt.Errorf("error loading workspace for update: %w", err)
 	}
 
 	if ws.Targets == nil {
@@ -187,8 +177,7 @@ func handleGitClone(workspacePath string, args []string) {
 		}
 		err = ws.Save()
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error saving updated workspace: %v\n", err)
-			os.Exit(1)
+			return fmt.Errorf("error saving updated workspace: %w", err)
 		}
 		fmt.Printf("Added target %s to cbuild_workspace.yml.\n", destName)
 	}
@@ -196,9 +185,9 @@ func handleGitClone(workspacePath string, args []string) {
 	// 4. Process csetup.yml if it exists
 	err = ws.ProcessCSetupFile(destName)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error processing csetup file: %v\n", err)
-		os.Exit(1)
+		return fmt.Errorf("error processing csetup file: %w", err)
 	}
 
 	fmt.Println("Repository cloned successfully.")
+	return nil
 }
