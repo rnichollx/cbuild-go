@@ -86,16 +86,10 @@ func main() {
 	for _, tc := range toolchains {
 		fmt.Printf("Building with toolchain: %s, config: %s\n", tc, buildConfig)
 
-		tcPath := ""
-		if tc != "default" {
-			tcPath = filepath.Join(ws.WorkspacePath, "toolchains", tc)
-		}
-
 		bp := ccommon.BuildParameters{
-			Toolchain:     tc,
-			ToolchainPath: tcPath,
-			BuildType:     buildConfig,
-			DryRun:        dryRun,
+			Toolchain: tc,
+			BuildType: buildConfig,
+			DryRun:    dryRun,
 		}
 
 		if targetName != "" {

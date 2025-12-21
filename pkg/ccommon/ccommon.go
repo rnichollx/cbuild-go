@@ -32,10 +32,9 @@ type Toolchain struct {
 }
 
 type BuildParameters struct {
-	Toolchain     string
-	ToolchainPath string
-	BuildType     string
-	DryRun        bool
+	Toolchain string
+	BuildType string
+	DryRun    bool
 }
 
 type Workspace struct {
@@ -51,11 +50,11 @@ type Target struct {
 	Depends                      []string `yaml:"depends"`
 	ProjectType                  string   `yaml:"project_type"`
 	CMakePackageName             string   `yaml:"cmake_package_name,omitempty"`
-	FindPackageRoot              *string  `yaml:"find_package_root"`
-	Staged                       *bool    `yaml:"staged"`
-	ExternalSourceOverride       *string  `yaml:"external_source_override"`
-	OverrideCMakeConfigPath      *string  `yaml:"override_cmake_config_path"`
-	ExtraCMakeConfigureArgs      []string `yaml:"extra_cmake_configure_args"`
+	FindPackageRoot              *string  `yaml:"find_package_root,omitempty"`
+	Staged                       *bool    `yaml:"staged,omitempty"`
+	ExternalSourceOverride       *string  `yaml:"external_source_override,omitempty"`
+	OverrideCMakeConfigPath      *string  `yaml:"override_cmake_config_path,omitempty"`
+	ExtraCMakeConfigureArgs      []string `yaml:"extra_cmake_configure_args,omitempty"`
 	CMakeAdditionalConfigureArgs []string `yaml:"cmake_additional_configure_args"`
 	CxxStandard                  *string  `yaml:"cxx_standard"`
 }
@@ -99,29 +98,12 @@ func (m *Target) CMakeConfigureArgs(workspace *Workspace, modname string, bp Bui
 		args = append(args, fmt.Sprintf("-DCMAKE_CXX_STANDARD=%s", cxxStandard))
 	}
 
-	if bp.ToolchainPath != "" {
-		tc, tcPath, err := workspace.LoadToolchain(bp.Toolchain)
-		if err == nil {
-			hostPlatform := fmt.Sprintf("host-%s-%s", host.DetectHostPlatform(), host.DetectHostArch())
-			if tcf, ok := tc.CMakeToolchain[hostPlatform]; ok {
-				var tcfPath string
-				if tcf.Generate != nil {
-					tcfPath = filepath.Join(workspace.WorkspacePath, "buildspaces", bp.Toolchain, "generated_toolchain.cmake")
-					err := workspace.GenerateToolchainFile(tcf.Generate, tc.TargetSystem, tc.TargetArch, tcfPath)
-					if err != nil {
-						return nil, fmt.Errorf("failed to generate toolchain file: %w", err)
-					}
-				} else {
-					tcfPath = filepath.Join(tcPath, tcf.CMakeToolchainFile)
-				}
-
-				absTcfPath, err := filepath.Abs(tcfPath)
-				if err == nil {
-					tcfPath = absTcfPath
-				}
-				args = append(args, fmt.Sprintf("-DCMAKE_TOOLCHAIN_FILE=%s", tcfPath))
-			}
-		}
+	toolchainFile, err := workspace.ToolchainFilePath(m, bp)
+	if err != nil {
+		return nil, err
+	}
+	if toolchainFile != "" {
+		args = append(args, fmt.Sprintf("-DCMAKE_TOOLCHAIN_FILE=%s", toolchainFile))
 	}
 
 	stagedPaths := []string{}
@@ -343,7 +325,63 @@ func (w *Workspace) LoadToolchain(toolchainName string) (*Toolchain, string, err
 	return tc, toolchainDir, nil
 }
 
+func (w *Workspace) ToolchainFilePath(mod *Target, bp BuildParameters) (string, error) {
+	if bp.Toolchain != "default" {
+		tc, tcPath, err := w.LoadToolchain(bp.Toolchain)
+		if err == nil {
+			hostPlatform := fmt.Sprintf("host-%s-%s", host.DetectHostPlatform(), host.DetectHostArch())
+			if tcf, ok := tc.CMakeToolchain[hostPlatform]; ok {
+				var tcfPath string
+				if tcf.Generate != nil {
+					tcfPath = filepath.Join(w.WorkspacePath, "buildspaces", bp.Toolchain, "generated_toolchain.cmake")
+				} else {
+					tcfPath = filepath.Join(tcPath, tcf.CMakeToolchainFile)
+				}
+
+				absTcfPath, err := filepath.Abs(tcfPath)
+				if err == nil {
+					tcfPath = absTcfPath
+				}
+				return tcfPath, nil
+			}
+		} else {
+			return "", fmt.Errorf("failed to load toolchain: %w", err)
+		}
+	}
+	return "", nil
+}
+
+func (w *Workspace) Prebuild(bp BuildParameters) (string, error) {
+	if bp.Toolchain != "default" {
+		tc, _, err := w.LoadToolchain(bp.Toolchain)
+		if err == nil {
+			hostPlatform := fmt.Sprintf("host-%s-%s", host.DetectHostPlatform(), host.DetectHostArch())
+			if tcf, ok := tc.CMakeToolchain[hostPlatform]; ok {
+				tcfPath, err := w.ToolchainFilePath(nil, bp)
+				if err != nil {
+					return "", err
+				}
+				if tcf.Generate != nil {
+					err := w.GenerateToolchainFile(tcf.Generate, tc.TargetSystem, tc.TargetArch, tcfPath)
+					if err != nil {
+						return "", fmt.Errorf("failed to generate toolchain file: %w", err)
+					}
+				}
+				return tcfPath, nil
+			}
+		} else {
+			return "", fmt.Errorf("failed to load toolchain: %w", err)
+		}
+	}
+	return "", nil
+}
+
 func (w *Workspace) Build(bp BuildParameters) error {
+	_, err := w.Prebuild(bp)
+	if err != nil {
+		return err
+	}
+
 	var builtModules = make(map[string]bool)
 
 	for name, mod := range w.Targets {
@@ -357,6 +395,11 @@ func (w *Workspace) Build(bp BuildParameters) error {
 }
 
 func (w *Workspace) BuildTarget(targetName string, bp BuildParameters) error {
+	_, err := w.Prebuild(bp)
+	if err != nil {
+		return err
+	}
+
 	var builtModules = make(map[string]bool)
 
 	mod, ok := w.Targets[targetName]
