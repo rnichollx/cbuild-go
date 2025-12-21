@@ -48,13 +48,16 @@ type Workspace struct {
 }
 
 type Target struct {
-	Depends                 []string `yaml:"depends"`
-	ProjectType             string   `yaml:"project_type"`
-	CMakePackageName        string   `yaml:"cmake_package_name,omitempty"`
-	FindPackageRoot         *string  `yaml:"find_package_root"`
-	ExternalSourceOverride  *string  `yaml:"external_source_override"`
-	OverrideCMakeConfigPath *string  `yaml:"override_cmake_config_path"`
-	CMakeAdditionalOptions  []string `yaml:"cmake_additional_options"`
+	Depends                      []string `yaml:"depends"`
+	ProjectType                  string   `yaml:"project_type"`
+	CMakePackageName             string   `yaml:"cmake_package_name,omitempty"`
+	FindPackageRoot              *string  `yaml:"find_package_root"`
+	Staged                       *bool    `yaml:"staged"`
+	ExternalSourceOverride       *string  `yaml:"external_source_override"`
+	OverrideCMakeConfigPath      *string  `yaml:"override_cmake_config_path"`
+	ExtraCMakeConfigureArgs      []string `yaml:"extra_cmake_configure_args"`
+	CMakeAdditionalConfigureArgs []string `yaml:"cmake_additional_configure_args"`
+	CxxStandard                  *string  `yaml:"cxx_standard"`
 }
 
 // CMakeConfigureArgs returns the arguments to pass to cmake when configuring the module
@@ -80,7 +83,21 @@ func (m *Target) CMakeConfigureArgs(workspace *Workspace, modname string, bp Bui
 	args = append(args, "-B")
 	args = append(args, bld)
 
+	args = append(args, "-G")
+	args = append(args, "Ninja")
+
 	args = append(args, fmt.Sprintf("-DCMAKE_BUILD_TYPE=%s", bp.BuildType))
+
+	cxxStandard := ""
+	if m.CxxStandard != nil {
+		cxxStandard = *m.CxxStandard
+	} else if workspace.CXXVersion != "" {
+		cxxStandard = workspace.CXXVersion
+	}
+
+	if cxxStandard != "" {
+		args = append(args, fmt.Sprintf("-DCMAKE_CXX_STANDARD=%s", cxxStandard))
+	}
 
 	if bp.ToolchainPath != "" {
 		tc, tcPath, err := workspace.LoadToolchain(bp.Toolchain)
@@ -107,6 +124,53 @@ func (m *Target) CMakeConfigureArgs(workspace *Workspace, modname string, bp Bui
 		}
 	}
 
+	stagedPaths := []string{}
+	processedStaged := make(map[string]bool)
+
+	var collectStaged func(target *Target, name string) error
+	collectStaged = func(target *Target, name string) error {
+		for _, dep := range target.Depends {
+			parts := strings.SplitN(dep, "/", 2)
+			targetName := parts[0]
+
+			if processedStaged[targetName] {
+				continue
+			}
+
+			depMod, ok := workspace.Targets[targetName]
+			if !ok {
+				return fmt.Errorf("unknown target %s", targetName)
+			}
+
+			if depMod.Staged != nil && *depMod.Staged {
+				stagingPath, err := depMod.CMakeStagingPath(workspace, targetName, bp)
+				if err != nil {
+					return err
+				}
+				stagingPath, _ = filepath.Abs(stagingPath)
+				stagedPaths = append(stagedPaths, stagingPath)
+				processedStaged[targetName] = true
+			}
+
+			err := collectStaged(depMod, targetName)
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+
+	err = collectStaged(m, modname)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(stagedPaths) > 0 {
+		paths := strings.Join(stagedPaths, ";")
+		args = append(args, fmt.Sprintf("-DCMAKE_PREFIX_PATH=%s", paths))
+		args = append(args, fmt.Sprintf("-DCMAKE_MODULE_PATH=%s", paths))
+	}
+
 	for _, dep := range m.Depends {
 		parts := strings.SplitN(dep, "/", 2)
 		targetName := parts[0]
@@ -122,8 +186,9 @@ func (m *Target) CMakeConfigureArgs(workspace *Workspace, modname string, bp Bui
 		args = append(args, mod_args...)
 	}
 
-	return args, nil
+	args = append(args, m.ExtraCMakeConfigureArgs...)
 
+	return args, nil
 }
 
 func (m *Target) CMakeSourcePath(workspace *Workspace, defaultRoot string) (string, error) {
@@ -157,6 +222,10 @@ func (m *Target) CMakeBuildPath(workspace *Workspace, defaultRoot string, bp Bui
 	return filepath.Join(workspace.WorkspacePath, "buildspaces", bp.Toolchain, defaultRoot, bp.BuildType), nil
 }
 
+func (m *Target) CMakeStagingPath(workspace *Workspace, defaultRoot string, bp BuildParameters) (string, error) {
+	return filepath.Join(workspace.WorkspacePath, "staging", bp.Toolchain, bp.BuildType, defaultRoot), nil
+}
+
 func (m *Target) CMakeExportPath(workspace *Workspace, defaultRoot string, bp BuildParameters) (string, error) {
 	return filepath.Join(workspace.WorkspacePath, "exports", bp.Toolchain, defaultRoot, bp.BuildType), nil
 }
@@ -164,6 +233,20 @@ func (m *Target) CMakeExportPath(workspace *Workspace, defaultRoot string, bp Bu
 // CMakeDependencyArgs returns the arguments to pass to cmake when configuring another module that depends on this module
 func (m *Target) CMakeDependencyArgs(workspace *Workspace, modname string, bp BuildParameters) ([]string, error) {
 	args := []string{}
+
+	if m.Staged != nil && *m.Staged {
+		stagingPath, err := m.CMakeStagingPath(workspace, modname, bp)
+		if err != nil {
+			return nil, err
+		}
+		stagingPath, err = filepath.Abs(stagingPath)
+		if err != nil {
+			return nil, err
+		}
+		args = append(args, fmt.Sprintf("-DCMAKE_PREFIX_PATH=%s", stagingPath))
+		args = append(args, fmt.Sprintf("-DCMAKE_MODULE_PATH=%s", stagingPath))
+		return args, nil
+	}
 
 	packageName := m.CMakePackageName
 	if packageName == "" {
@@ -367,11 +450,25 @@ func (w *Workspace) buildModule(mod *Target, modname string, builtModules map[st
 	buildPath, _ = filepath.Abs(buildPath)
 
 	// Build the module
-	buildCmd := []string{"--build", buildPath}
+	buildCmd := []string{"--build", buildPath, "-j"}
 
 	err = w.Exec(cmakeBinary, buildCmd, bp.DryRun)
 	if err != nil {
 		return fmt.Errorf("failed to build module %s: %w", modname, err)
+	}
+
+	if mod.Staged != nil && *mod.Staged {
+		stagingPath, err := mod.CMakeStagingPath(w, modname, bp)
+		if err != nil {
+			return fmt.Errorf("failed to get staging path: %w", err)
+		}
+		stagingPath, _ = filepath.Abs(stagingPath)
+
+		installCmd := []string{"--install", buildPath, "--prefix", stagingPath}
+		err = w.Exec(cmakeBinary, installCmd, bp.DryRun)
+		if err != nil {
+			return fmt.Errorf("failed to install module %s to staging: %w", modname, err)
+		}
 	}
 
 	builtModules[modname] = true

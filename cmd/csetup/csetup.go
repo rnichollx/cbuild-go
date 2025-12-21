@@ -94,6 +94,10 @@ func main() {
 		handleRemoveSource(workspacePath, subArgs)
 	case "set-cxx-version":
 		handleSetCXXVersion(workspacePath, subArgs)
+	case "enable-staging":
+		handleEnableStaging(workspacePath, subArgs)
+	case "disable-staging":
+		handleDisableStaging(workspacePath, subArgs)
 	default:
 		fmt.Fprintf(os.Stderr, "Unknown subcommand: %s\n", subcommand)
 		printUsage()
@@ -110,6 +114,8 @@ func printUsage() {
 	fmt.Println("  remove-dependency <source> <depname>")
 	fmt.Println("  remove-source <source> [-D|--delete]")
 	fmt.Println("  set-cxx-version <source> <version>")
+	fmt.Println("  enable-staging <source>")
+	fmt.Println("  disable-staging <source>")
 }
 
 func handleAddDependency(workspacePath string, args []string) {
@@ -308,6 +314,72 @@ func handleSetCXXVersion(workspacePath string, args []string) {
 	}
 
 	fmt.Printf("Set CXX version to %s (source argument %s was ignored as it is currently global)\n", version, source)
+}
+
+func handleEnableStaging(workspacePath string, args []string) {
+	if len(args) < 1 {
+		fmt.Println("Usage: csetup enable-staging <source>")
+		os.Exit(1)
+	}
+
+	source := args[0]
+
+	ws := &ccommon.Workspace{}
+	err := ws.Load(workspacePath)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error loading workspace: %v\n", err)
+		os.Exit(1)
+	}
+
+	target, ok := ws.Targets[source]
+	if !ok {
+		fmt.Fprintf(os.Stderr, "Error: source %s not found in workspace\n", source)
+		os.Exit(1)
+	}
+
+	staged := true
+	target.Staged = &staged
+
+	err = ws.Save()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error saving workspace: %v\n", err)
+		os.Exit(1)
+	}
+
+	fmt.Printf("Enabled staging for %s\n", source)
+}
+
+func handleDisableStaging(workspacePath string, args []string) {
+	if len(args) < 1 {
+		fmt.Println("Usage: csetup disable-staging <source>")
+		os.Exit(1)
+	}
+
+	source := args[0]
+
+	ws := &ccommon.Workspace{}
+	err := ws.Load(workspacePath)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error loading workspace: %v\n", err)
+		os.Exit(1)
+	}
+
+	target, ok := ws.Targets[source]
+	if !ok {
+		fmt.Fprintf(os.Stderr, "Error: source %s not found in workspace\n", source)
+		os.Exit(1)
+	}
+
+	staged := false
+	target.Staged = &staged
+
+	err = ws.Save()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error saving workspace: %v\n", err)
+		os.Exit(1)
+	}
+
+	fmt.Printf("Disabled staging for %s\n", source)
 }
 
 func handleInit(workspacePath string, args []string) {
