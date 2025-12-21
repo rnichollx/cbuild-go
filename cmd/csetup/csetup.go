@@ -98,6 +98,8 @@ func main() {
 		handleEnableStaging(workspacePath, subArgs)
 	case "disable-staging":
 		handleDisableStaging(workspacePath, subArgs)
+	case "list-sources":
+		handleListSources(workspacePath, subArgs)
 	default:
 		fmt.Fprintf(os.Stderr, "Unknown subcommand: %s\n", subcommand)
 		printUsage()
@@ -116,6 +118,67 @@ func printUsage() {
 	fmt.Println("  set-cxx-version <source> <version>")
 	fmt.Println("  enable-staging <source>")
 	fmt.Println("  disable-staging <source>")
+	fmt.Println("  list-sources")
+}
+
+func handleListSources(workspacePath string, args []string) {
+	ws := &ccommon.Workspace{}
+	err := ws.Load(workspacePath)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error loading workspace: %v\n", err)
+		os.Exit(1)
+	}
+
+	sourcesDir := filepath.Join(workspacePath, "sources")
+	dirEntries, err := os.ReadDir(sourcesDir)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error reading sources directory: %v\n", err)
+		os.Exit(1)
+	}
+
+	trackedDirs := make(map[string]bool)
+
+	// First, list all targets from the workspace configuration
+	for name, target := range ws.Targets {
+		status := "[MISSING]"
+		srcPath, err := target.CMakeSourcePath(ws, name)
+		if err == nil {
+			if info, err := os.Stat(srcPath); err == nil && info.IsDir() {
+				if target.ExternalSourceOverride != nil {
+					status = "[OK EXTERNAL]"
+				} else {
+					status = "[OK]"
+				}
+			}
+		}
+
+		fmt.Printf("%s %s\n", name, status)
+
+		// If it's a standard source (in the sources/ directory), mark it as tracked
+		if target.ExternalSourceOverride == nil {
+			trackedDirs[name] = true
+		} else {
+			// If it's an override, check if it points into our sources dir anyway
+			rel, err := filepath.Rel(sourcesDir, srcPath)
+			if err == nil && !strings.HasPrefix(rel, "..") && rel != ".." {
+				// It points inside sourcesDir, possibly to a different name
+				parts := strings.Split(rel, string(os.PathSeparator))
+				if len(parts) > 0 {
+					trackedDirs[parts[0]] = true
+				}
+			}
+		}
+	}
+
+	// Now list untracked folders in the sources directory
+	for _, entry := range dirEntries {
+		if entry.IsDir() {
+			name := entry.Name()
+			if !trackedDirs[name] {
+				fmt.Printf("%s [UNTRACKED]\n", name)
+			}
+		}
+	}
 }
 
 func handleAddDependency(workspacePath string, args []string) {
