@@ -46,17 +46,68 @@ type Workspace struct {
 	CXXVersion  string  `yaml:"cxx_version"`
 }
 
+type CMakeOption struct {
+	Type  string `yaml:"type"`
+	Value string `yaml:"value"`
+}
+
+func (o *CMakeOption) UnmarshalYAML(value *yaml.Node) error {
+	if value.Kind == yaml.ScalarNode {
+		o.Value = value.Value
+		o.Type = ""
+		return nil
+	}
+	type Alias CMakeOption
+	var aux Alias
+	if err := value.Decode(&aux); err != nil {
+		return err
+	}
+	o.Type = aux.Type
+	o.Value = aux.Value
+	return nil
+}
+
+func (o CMakeOption) MarshalYAML() (interface{}, error) {
+	if o.Type == "" {
+		return o.Value, nil
+	}
+	type Alias CMakeOption
+	return Alias(o), nil
+}
+
 type Target struct {
-	Depends                      []string `yaml:"depends"`
-	ProjectType                  string   `yaml:"project_type"`
-	CMakePackageName             string   `yaml:"cmake_package_name,omitempty"`
-	FindPackageRoot              *string  `yaml:"find_package_root,omitempty"`
-	Staged                       *bool    `yaml:"staged,omitempty"`
-	ExternalSourceOverride       *string  `yaml:"external_source_override,omitempty"`
-	OverrideCMakeConfigPath      *string  `yaml:"override_cmake_config_path,omitempty"`
-	ExtraCMakeConfigureArgs      []string `yaml:"extra_cmake_configure_args,omitempty"`
-	CMakeAdditionalConfigureArgs []string `yaml:"cmake_additional_configure_args"`
-	CxxStandard                  *string  `yaml:"cxx_standard"`
+	Depends                 []string               `yaml:"depends"`
+	ProjectType             string                 `yaml:"project_type"`
+	CMakePackageName        string                 `yaml:"cmake_package_name,omitempty"`
+	FindPackageRoot         *string                `yaml:"find_package_root,omitempty"`
+	Staged                  *bool                  `yaml:"staged,omitempty"`
+	ExternalSourceOverride  *string                `yaml:"external_source_override,omitempty"`
+	OverrideCMakeConfigPath *string                `yaml:"override_cmake_config_path,omitempty"`
+	ExtraCMakeConfigureArgs []string               `yaml:"extra_cmake_configure_args,omitempty"`
+	CMakeOptions            map[string]CMakeOption `yaml:"cmake_options,omitempty"`
+	CxxStandard             *string                `yaml:"cxx_standard,omitempty"`
+}
+
+func (m *Target) MarshalYAML() (interface{}, error) {
+	type Alias Target
+	node := &yaml.Node{}
+	err := node.Encode((*Alias)(m))
+	if err != nil {
+		return nil, err
+	}
+
+	for i := 0; i < len(node.Content); i += 2 {
+		if node.Content[i].Value == "extra_cmake_configure_args" {
+			valueNode := node.Content[i+1]
+			valueNode.Style = yaml.FlowStyle
+			for _, item := range valueNode.Content {
+				item.Style = yaml.DoubleQuotedStyle
+			}
+			break
+		}
+	}
+
+	return node, nil
 }
 
 // CMakeConfigureArgs returns the arguments to pass to cmake when configuring the module
@@ -107,44 +158,23 @@ func (m *Target) CMakeConfigureArgs(workspace *Workspace, modname string, bp Bui
 	}
 
 	stagedPaths := []string{}
-	processedStaged := make(map[string]bool)
+	for _, dep := range m.Depends {
+		parts := strings.SplitN(dep, "/", 2)
+		targetName := parts[0]
 
-	var collectStaged func(target *Target, name string) error
-	collectStaged = func(target *Target, name string) error {
-		for _, dep := range target.Depends {
-			parts := strings.SplitN(dep, "/", 2)
-			targetName := parts[0]
-
-			if processedStaged[targetName] {
-				continue
-			}
-
-			depMod, ok := workspace.Targets[targetName]
-			if !ok {
-				return fmt.Errorf("unknown target %s", targetName)
-			}
-
-			if depMod.Staged != nil && *depMod.Staged {
-				stagingPath, err := depMod.CMakeStagingPath(workspace, targetName, bp)
-				if err != nil {
-					return err
-				}
-				stagingPath, _ = filepath.Abs(stagingPath)
-				stagedPaths = append(stagedPaths, stagingPath)
-				processedStaged[targetName] = true
-			}
-
-			err := collectStaged(depMod, targetName)
-			if err != nil {
-				return err
-			}
+		depMod, ok := workspace.Targets[targetName]
+		if !ok {
+			return nil, fmt.Errorf("unknown target %s", targetName)
 		}
-		return nil
-	}
 
-	err = collectStaged(m, modname)
-	if err != nil {
-		return nil, err
+		if depMod.Staged != nil && *depMod.Staged {
+			stagingPath, err := depMod.CMakeStagingPath(workspace, targetName, bp)
+			if err != nil {
+				return nil, err
+			}
+			stagingPath, _ = filepath.Abs(stagingPath)
+			stagedPaths = append(stagedPaths, stagingPath)
+		}
 	}
 
 	if len(stagedPaths) > 0 {
@@ -161,6 +191,11 @@ func (m *Target) CMakeConfigureArgs(workspace *Workspace, modname string, bp Bui
 		if !ok {
 			return nil, fmt.Errorf("depend on unknown target %s", targetName)
 		}
+
+		if mod.Staged != nil && *mod.Staged {
+			continue
+		}
+
 		mod_args, err := mod.CMakeDependencyArgs(workspace, targetName, bp)
 		if err != nil {
 			return nil, err
@@ -169,6 +204,14 @@ func (m *Target) CMakeConfigureArgs(workspace *Workspace, modname string, bp Bui
 	}
 
 	args = append(args, m.ExtraCMakeConfigureArgs...)
+
+	for optName, opt := range m.CMakeOptions {
+		if opt.Type != "" {
+			args = append(args, fmt.Sprintf("-D%s:%s=%s", optName, opt.Type, opt.Value))
+		} else {
+			args = append(args, fmt.Sprintf("-D%s=%s", optName, opt.Value))
+		}
+	}
 
 	return args, nil
 }
