@@ -166,13 +166,13 @@ func handleGitClone(workspacePath string, args []string) error {
 	}
 
 	if ws.Targets == nil {
-		ws.Targets = make(map[string]*ccommon.Target)
+		ws.Targets = make(map[string]*ccommon.TargetConfiguration)
 	}
 
 	if _, exists := ws.Targets[destName]; exists {
-		fmt.Printf("Target %s already exists in cbuild_workspace.yml. Skipping update.\n", destName)
+		fmt.Printf("TargetConfiguration %s already exists in cbuild_workspace.yml. Skipping update.\n", destName)
 	} else {
-		ws.Targets[destName] = &ccommon.Target{
+		ws.Targets[destName] = &ccommon.TargetConfiguration{
 			ProjectType: "CMake",
 		}
 		err = ws.Save()

@@ -5,6 +5,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"gopkg.in/yaml.v3"
 )
 
 type GenerateToolchainFileOptions struct {
@@ -103,4 +105,33 @@ func GenerateToolchainFile(opts GenerateToolchainFileOptions) error {
 	}
 
 	return nil
+}
+
+type Option struct {
+	Type  string `yaml:"type"`
+	Value string `yaml:"value"`
+}
+
+func (o *Option) UnmarshalYAML(value *yaml.Node) error {
+	if value.Kind == yaml.ScalarNode {
+		o.Value = value.Value
+		o.Type = ""
+		return nil
+	}
+	type Alias Option
+	var aux Alias
+	if err := value.Decode(&aux); err != nil {
+		return err
+	}
+	o.Type = aux.Type
+	o.Value = aux.Value
+	return nil
+}
+
+func (o Option) MarshalYAML() (interface{}, error) {
+	if o.Type == "" {
+		return o.Value, nil
+	}
+	type Alias Option
+	return Alias(o), nil
 }

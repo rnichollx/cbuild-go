@@ -49,7 +49,7 @@ func handleInit(workspacePath string, args []string) error {
 
 	ws := &ccommon.Workspace{
 		WorkspacePath: targetPath,
-		Targets:       make(map[string]*ccommon.Target),
+		Targets:       make(map[string]*ccommon.TargetConfiguration),
 		CXXVersion:    "20",
 	}
 

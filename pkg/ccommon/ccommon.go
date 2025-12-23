@@ -41,78 +41,14 @@ type BuildParameters struct {
 type Workspace struct {
 	WorkspacePath string `yaml:"-"`
 
-	Targets map[string]*Target `yaml:"targets"`
+	Targets map[string]*TargetConfiguration `yaml:"targets"`
 
 	CMakeBinary *string `yaml:"cmake_binary"`
 	CXXVersion  string  `yaml:"cxx_version"`
 }
 
-type CMakeOption struct {
-	Type  string `yaml:"type"`
-	Value string `yaml:"value"`
-}
-
-func (o *CMakeOption) UnmarshalYAML(value *yaml.Node) error {
-	if value.Kind == yaml.ScalarNode {
-		o.Value = value.Value
-		o.Type = ""
-		return nil
-	}
-	type Alias CMakeOption
-	var aux Alias
-	if err := value.Decode(&aux); err != nil {
-		return err
-	}
-	o.Type = aux.Type
-	o.Value = aux.Value
-	return nil
-}
-
-func (o CMakeOption) MarshalYAML() (interface{}, error) {
-	if o.Type == "" {
-		return o.Value, nil
-	}
-	type Alias CMakeOption
-	return Alias(o), nil
-}
-
-type Target struct {
-	Depends                 []string               `yaml:"depends"`
-	ProjectType             string                 `yaml:"project_type"`
-	CMakePackageName        string                 `yaml:"cmake_package_name,omitempty"`
-	FindPackageRoot         *string                `yaml:"find_package_root,omitempty"`
-	Staged                  *bool                  `yaml:"staged,omitempty"`
-	ExternalSourceOverride  *string                `yaml:"external_source_override,omitempty"`
-	OverrideCMakeConfigPath *string                `yaml:"override_cmake_config_path,omitempty"`
-	ExtraCMakeConfigureArgs []string               `yaml:"extra_cmake_configure_args,omitempty"`
-	CMakeOptions            map[string]CMakeOption `yaml:"cmake_options,omitempty"`
-	CxxStandard             *string                `yaml:"cxx_standard,omitempty"`
-}
-
-func (m *Target) MarshalYAML() (interface{}, error) {
-	type Alias Target
-	node := &yaml.Node{}
-	err := node.Encode((*Alias)(m))
-	if err != nil {
-		return nil, err
-	}
-
-	for i := 0; i < len(node.Content); i += 2 {
-		if node.Content[i].Value == "extra_cmake_configure_args" {
-			valueNode := node.Content[i+1]
-			valueNode.Style = yaml.FlowStyle
-			for _, item := range valueNode.Content {
-				item.Style = yaml.DoubleQuotedStyle
-			}
-			break
-		}
-	}
-
-	return node, nil
-}
-
 // CMakeConfigureArgs returns the arguments to pass to cmake when configuring the module
-func (m *Target) CMakeConfigureArgs(workspace *Workspace, modname string, bp BuildParameters) ([]string, error) {
+func (m *TargetConfiguration) CMakeConfigureArgs(workspace *Workspace, modname string, bp BuildParameters) ([]string, error) {
 
 	args := []string{}
 
@@ -224,7 +160,7 @@ func (m *Target) CMakeConfigureArgs(workspace *Workspace, modname string, bp Bui
 	return args, nil
 }
 
-func (m *Target) CMakeSourcePath(workspace *Workspace, defaultRoot string) (string, error) {
+func (m *TargetConfiguration) CMakeSourcePath(workspace *Workspace, defaultRoot string) (string, error) {
 	path := m.ExternalSourceOverride
 	if path == nil {
 		return filepath.Join(workspace.WorkspacePath, "sources", defaultRoot), nil
@@ -237,7 +173,7 @@ func (m *Target) CMakeSourcePath(workspace *Workspace, defaultRoot string) (stri
 	return filepath.Join(workspace.WorkspacePath, "sources", *path), nil
 }
 
-func (m *Target) CMakeConfigPath(workspace *Workspace, defaultRoot string, bp BuildParameters) (string, error) {
+func (m *TargetConfiguration) CMakeConfigPath(workspace *Workspace, defaultRoot string, bp BuildParameters) (string, error) {
 
 	buildPath, err := m.CMakeBuildPath(workspace, defaultRoot, bp)
 	if err != nil {
@@ -251,20 +187,20 @@ func (m *Target) CMakeConfigPath(workspace *Workspace, defaultRoot string, bp Bu
 	return buildPath, nil
 }
 
-func (m *Target) CMakeBuildPath(workspace *Workspace, defaultRoot string, bp BuildParameters) (string, error) {
+func (m *TargetConfiguration) CMakeBuildPath(workspace *Workspace, defaultRoot string, bp BuildParameters) (string, error) {
 	return filepath.Join(workspace.WorkspacePath, "buildspaces", bp.Toolchain, defaultRoot, bp.BuildType), nil
 }
 
-func (m *Target) CMakeStagingPath(workspace *Workspace, defaultRoot string, bp BuildParameters) (string, error) {
+func (m *TargetConfiguration) CMakeStagingPath(workspace *Workspace, defaultRoot string, bp BuildParameters) (string, error) {
 	return filepath.Join(workspace.WorkspacePath, "staging", bp.Toolchain, bp.BuildType, defaultRoot), nil
 }
 
-func (m *Target) CMakeExportPath(workspace *Workspace, defaultRoot string, bp BuildParameters) (string, error) {
+func (m *TargetConfiguration) CMakeExportPath(workspace *Workspace, defaultRoot string, bp BuildParameters) (string, error) {
 	return filepath.Join(workspace.WorkspacePath, "exports", bp.Toolchain, defaultRoot, bp.BuildType), nil
 }
 
 // CMakeDependencyArgs returns the arguments to pass to cmake when configuring another module that depends on this module
-func (m *Target) CMakeDependencyArgs(workspace *Workspace, modname string, bp BuildParameters) ([]string, error) {
+func (m *TargetConfiguration) CMakeDependencyArgs(workspace *Workspace, modname string, bp BuildParameters) ([]string, error) {
 	args := []string{}
 
 	if m.Staged != nil && *m.Staged {
@@ -380,7 +316,7 @@ func (w *Workspace) LoadToolchain(toolchainName string) (*Toolchain, string, err
 	return tc, toolchainDir, nil
 }
 
-func (w *Workspace) ToolchainFilePath(mod *Target, bp BuildParameters) (string, error) {
+func (w *Workspace) ToolchainFilePath(mod *TargetConfiguration, bp BuildParameters) (string, error) {
 	tc, tcPath, err := w.LoadToolchain(bp.Toolchain)
 	if err != nil {
 		return "", fmt.Errorf("failed to load toolchain: %w", err)
@@ -499,7 +435,7 @@ func (w *Workspace) Exec(command string, args []string, dryRun bool) error {
 	return cmd.Run()
 }
 
-func (w *Workspace) buildModule(mod *Target, modname string, builtModules map[string]bool, bp BuildParameters) error {
+func (w *Workspace) buildModule(mod *TargetConfiguration, modname string, builtModules map[string]bool, bp BuildParameters) error {
 
 	if builtModules[modname] {
 		return nil
@@ -548,7 +484,7 @@ func (w *Workspace) buildModule(mod *Target, modname string, builtModules map[st
 	}
 
 	// Build the module
-	buildCmd := []string{"--build", buildPath, "-j"}
+	buildCmd := []string{"--build", buildPath}
 
 	err = w.Exec(cmakeBinary, buildCmd, bp.DryRun)
 	if err != nil {
@@ -615,71 +551,44 @@ func (w *Workspace) ProcessCSetupFile(targetName string) error {
 
 	reader := bufio.NewReader(os.Stdin)
 
-	// Process Dependencies
-	for _, dep := range csetup.Dependencies {
-		parts := strings.SplitN(dep, "/", 2)
-		depTargetName := parts[0]
-
-		found := false
-		for _, existingDep := range target.Depends {
-			if existingDep == dep {
-				found = true
-				break
-			}
-		}
-
-		if !found {
-			target.Depends = append(target.Depends, dep)
-			fmt.Printf("Added dependency '%s' to target '%s'.\n", dep, targetName)
-
-			// Also check if the dependency exists in the workspace
-			if _, exists := w.Targets[depTargetName]; !exists {
-				fmt.Printf("Warning: Dependency '%s' is not defined in the workspace.\n", depTargetName)
-			}
-		}
-	}
-
-	// Process CMakePackageName
-	if csetup.CMakePackageName != "" {
-		target.CMakePackageName = csetup.CMakePackageName
-		fmt.Printf("Set CMake package name for target '%s' to '%s'.\n", targetName, csetup.CMakePackageName)
-	}
+	// Replace all fields of TargetConfiguration with the DefaultConfiguration from the CSetup file,
+	// *except* ExternalSourceOverride if it is present, making sure to nil any existing fields not present
+	// in the DefaultConfiguration, excluding ExternalSourceOverride.
+	externalOverride := target.ExternalSourceOverride
+	*target = csetup.DefaultConfig
+	target.ExternalSourceOverride = externalOverride
 
 	// Process Suggested Dependencies
-	for depName, sdep := range csetup.SuggestedDeps {
+	for depName, sdep := range csetup.SuggestedSources {
+		if err := sdep.ValidateWeb(); err != nil {
+			return fmt.Errorf("invalid suggested source for dependency %s: %w", depName, err)
+		}
+
 		if _, exists := w.Targets[depName]; !exists {
-			fmt.Printf("Dependency '%s' is not present in sources, module '%s' suggests getting it from '%s', download it? [Y/n] ", depName, targetName, sdep.URL)
+			fmt.Printf("Dependency '%s' is not present in sources, module '%s' suggests getting it from '%s', download it? [Y/n] ", depName, targetName, sdep.From())
 			response, err := reader.ReadString('\n')
 			if err != nil {
 				return fmt.Errorf("error reading input: %w", err)
 			}
 			response = strings.ToLower(strings.TrimSpace(response))
 			if response == "" || response == "y" || response == "yes" {
-				fmt.Printf("Downloading '%s' from '%s'...\n", depName, sdep.URL)
-
-				destDir := filepath.Join(w.WorkspacePath, "sources", depName)
-				cmd := exec.Command("git", "clone", sdep.URL, destDir)
-				cmd.Stdout = os.Stdout
-				cmd.Stderr = os.Stderr
-				err := cmd.Run()
+				err := w.Get(depName, sdep)
 				if err != nil {
 					return fmt.Errorf("failed to download '%s': %w", depName, err)
-				} else {
-					// Add to workspace targets
-					w.Targets[depName] = &Target{
-						ProjectType: "CMake",
-					}
-					fmt.Printf("Added target '%s' to workspace.\n", depName)
+				}
 
-					// Also add it as a dependency to the current target
-					target.Depends = append(target.Depends, depName)
-					fmt.Printf("Added dependency '%s' to target '%s'.\n", depName, targetName)
+				// Add to workspace targets
+				w.Targets[depName] = &TargetConfiguration{}
+				fmt.Printf("Added target '%s' to workspace.\n", depName)
 
-					// Recursively process the new target's csetup file
-					err = w.ProcessCSetupFile(depName)
-					if err != nil {
-						return fmt.Errorf("error processing csetup file for %s: %w", depName, err)
-					}
+				// Also add it as a dependency to the current target
+				target.Depends = append(target.Depends, depName)
+				fmt.Printf("Added dependency '%s' to target '%s'.\n", depName, targetName)
+
+				// Recursively process the new target's csetup file
+				err = w.ProcessCSetupFile(depName)
+				if err != nil {
+					return fmt.Errorf("error processing csetup file for %s: %w", depName, err)
 				}
 			}
 		}
