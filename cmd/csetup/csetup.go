@@ -9,38 +9,10 @@ import (
 	"path/filepath"
 )
 
-func main() {
-	flags := []cli.Flag{
-		ccommon.WorkspaceFlag,
-		ccommon.ConfigFlag,
-		ccommon.ToolchainFlag,
-		ccommon.ReinitFlag,
-		ccommon.DownloadDepsFlag,
-		ccommon.DeleteFlag,
-	}
-
-	ctx, args, parseErr := cli.ParseFlags(context.Background(), cli.ParseOptions{Flags: flags}, os.Args[1:])
-	if parseErr != nil {
-		fmt.Fprintf(os.Stderr, "Error parsing flags: %v\n", parseErr)
-		os.Exit(1)
-	}
-
+func getWorkspacePath(ctx context.Context) string {
 	workspacePath := cli.GetString(ctx, cli.FlagKey(ccommon.FlagWorkspace))
 	if workspacePath == "" {
 		workspacePath = "."
-	}
-
-	if len(args) < 1 {
-		printUsage()
-		os.Exit(1)
-	}
-
-	subcommand := args[0]
-	subArgs := args[1:]
-
-	if subcommand == "" {
-		printUsage()
-		os.Exit(1)
 	}
 
 	// Try to find the workspace by looking up from current directory
@@ -71,61 +43,120 @@ func main() {
 			workspacePath = absPath
 		}
 	}
+	return workspacePath
+}
 
-	var err error
-	switch subcommand {
-	case "init":
-		err = handleInit(ctx, workspacePath, subArgs)
-	case "git-clone":
-		err = handleGitClone(ctx, workspacePath, subArgs)
-	case "add-dependency":
-		err = handleAddDependency(ctx, workspacePath, subArgs)
-	case "remove-dependency":
-		err = handleRemoveDependency(ctx, workspacePath, subArgs)
-	case "remove-source":
-		err = handleRemoveSource(ctx, workspacePath, subArgs)
-	case "set-cxx-version":
-		err = handleSetCXXVersion(ctx, workspacePath, subArgs)
-	case "enable-staging":
-		err = handleEnableStaging(ctx, workspacePath, subArgs)
-	case "disable-staging":
-		err = handleDisableStaging(ctx, workspacePath, subArgs)
-	case "list-sources":
-		err = handleListSources(ctx, workspacePath, subArgs)
-	case "get-args":
-		err = handleGetArgs(ctx, workspacePath, subArgs)
-	case "detect-toolchains":
-		err = handleDetectToolchains(ctx, workspacePath, subArgs)
-	case "add-config":
-		err = handleAddConfig(ctx, workspacePath, subArgs)
-	case "remove-config":
-		err = handleRemoveConfig(ctx, workspacePath, subArgs)
-	default:
-		fmt.Fprintf(os.Stderr, "Unknown subcommand: %s\n", subcommand)
-		printUsage()
-		os.Exit(1)
+func main() {
+	runner := &cli.Runner{
+		Name:        "csetup",
+		Description: "Workspace setup tool for cbuild",
+		GlobalFlags: []cli.Flag{
+			ccommon.WorkspaceFlag,
+			ccommon.HelpFlag,
+		},
+		Subcommands: make(map[string]*cli.Subcommand),
 	}
 
-	if err != nil {
+	runner.Subcommands["init"] = &cli.Subcommand{
+		Description:  "Initialize a new workspace",
+		AllowArgs:    true,
+		AcceptsFlags: []cli.Flag{ccommon.ReinitFlag},
+		Exec: func(ctx context.Context, args []string) error {
+			return handleInit(ctx, getWorkspacePath(ctx), args)
+		},
+	}
+	runner.Subcommands["git-clone"] = &cli.Subcommand{
+		Description:  "Clone a git repository into the workspace",
+		AllowArgs:    true,
+		AcceptsFlags: []cli.Flag{ccommon.DownloadDepsFlag},
+		Exec: func(ctx context.Context, args []string) error {
+			return handleGitClone(ctx, getWorkspacePath(ctx), args)
+		},
+	}
+	runner.Subcommands["add-dependency"] = &cli.Subcommand{
+		Description: "Add a dependency to a source",
+		AllowArgs:   true,
+		Exec: func(ctx context.Context, args []string) error {
+			return handleAddDependency(ctx, getWorkspacePath(ctx), args)
+		},
+	}
+	runner.Subcommands["remove-dependency"] = &cli.Subcommand{
+		Description: "Remove a dependency from a source",
+		AllowArgs:   true,
+		Exec: func(ctx context.Context, args []string) error {
+			return handleRemoveDependency(ctx, getWorkspacePath(ctx), args)
+		},
+	}
+	runner.Subcommands["remove-source"] = &cli.Subcommand{
+		Description:  "Remove a source from the workspace",
+		AllowArgs:    true,
+		AcceptsFlags: []cli.Flag{ccommon.DeleteFlag},
+		Exec: func(ctx context.Context, args []string) error {
+			return handleRemoveSource(ctx, getWorkspacePath(ctx), args)
+		},
+	}
+	runner.Subcommands["set-cxx-version"] = &cli.Subcommand{
+		Description: "Set the C++ version for a source or the whole workspace",
+		AllowArgs:   true,
+		Exec: func(ctx context.Context, args []string) error {
+			return handleSetCXXVersion(ctx, getWorkspacePath(ctx), args)
+		},
+	}
+	runner.Subcommands["enable-staging"] = &cli.Subcommand{
+		Description: "Enable staging for a source",
+		AllowArgs:   true,
+		Exec: func(ctx context.Context, args []string) error {
+			return handleEnableStaging(ctx, getWorkspacePath(ctx), args)
+		},
+	}
+	runner.Subcommands["disable-staging"] = &cli.Subcommand{
+		Description: "Disable staging for a source",
+		AllowArgs:   true,
+		Exec: func(ctx context.Context, args []string) error {
+			return handleDisableStaging(ctx, getWorkspacePath(ctx), args)
+		},
+	}
+	runner.Subcommands["list-sources"] = &cli.Subcommand{
+		Description: "List all sources in the workspace",
+		AllowArgs:   true,
+		Exec: func(ctx context.Context, args []string) error {
+			return handleListSources(ctx, getWorkspacePath(ctx), args)
+		},
+	}
+	runner.Subcommands["get-args"] = &cli.Subcommand{
+		Description:  "Get build arguments for a target",
+		AllowArgs:    true,
+		AcceptsFlags: []cli.Flag{ccommon.ConfigFlag, ccommon.ToolchainFlag},
+		Exec: func(ctx context.Context, args []string) error {
+			return handleGetArgs(ctx, getWorkspacePath(ctx), args)
+		},
+	}
+	runner.Subcommands["detect-toolchains"] = &cli.Subcommand{
+		Description: "Detect system toolchains",
+		AllowArgs:   true,
+		Exec: func(ctx context.Context, args []string) error {
+			return handleDetectToolchains(ctx, getWorkspacePath(ctx), args)
+		},
+	}
+	runner.Subcommands["add-config"] = &cli.Subcommand{
+		Description:  "Add a build configuration",
+		AllowArgs:    true,
+		AcceptsFlags: []cli.Flag{ccommon.ConfigFlag, ccommon.ToolchainFlag},
+		Exec: func(ctx context.Context, args []string) error {
+			return handleAddConfig(ctx, getWorkspacePath(ctx), args)
+		},
+	}
+	runner.Subcommands["remove-config"] = &cli.Subcommand{
+		Description:  "Remove a build configuration",
+		AllowArgs:    true,
+		AcceptsFlags: []cli.Flag{ccommon.ConfigFlag},
+		Exec: func(ctx context.Context, args []string) error {
+			return handleRemoveConfig(ctx, getWorkspacePath(ctx), args)
+		},
+	}
+
+	if err := runner.Run(context.Background(), os.Args[1:]); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
 	}
-}
-
-func printUsage() {
-	fmt.Println("Usage: csetup [-w workspace] <subcommand> [args]")
-	fmt.Println("Subcommands:")
-	fmt.Println("  init <workspace name> [--reinit]")
-	fmt.Println("  git-clone <repo_url> [dest_name] [--download-deps]")
-	fmt.Println("  add-dependency <source> <depname>")
-	fmt.Println("  remove-dependency <source> <depname>")
-	fmt.Println("  remove-source <source> [-D|--delete]")
-	fmt.Println("  set-cxx-version <version> [<source>]")
-	fmt.Println("  enable-staging <source>")
-	fmt.Println("  disable-staging <source>")
-	fmt.Println("  list-sources")
-	fmt.Println("  get-args <target> [-T|--toolchain <toolchain>] [-c|--config <type>]")
-	fmt.Println("  detect-toolchains")
-	fmt.Println("  add-config <configname>")
-	fmt.Println("  remove-config <configname>")
 }

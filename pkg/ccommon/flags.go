@@ -13,6 +13,7 @@ const (
 	FlagReinit    FlagKey = "reinit"
 	FlagDownload  FlagKey = "download-deps"
 	FlagDelete    FlagKey = "delete"
+	FlagHelp      FlagKey = "help"
 )
 
 type FlagKey string
@@ -26,11 +27,13 @@ var (
 
 	ToolchainFlag = cli.NewStringFlag("T", "toolchain", cli.FlagKey(FlagToolchain), "toolchain to use")
 
-	DryRunFlag = cli.NewBoolFlag("", "dry-run", cli.FlagKey(FlagDryRun), "show commands without executing them")
+	DryRunFlag = cli.NewBoolFlag("d", "dry-run", cli.FlagKey(FlagDryRun), "show commands without executing them")
 
 	ReinitFlag = cli.NewBoolFlag("", "reinit", cli.FlagKey(FlagReinit), "reinitialize the workspace")
 
 	DownloadDepsFlag = cli.NewBoolFlag("", "download-deps", cli.FlagKey(FlagDownload), "download dependencies during clone")
 
-	DeleteFlag = cli.NewBoolFlag("D", "delete", cli.FlagKey(FlagDelete), "delete files when removing source")
+	DeleteFlag = cli.NewBoolFlag("X", "delete", cli.FlagKey(FlagDelete), "delete files when removing source")
+
+	HelpFlag = cli.NewBoolFlag("h", "help", cli.FlagKey(FlagHelp), "show this help message")
 )

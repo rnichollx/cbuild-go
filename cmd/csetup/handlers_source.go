@@ -112,7 +112,7 @@ func handleRemoveSource(ctx context.Context, workspacePath string, args []string
 			fmt.Printf("Source folder %s not found, skipping deletion.\n", sourceDir)
 		}
 	} else {
-		fmt.Printf("Note: files in sources/%s were NOT deleted. Use -R to delete them.\n", source)
+		fmt.Printf("Note: files in sources/%s were NOT deleted. Use -X to delete them.\n", source)
 	}
 	return nil
 }
