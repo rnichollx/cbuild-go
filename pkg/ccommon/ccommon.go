@@ -187,11 +187,9 @@ func (m *Target) CMakeConfigureArgs(workspace *Workspace, modname string, bp Bui
 		}
 	}
 
-	if len(stagedPaths) > 0 {
-		paths := strings.Join(stagedPaths, ";")
-		args = append(args, fmt.Sprintf("-DCMAKE_PREFIX_PATH=%s", paths))
-		args = append(args, fmt.Sprintf("-DCMAKE_MODULE_PATH=%s", paths))
-	}
+	paths := strings.Join(stagedPaths, ";")
+	args = append(args, fmt.Sprintf("-DCMAKE_PREFIX_PATH=%s", paths))
+	args = append(args, fmt.Sprintf("-DCMAKE_MODULE_PATH=%s", paths))
 
 	for _, dep := range m.Depends {
 		parts := strings.SplitN(dep, "/", 2)

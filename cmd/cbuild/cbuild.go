@@ -98,7 +98,7 @@ func main() {
 		}
 
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error building workspace for toolchain %s: %v\n", tc, err)
+			_, _ = fmt.Fprintf(os.Stderr, "Error building workspace for toolchain %s: %v\n", tc, err)
 			os.Exit(1)
 		}
 	}

@@ -82,10 +82,15 @@ func GenerateToolchainFile(opts GenerateToolchainFileOptions) error {
 	sb.WriteString(fmt.Sprintf("set(CMAKE_C_FLAGS_INIT \"%s\")\n", cFlags))
 	sb.WriteString(fmt.Sprintf("set(CMAKE_CXX_FLAGS_INIT \"%s\")\n", cxxFlags))
 
-	sb.WriteString("set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)\n")
-	sb.WriteString("set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)\n")
-	sb.WriteString("set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)\n")
-	sb.WriteString("set(CMAKE_FIND_ROOT_PATH_MODE_PACKAGE ONLY)\n")
+	//sb.WriteString("set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)\n")
+	//sb.WriteString("set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)\n")
+	//sb.WriteString("set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)\n")
+	sb.WriteString("set(CMAKE_FIND_ROOT_PATH_MODE_PACKAGE NEVER)\n")
+	//sb.WriteString("set(CMAKE_FIND_PACKAGE_PREFER_CONFIG TRUE)\n")
+
+	// sb.WriteString("set(CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH OFF)\n")
+	//sb.WriteString("set(CMAKE_FIND_USE_SYSTEM_PACKAGE_REGISTRY OFF)\n")
+	//sb.WriteString("set(CMAKE_FIND_USE_PACKAGE_REGISTRY OFF)\n")
 
 	err = os.MkdirAll(filepath.Dir(opts.OutputFile), 0755)
 	if err != nil {
