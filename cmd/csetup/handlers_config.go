@@ -6,12 +6,15 @@ import (
 )
 
 func handleSetCXXVersion(workspacePath string, args []string) error {
-	if len(args) < 2 {
-		return fmt.Errorf("usage: csetup set-cxx-version <source> <version>")
+	if len(args) < 1 {
+		return fmt.Errorf("usage: csetup set-cxx-version <version> [<source>]")
 	}
 
-	source := args[0]
-	version := args[1]
+	version := args[0]
+	var source string
+	if len(args) > 1 {
+		source = args[1]
+	}
 
 	ws := &ccommon.Workspace{}
 	err := ws.Load(workspacePath)
@@ -19,13 +22,23 @@ func handleSetCXXVersion(workspacePath string, args []string) error {
 		return fmt.Errorf("error loading workspace: %w", err)
 	}
 
-	ws.CXXVersion = version
+	if source != "" {
+		target, ok := ws.Targets[source]
+		if !ok {
+			return fmt.Errorf("source %s not found in workspace", source)
+		}
+		target.CxxStandard = &version
+		fmt.Printf("Set CXX version for %s to %s\n", source, version)
+	} else {
+		ws.CXXVersion = version
+		fmt.Printf("Set global CXX version to %s\n", version)
+	}
+
 	err = ws.Save()
 	if err != nil {
 		return fmt.Errorf("error saving workspace: %w", err)
 	}
 
-	fmt.Printf("Set CXX version to %s (source argument %s was ignored as it is currently global)\n", version, source)
 	return nil
 }
 

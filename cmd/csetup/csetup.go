@@ -128,7 +128,7 @@ func printUsage() {
 	fmt.Println("  add-dependency <source> <depname>")
 	fmt.Println("  remove-dependency <source> <depname>")
 	fmt.Println("  remove-source <source> [-D|--delete]")
-	fmt.Println("  set-cxx-version <source> <version>")
+	fmt.Println("  set-cxx-version <version> [<source>]")
 	fmt.Println("  enable-staging <source>")
 	fmt.Println("  disable-staging <source>")
 	fmt.Println("  list-sources")
