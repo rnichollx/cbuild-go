@@ -35,8 +35,15 @@ func main() {
 	command := "build"
 	args := flag.Args()
 	if len(args) > 0 {
-		if args[0] == "clean" || args[0] == "build" {
+		if args[0] == "clean" || args[0] == "build" || args[0] == "build-deps" {
 			command = args[0]
+			if command == "build-deps" {
+				if len(args) < 2 {
+					fmt.Fprintf(os.Stderr, "Usage: cbuild build-deps <sourcename>\n")
+					os.Exit(1)
+				}
+				targetName = args[1]
+			}
 		} else {
 			fmt.Fprintf(os.Stderr, "Unknown command: %s\n", args[0])
 			os.Exit(1)
@@ -91,7 +98,9 @@ func main() {
 			DryRun:    dryRun,
 		}
 
-		if targetName != "" {
+		if command == "build-deps" {
+			err = ws.BuildDependencies(targetName, bp)
+		} else if targetName != "" {
 			err = ws.BuildTarget(targetName, bp)
 		} else {
 			err = ws.Build(bp)

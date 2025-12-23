@@ -398,6 +398,35 @@ func (w *Workspace) BuildTarget(targetName string, bp BuildParameters) error {
 	return w.buildModule(mod, targetName, builtModules, bp)
 }
 
+func (w *Workspace) BuildDependencies(targetName string, bp BuildParameters) error {
+	_, err := w.Prebuild(bp)
+	if err != nil {
+		return err
+	}
+
+	var builtModules = make(map[string]bool)
+
+	mod, ok := w.Targets[targetName]
+	if !ok {
+		return fmt.Errorf("unknown target %s", targetName)
+	}
+
+	for _, dep := range mod.Depends {
+		parts := strings.SplitN(dep, "/", 2)
+		depTargetName := parts[0]
+		depMod, ok := w.Targets[depTargetName]
+		if !ok {
+			return fmt.Errorf("depends on unknown target %s", depTargetName)
+		}
+		err := w.buildModule(depMod, depTargetName, builtModules, bp)
+		if err != nil {
+			return fmt.Errorf("failed to build dependency %s: %w", depTargetName, err)
+		}
+	}
+
+	return nil
+}
+
 func (w *Workspace) Clean(toolchain string, dryRun bool) error {
 	cleanPath := filepath.Join(w.WorkspacePath, "buildspaces")
 	if toolchain != "all" && toolchain != "" {
