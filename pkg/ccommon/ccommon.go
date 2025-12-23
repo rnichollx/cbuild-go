@@ -43,8 +43,9 @@ type Workspace struct {
 
 	Targets map[string]*TargetConfiguration `yaml:"targets"`
 
-	CMakeBinary *string `yaml:"cmake_binary"`
-	CXXVersion  string  `yaml:"cxx_version"`
+	CMakeBinary    *string  `yaml:"cmake_binary"`
+	CXXVersion     string   `yaml:"cxx_version"`
+	Configurations []string `yaml:"configurations"`
 }
 
 // CMakeConfigureArgs returns the arguments to pass to cmake when configuring the module
@@ -266,6 +267,10 @@ func (w *Workspace) Load(path string) error {
 
 	if err != nil {
 		return fmt.Errorf("failed to parse config file: %w", err)
+	}
+
+	if len(w.Configurations) == 0 {
+		w.Configurations = []string{"Debug", "Release"}
 	}
 
 	return nil

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 func main() {
@@ -15,8 +16,8 @@ func main() {
 	var toolchain string
 	var dryRun bool
 
-	flag.StringVar(&buildConfig, "c", "Debug", "build configuration to use (e.g., Debug, Release)")
-	flag.StringVar(&buildConfig, "config", "Debug", "build configuration to use (e.g., Debug, Release)")
+	flag.StringVar(&buildConfig, "c", "", "build configuration to use (e.g., Debug, Release), comma separated. Defaults to all configs in workspace.")
+	flag.StringVar(&buildConfig, "config", "", "build configuration to use (e.g., Debug, Release), comma separated. Defaults to all configs in workspace.")
 
 	flag.StringVar(&workspacePath, "w", ".", "path to the workspace directory")
 	flag.StringVar(&workspacePath, "workspace", ".", "path to the workspace directory")
@@ -89,26 +90,36 @@ func main() {
 		toolchains = append(toolchains, toolchain)
 	}
 
+	configs := []string{}
+	if buildConfig == "" {
+		configs = ws.Configurations
+	} else {
+		configs = strings.Split(buildConfig, ",")
+	}
+
 	for _, tc := range toolchains {
-		fmt.Printf("Building with toolchain: %s, config: %s\n", tc, buildConfig)
+		for _, cfg := range configs {
+			cfg = strings.TrimSpace(cfg)
+			fmt.Printf("Building with toolchain: %s, config: %s\n", tc, cfg)
 
-		bp := ccommon.BuildParameters{
-			Toolchain: tc,
-			BuildType: buildConfig,
-			DryRun:    dryRun,
-		}
+			bp := ccommon.BuildParameters{
+				Toolchain: tc,
+				BuildType: cfg,
+				DryRun:    dryRun,
+			}
 
-		if command == "build-deps" {
-			err = ws.BuildDependencies(targetName, bp)
-		} else if targetName != "" {
-			err = ws.BuildTarget(targetName, bp)
-		} else {
-			err = ws.Build(bp)
-		}
+			if command == "build-deps" {
+				err = ws.BuildDependencies(targetName, bp)
+			} else if targetName != "" {
+				err = ws.BuildTarget(targetName, bp)
+			} else {
+				err = ws.Build(bp)
+			}
 
-		if err != nil {
-			_, _ = fmt.Fprintf(os.Stderr, "Error building workspace for toolchain %s: %v\n", tc, err)
-			os.Exit(1)
+			if err != nil {
+				_, _ = fmt.Fprintf(os.Stderr, "Error building workspace for toolchain %s, config %s: %v\n", tc, cfg, err)
+				os.Exit(1)
+			}
 		}
 	}
 

@@ -101,3 +101,72 @@ func handleDisableStaging(workspacePath string, args []string) error {
 	fmt.Printf("Disabled staging for %s\n", source)
 	return nil
 }
+
+func handleAddConfig(workspacePath string, args []string) error {
+	if len(args) < 1 {
+		return fmt.Errorf("usage: csetup add-config <configname>")
+	}
+
+	configName := args[0]
+
+	ws := &ccommon.Workspace{}
+	err := ws.Load(workspacePath)
+	if err != nil {
+		return fmt.Errorf("error loading workspace: %w", err)
+	}
+
+	for _, cfg := range ws.Configurations {
+		if cfg == configName {
+			fmt.Printf("Configuration %s already exists\n", configName)
+			return nil
+		}
+	}
+
+	ws.Configurations = append(ws.Configurations, configName)
+
+	err = ws.Save()
+	if err != nil {
+		return fmt.Errorf("error saving workspace: %w", err)
+	}
+
+	fmt.Printf("Added configuration %s\n", configName)
+	return nil
+}
+
+func handleRemoveConfig(workspacePath string, args []string) error {
+	if len(args) < 1 {
+		return fmt.Errorf("usage: csetup remove-config <configname>")
+	}
+
+	configName := args[0]
+
+	ws := &ccommon.Workspace{}
+	err := ws.Load(workspacePath)
+	if err != nil {
+		return fmt.Errorf("error loading workspace: %w", err)
+	}
+
+	found := false
+	newConfigs := []string{}
+	for _, cfg := range ws.Configurations {
+		if cfg == configName {
+			found = true
+			continue
+		}
+		newConfigs = append(newConfigs, cfg)
+	}
+
+	if !found {
+		return fmt.Errorf("configuration %s not found", configName)
+	}
+
+	ws.Configurations = newConfigs
+
+	err = ws.Save()
+	if err != nil {
+		return fmt.Errorf("error saving workspace: %w", err)
+	}
+
+	fmt.Printf("Removed configuration %s\n", configName)
+	return nil
+}

@@ -108,6 +108,10 @@ func main() {
 		err = handleGetArgs(workspacePath, subArgs)
 	case "detect-toolchains":
 		err = handleDetectToolchains(workspacePath, subArgs)
+	case "add-config":
+		err = handleAddConfig(workspacePath, subArgs)
+	case "remove-config":
+		err = handleRemoveConfig(workspacePath, subArgs)
 	default:
 		fmt.Fprintf(os.Stderr, "Unknown subcommand: %s\n", subcommand)
 		printUsage()
@@ -134,4 +138,6 @@ func printUsage() {
 	fmt.Println("  list-sources")
 	fmt.Println("  get-args <target> [--toolchain <toolchain>] [--build-type <type>]")
 	fmt.Println("  detect-toolchains")
+	fmt.Println("  add-config <configname>")
+	fmt.Println("  remove-config <configname>")
 }
