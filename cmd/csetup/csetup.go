@@ -1,54 +1,42 @@
 package main
 
 import (
-	"flag"
+	"cbuild-go/pkg/ccommon"
+	"cbuild-go/pkg/cli"
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 )
 
 func main() {
-	var workspacePath string
+	flags := []cli.Flag{
+		ccommon.WorkspaceFlag,
+		ccommon.ConfigFlag,
+		ccommon.ToolchainFlag,
+		ccommon.ReinitFlag,
+		ccommon.DownloadDepsFlag,
+		ccommon.DeleteFlag,
+	}
 
-	// Common flags
-	fs := flag.NewFlagSet("csetup", flag.ExitOnError)
-	fs.StringVar(&workspacePath, "w", ".", "path to the workspace directory")
-	fs.StringVar(&workspacePath, "workspace", ".", "path to the workspace directory")
+	ctx, args, parseErr := cli.ParseFlags(context.Background(), os.Args[1:], flags)
+	if parseErr != nil {
+		fmt.Fprintf(os.Stderr, "Error parsing flags: %v\n", parseErr)
+		os.Exit(1)
+	}
 
-	if len(os.Args) < 2 {
+	workspacePath := cli.GetString(ctx, cli.FlagKey(ccommon.FlagWorkspace))
+	if workspacePath == "" {
+		workspacePath = "."
+	}
+
+	if len(args) < 1 {
 		printUsage()
 		os.Exit(1)
 	}
 
-	// We need to parse common flags that might appear before or after the subcommand
-	// But the requirement says "csetup git-clone ...", so let's check for subcommand first.
-
-	subcommand := ""
-	subArgs := []string{}
-
-	// Basic parsing to handle flags before/after subcommand
-	args := os.Args[1:]
-	for i := 0; i < len(args); i++ {
-		arg := args[i]
-		if strings.HasPrefix(arg, "-") {
-			if arg == "-w" || arg == "--workspace" {
-				if i+1 < len(args) {
-					workspacePath = args[i+1]
-					i++
-				} else {
-					fmt.Fprintf(os.Stderr, "Error: flag %s requires an argument\n", arg)
-					os.Exit(1)
-				}
-			} else {
-				// Ignore other flags for now or handle them
-			}
-		} else if subcommand == "" {
-			subcommand = arg
-			subArgs = args[i+1:]
-			break
-		}
-	}
+	subcommand := args[0]
+	subArgs := args[1:]
 
 	if subcommand == "" {
 		printUsage()
@@ -87,31 +75,31 @@ func main() {
 	var err error
 	switch subcommand {
 	case "init":
-		err = handleInit(workspacePath, subArgs)
+		err = handleInit(ctx, workspacePath, subArgs)
 	case "git-clone":
-		err = handleGitClone(workspacePath, subArgs)
+		err = handleGitClone(ctx, workspacePath, subArgs)
 	case "add-dependency":
-		err = handleAddDependency(workspacePath, subArgs)
+		err = handleAddDependency(ctx, workspacePath, subArgs)
 	case "remove-dependency":
-		err = handleRemoveDependency(workspacePath, subArgs)
+		err = handleRemoveDependency(ctx, workspacePath, subArgs)
 	case "remove-source":
-		err = handleRemoveSource(workspacePath, subArgs)
+		err = handleRemoveSource(ctx, workspacePath, subArgs)
 	case "set-cxx-version":
-		err = handleSetCXXVersion(workspacePath, subArgs)
+		err = handleSetCXXVersion(ctx, workspacePath, subArgs)
 	case "enable-staging":
-		err = handleEnableStaging(workspacePath, subArgs)
+		err = handleEnableStaging(ctx, workspacePath, subArgs)
 	case "disable-staging":
-		err = handleDisableStaging(workspacePath, subArgs)
+		err = handleDisableStaging(ctx, workspacePath, subArgs)
 	case "list-sources":
-		err = handleListSources(workspacePath, subArgs)
+		err = handleListSources(ctx, workspacePath, subArgs)
 	case "get-args":
-		err = handleGetArgs(workspacePath, subArgs)
+		err = handleGetArgs(ctx, workspacePath, subArgs)
 	case "detect-toolchains":
-		err = handleDetectToolchains(workspacePath, subArgs)
+		err = handleDetectToolchains(ctx, workspacePath, subArgs)
 	case "add-config":
-		err = handleAddConfig(workspacePath, subArgs)
+		err = handleAddConfig(ctx, workspacePath, subArgs)
 	case "remove-config":
-		err = handleRemoveConfig(workspacePath, subArgs)
+		err = handleRemoveConfig(ctx, workspacePath, subArgs)
 	default:
 		fmt.Fprintf(os.Stderr, "Unknown subcommand: %s\n", subcommand)
 		printUsage()

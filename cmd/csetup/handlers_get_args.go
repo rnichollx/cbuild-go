@@ -2,27 +2,25 @@ package main
 
 import (
 	"cbuild-go/pkg/ccommon"
+	"cbuild-go/pkg/cli"
+	"context"
 	"fmt"
 	"strings"
 )
 
-func handleGetArgs(workspacePath string, args []string) error {
+func handleGetArgs(ctx context.Context, workspacePath string, args []string) error {
 	if len(args) < 1 {
 		return fmt.Errorf("usage: csetup get-args <target> [-T|--toolchain <toolchain>] [-c|--config <type>]")
 	}
 
 	targetName := args[0]
-	toolchain := "default"
-	buildType := "Debug"
-
-	for i := 1; i < len(args); i++ {
-		if (args[i] == "-T" || args[i] == "--toolchain") && i+1 < len(args) {
-			toolchain = args[i+1]
-			i++
-		} else if (args[i] == "-c" || args[i] == "--config" || args[i] == "--build-type") && i+1 < len(args) {
-			buildType = args[i+1]
-			i++
-		}
+	toolchain := cli.GetString(ctx, cli.FlagKey(ccommon.FlagToolchain))
+	if toolchain == "" {
+		toolchain = "default"
+	}
+	buildType := cli.GetString(ctx, cli.FlagKey(ccommon.FlagConfig))
+	if buildType == "" {
+		buildType = "Debug"
 	}
 
 	ws := &ccommon.Workspace{}

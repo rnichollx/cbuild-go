@@ -2,10 +2,11 @@ package main
 
 import (
 	"cbuild-go/pkg/ccommon"
+	"context"
 	"fmt"
 )
 
-func handleSetCXXVersion(workspacePath string, args []string) error {
+func handleSetCXXVersion(ctx context.Context, workspacePath string, args []string) error {
 	if len(args) < 1 {
 		return fmt.Errorf("usage: csetup set-cxx-version <version> [<source>]")
 	}
@@ -42,7 +43,7 @@ func handleSetCXXVersion(workspacePath string, args []string) error {
 	return nil
 }
 
-func handleEnableStaging(workspacePath string, args []string) error {
+func handleEnableStaging(ctx context.Context, workspacePath string, args []string) error {
 	if len(args) < 1 {
 		return fmt.Errorf("usage: csetup enable-staging <source>")
 	}
@@ -72,7 +73,7 @@ func handleEnableStaging(workspacePath string, args []string) error {
 	return nil
 }
 
-func handleDisableStaging(workspacePath string, args []string) error {
+func handleDisableStaging(ctx context.Context, workspacePath string, args []string) error {
 	if len(args) < 1 {
 		return fmt.Errorf("usage: csetup disable-staging <source>")
 	}
@@ -102,7 +103,7 @@ func handleDisableStaging(workspacePath string, args []string) error {
 	return nil
 }
 
-func handleAddConfig(workspacePath string, args []string) error {
+func handleAddConfig(ctx context.Context, workspacePath string, args []string) error {
 	if len(args) < 1 {
 		return fmt.Errorf("usage: csetup add-config <configname>")
 	}
@@ -133,7 +134,7 @@ func handleAddConfig(workspacePath string, args []string) error {
 	return nil
 }
 
-func handleRemoveConfig(workspacePath string, args []string) error {
+func handleRemoveConfig(ctx context.Context, workspacePath string, args []string) error {
 	if len(args) < 1 {
 		return fmt.Errorf("usage: csetup remove-config <configname>")
 	}

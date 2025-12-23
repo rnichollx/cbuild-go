@@ -2,7 +2,8 @@ package main
 
 import (
 	"cbuild-go/pkg/ccommon"
-	"flag"
+	"cbuild-go/pkg/cli"
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -10,31 +11,33 @@ import (
 )
 
 func main() {
-	var buildConfig string
-	var workspacePath string
-	var targetName string
-	var toolchain string
-	var dryRun bool
+	flags := []cli.Flag{
+		ccommon.ConfigFlag,
+		ccommon.WorkspaceFlag,
+		ccommon.TargetFlag,
+		ccommon.ToolchainFlag,
+		ccommon.DryRunFlag,
+	}
 
-	flag.StringVar(&buildConfig, "c", "", "build configuration to use (e.g., Debug, Release), comma separated. Defaults to all configs in workspace.")
-	flag.StringVar(&buildConfig, "config", "", "build configuration to use (e.g., Debug, Release), comma separated. Defaults to all configs in workspace.")
+	ctx, args, err := cli.ParseFlags(context.Background(), os.Args[1:], flags)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error parsing flags: %v\n", err)
+		os.Exit(1)
+	}
 
-	flag.StringVar(&workspacePath, "w", ".", "path to the workspace directory")
-	flag.StringVar(&workspacePath, "workspace", ".", "path to the workspace directory")
-
-	flag.StringVar(&targetName, "t", "", "specific target to build")
-	flag.StringVar(&targetName, "target", "", "specific target to build")
-
-	flag.StringVar(&toolchain, "T", "all", "toolchain to use (use 'all' to build all toolchains)")
-	flag.StringVar(&toolchain, "toolchain", "all", "toolchain to use (use 'all' to build all toolchains)")
-
-	flag.BoolVar(&dryRun, "dry-run", false, "show commands without executing them")
-	flag.BoolVar(&dryRun, "dry_run", false, "show commands without executing them")
-
-	flag.Parse()
+	buildConfig := cli.GetString(ctx, cli.FlagKey(ccommon.FlagConfig))
+	workspacePath := cli.GetString(ctx, cli.FlagKey(ccommon.FlagWorkspace))
+	if workspacePath == "" {
+		workspacePath = "."
+	}
+	targetName := cli.GetString(ctx, cli.FlagKey(ccommon.FlagTarget))
+	toolchain := cli.GetString(ctx, cli.FlagKey(ccommon.FlagToolchain))
+	if toolchain == "" {
+		toolchain = "all"
+	}
+	dryRun := cli.GetBool(ctx, cli.FlagKey(ccommon.FlagDryRun))
 
 	command := "build"
-	args := flag.Args()
 	if len(args) > 0 {
 		if args[0] == "clean" || args[0] == "build" || args[0] == "build-deps" {
 			command = args[0]
@@ -52,7 +55,7 @@ func main() {
 	}
 
 	ws := &ccommon.Workspace{}
-	err := ws.Load(workspacePath)
+	err = ws.Load(workspacePath)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error loading configuration: %v\n", err)
 		os.Exit(1)

@@ -2,20 +2,20 @@ package main
 
 import (
 	"cbuild-go/pkg/ccommon"
+	"cbuild-go/pkg/cli"
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 )
 
-func handleInit(workspacePath string, args []string) error {
-	var reinit bool
+func handleInit(ctx context.Context, workspacePath string, args []string) error {
+	reinit := cli.GetBool(ctx, cli.FlagKey(ccommon.FlagReinit))
 	workspaceName := ""
 
 	for _, arg := range args {
-		if arg == "--reinit" {
-			reinit = true
-		} else if !strings.HasPrefix(arg, "-") && workspaceName == "" {
+		if !strings.HasPrefix(arg, "-") && workspaceName == "" {
 			workspaceName = arg
 		}
 	}

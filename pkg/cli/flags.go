@@ -23,6 +23,10 @@ type StringFlag struct {
 	description string
 }
 
+func NewStringFlag(short, long string, key FlagKey, description string) *StringFlag {
+	return &StringFlag{short: short, long: long, key: key, description: description}
+}
+
 func (s *StringFlag) Short() string            { return s.short }
 func (s *StringFlag) Long() string             { return s.long }
 func (s *StringFlag) Key() FlagKey             { return s.key }
@@ -35,6 +39,10 @@ type BoolFlag struct {
 	long        string
 	key         FlagKey
 	description string
+}
+
+func NewBoolFlag(short, long string, key FlagKey, description string) *BoolFlag {
+	return &BoolFlag{short: short, long: long, key: key, description: description}
 }
 
 func (b *BoolFlag) Short() string            { return b.short }
@@ -129,4 +137,20 @@ func ParseFlags(ctx context.Context, args []string, flags []Flag) (context.Conte
 	}
 
 	return ctx, nonFlagArgs, nil
+}
+
+func GetString(ctx context.Context, key FlagKey) string {
+	val := ctx.Value(key)
+	if val == nil {
+		return ""
+	}
+	return val.(string)
+}
+
+func GetBool(ctx context.Context, key FlagKey) bool {
+	val := ctx.Value(key)
+	if val == nil {
+		return false
+	}
+	return val.(string) == "true"
 }

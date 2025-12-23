@@ -3,6 +3,7 @@ package main
 import (
 	"cbuild-go/pkg/ccommon"
 	"cbuild-go/pkg/host"
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -12,7 +13,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-func handleDetectToolchains(workspacePath string, args []string) error {
+func handleDetectToolchains(ctx context.Context, workspacePath string, args []string) error {
 	ws := &ccommon.Workspace{}
 	err := ws.Load(workspacePath)
 	if err != nil {

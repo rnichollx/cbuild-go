@@ -2,10 +2,11 @@ package main
 
 import (
 	"cbuild-go/pkg/ccommon"
+	"context"
 	"fmt"
 )
 
-func handleAddDependency(workspacePath string, args []string) error {
+func handleAddDependency(ctx context.Context, workspacePath string, args []string) error {
 	if len(args) < 2 {
 		return fmt.Errorf("usage: csetup add-dependency <source> <depname>")
 	}
@@ -42,7 +43,7 @@ func handleAddDependency(workspacePath string, args []string) error {
 	return nil
 }
 
-func handleRemoveDependency(workspacePath string, args []string) error {
+func handleRemoveDependency(ctx context.Context, workspacePath string, args []string) error {
 	if len(args) < 2 {
 		return fmt.Errorf("usage: csetup remove-dependency <source> <depname>")
 	}

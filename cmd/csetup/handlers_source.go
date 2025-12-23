@@ -2,6 +2,8 @@ package main
 
 import (
 	"cbuild-go/pkg/ccommon"
+	"cbuild-go/pkg/cli"
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -9,7 +11,7 @@ import (
 	"strings"
 )
 
-func handleListSources(workspacePath string, args []string) error {
+func handleListSources(ctx context.Context, workspacePath string, args []string) error {
 	ws := &ccommon.Workspace{}
 	err := ws.Load(workspacePath)
 	if err != nil {
@@ -68,21 +70,13 @@ func handleListSources(workspacePath string, args []string) error {
 	return nil
 }
 
-func handleRemoveSource(workspacePath string, args []string) error {
+func handleRemoveSource(ctx context.Context, workspacePath string, args []string) error {
 	if len(args) < 1 {
 		return fmt.Errorf("usage: csetup remove-source <source> [-D|--delete]")
 	}
 
-	source := ""
-	removeFolder := false
-
-	for _, arg := range args {
-		if arg == "-D" || arg == "--delete" {
-			removeFolder = true
-		} else if !strings.HasPrefix(arg, "-") && source == "" {
-			source = arg
-		}
-	}
+	source := args[0]
+	removeFolder := cli.GetBool(ctx, cli.FlagKey(ccommon.FlagDelete))
 
 	if source == "" {
 		return fmt.Errorf("usage: csetup remove-source <source> [-D|--delete]")
@@ -123,19 +117,17 @@ func handleRemoveSource(workspacePath string, args []string) error {
 	return nil
 }
 
-func handleGitClone(workspacePath string, args []string) error {
+func handleGitClone(ctx context.Context, workspacePath string, args []string) error {
 	if len(args) < 1 {
 		return fmt.Errorf("usage: csetup git-clone <repo_url> [dest_name] [--download-deps]")
 	}
 
 	repoURL := ""
 	destName := ""
-	downloadDeps := false
+	downloadDeps := cli.GetBool(ctx, cli.FlagKey(ccommon.FlagDownload))
 
 	for _, arg := range args {
-		if arg == "--download-deps" {
-			downloadDeps = true
-		} else if repoURL == "" {
+		if repoURL == "" {
 			repoURL = arg
 		} else if destName == "" {
 			destName = arg
