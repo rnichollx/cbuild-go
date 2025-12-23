@@ -125,14 +125,28 @@ func handleRemoveSource(workspacePath string, args []string) error {
 
 func handleGitClone(workspacePath string, args []string) error {
 	if len(args) < 1 {
-		return fmt.Errorf("usage: csetup git-clone <repo_url> [dest_name]")
+		return fmt.Errorf("usage: csetup git-clone <repo_url> [dest_name] [--download-deps]")
 	}
 
-	repoURL := args[0]
+	repoURL := ""
 	destName := ""
-	if len(args) >= 2 {
-		destName = args[1]
-	} else {
+	downloadDeps := false
+
+	for _, arg := range args {
+		if arg == "--download-deps" {
+			downloadDeps = true
+		} else if repoURL == "" {
+			repoURL = arg
+		} else if destName == "" {
+			destName = arg
+		}
+	}
+
+	if repoURL == "" {
+		return fmt.Errorf("usage: csetup git-clone <repo_url> [dest_name] [--download-deps]")
+	}
+
+	if destName == "" {
 		// Extract destName from repoURL
 		base := filepath.Base(repoURL)
 		destName = strings.TrimSuffix(base, ".git")
@@ -160,6 +174,7 @@ func handleGitClone(workspacePath string, args []string) error {
 
 	// 3. Update cbuild_workspace.yml
 	ws := &ccommon.Workspace{}
+	ws.DownloadDeps = downloadDeps
 	err = ws.Load(workspacePath)
 	if err != nil {
 		return fmt.Errorf("error loading workspace for update: %w", err)

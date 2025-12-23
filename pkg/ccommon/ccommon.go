@@ -40,6 +40,7 @@ type BuildParameters struct {
 
 type Workspace struct {
 	WorkspacePath string `yaml:"-"`
+	DownloadDeps  bool   `yaml:"-"`
 
 	Targets map[string]*TargetConfiguration `yaml:"targets"`
 
@@ -599,13 +600,20 @@ func (w *Workspace) ProcessCSetupFile(targetName string) error {
 		}
 
 		if _, exists := w.Targets[depName]; !exists {
-			fmt.Printf("Dependency '%s' is not present in sources, module '%s' suggests getting it from '%s', download it? [Y/n] ", depName, targetName, sdep.From())
-			response, err := reader.ReadString('\n')
-			if err != nil {
-				return fmt.Errorf("error reading input: %w", err)
+			autoDownload := w.DownloadDeps
+			if !autoDownload {
+				fmt.Printf("Dependency '%s' is not present in sources, module '%s' suggests getting it from '%s', download it? [Y/n] ", depName, targetName, sdep.From())
+				response, err := reader.ReadString('\n')
+				if err != nil {
+					return fmt.Errorf("error reading input: %w", err)
+				}
+				response = strings.ToLower(strings.TrimSpace(response))
+				if response == "" || response == "y" || response == "yes" {
+					autoDownload = true
+				}
 			}
-			response = strings.ToLower(strings.TrimSpace(response))
-			if response == "" || response == "y" || response == "yes" {
+
+			if autoDownload {
 				err := w.Get(depName, sdep)
 				if err != nil {
 					return fmt.Errorf("failed to download '%s': %w", depName, err)

@@ -128,7 +128,7 @@ func printUsage() {
 	fmt.Println("Usage: csetup [-w workspace] <subcommand> [args]")
 	fmt.Println("Subcommands:")
 	fmt.Println("  init <workspace name> [--reinit]")
-	fmt.Println("  git-clone <repo_url> [dest_name]")
+	fmt.Println("  git-clone <repo_url> [dest_name] [--download-deps]")
 	fmt.Println("  add-dependency <source> <depname>")
 	fmt.Println("  remove-dependency <source> <depname>")
 	fmt.Println("  remove-source <source> [-D|--delete]")
