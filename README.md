@@ -1,78 +1,103 @@
-# cbuild  csetup
+# cbuild & csetup
 
-cbuild is a tool for building distributions. You can
-think of it as a way to build many projects
-simultaneously. cbuild works locally to build a cbuild
-workspace.
+`cbuild` is a tool for building distributions by managing multiple projects simultaneously within a workspace. `csetup` is a companion tool used to initialize and manage these workspaces.
 
-csetup is a related tool to download or otherwise set up
-cbuild workspaces. For example, you might create a cbuild
-workspace like so:
+## Workspace Structure
 
-```
-csetup create ./my_workspace --from-url http://example.com/my_project/git/latest/csetuplists.yml 
-```
-Or using a csetup file that you provide:
-
-```
-csetup create ./my_workspace /srv/dev_shared/foo_project_setup.json
-```
-
-cbuild workspaces have the following structure:
+A `cbuild` workspace typically follows this structure:
 
 ```
 workspace/
-  
-  cbuid_workspace.yml
-  toolchains/<toolchain_name>/
-  sources/<sourcename>/
-  buildspaces/<sourcename>/<toolchain>/<config>
-  exports/<sourcename>/<toolchain>/<config>
+  cbuild_workspace.yml        # Main workspace configuration
+  toolchains/                 # Toolchain definitions
+    <toolchain_name>/
+      toolchain.yml
+      <toolchain_file>.cmake
+  sources/                    # Source code for projects
+    <sourcename>/
+  buildspaces/                # Build artifacts (temporary)
+    <sourcename>/<toolchain>/<config>/
+  exports/                    # Build outputs
+    <sourcename>/<toolchain>/<config>/
 ```
 
-## CSetup
+## cbuild
 
-### `csetup git-clone <repo_url> <dest_name>` 
+`cbuild` is the main build tool. It uses the information in `cbuild_workspace.yml` to build projects.
 
-## cbuild conepts
+### Commands
 
-### sources directory
+- **`build`** (default): Build the project(s).
+- **`clean`**: Remove build artifacts from `buildspaces`.
+- **`build-deps <sourcename>`**: Build only the dependencies for a specific source.
 
-The directory in which to use as the base of relative source paths.
+### Global Flags
 
-### buildspace directory
+- `-w, --workspace <path>`: Path to the workspace directory (default: current directory or nearest parent with `cbuild_workspace.yml`).
+- `-d, --dry-run`: Show commands without executing them.
+- `-h, --help`: Show help message.
 
-The directory to store object files, build system files, and other temporary files for building, including any files preserved between builds for incremental builds.
+### Command-specific Flags
 
-### toolchains directory
+- `-c, --config <configs>`: Build configurations to use (e.g., `Debug,Release`), comma-separated.
+- `-T, --toolchain <toolchain>`: Specific toolchain to use (default: `all`).
+- `-t, --target <target>`: Specific target to build.
 
-The directory to look for build toolchain definition files.
+## csetup
 
-### exports directory
+`csetup` is used for managing the workspace, including adding/removing sources and dependencies.
 
-The directory to store any files that result from the build process.
+### Commands
 
-## cbuild settings
+- **`init [--reinit]`**: Initialize a new workspace or reinitialize an existing one.
+- **`git-clone <repo_url> <dest_name> [--download-deps]`**: Clone a git repository into the `sources` directory.
+- **`add-dependency <sourcename> <dependency>`**: Add a dependency to a source.
+- **`remove-dependency <sourcename> <dependency>`**: Remove a dependency from a source.
+- **`remove-source <sourcename> [-X, --delete]`**: Remove a source from the workspace.
+- **`set-cxx-version [sourcename] <version>`**: Set the C++ version for a source or the whole workspace.
+- **`enable-staging <sourcename>`**: Enable staging for a source. Staged targets are built against the installed 
+         outputs, instead of a build tree.
+- **`disable-staging <sourcename>`**: Disable staging for a source.
+- **`list-sources`**: List all sources in the workspace.
+- **`get-args <sourcename>`**: Get the build arguments that would be passed to the build system (e.g., CMake).
+- **`detect-toolchains`**: Automatically detect system toolchains and create definitions in `toolchains/`.
+- **`add-config <config_name>`**: Add a build configuration.
+- **`remove-config <config_name>`**: Remove a build configuration.
 
-### cbuild_workspace.yml
+## YAML Formats
 
-This file defines the settings for the cbuild workspace.
+### `cbuild_workspace.yml`
 
-Fields:
+Located at the root of the workspace.
 
-#### `targets`
+```yaml
+cmake_binary: "/usr/bin/cmake"    # Optional: Path to cmake binary
+cxx_version: "20"                 # Default C++ standard for the workspace
+configurations: ["Debug", "Release"] # Default build configurations
 
-The targets field defines a list of targets to build. Each target is defined in its own directory under the sources
-directory.
+targets:
+  <sourcename>:
+    project_type: "cmake"         # Currently only "cmake" is supported
+    depends: ["dep1", "dep2/sub"] # List of dependencies
+    cmake_package_name: "Name"    # Optional: For CMake's find_package()
+    cxx_standard: "17"            # Optional: Override workspace C++ version
+    staged: true                  # Optional: Use staging for this target
+    extra_cmake_configure_args: ["-DFOO=BAR"] # Optional: Extra args for CMake
+```
 
-A target object has the following fields:
+### Toolchain `toolchain.yml`
 
-- `depends`: An array of list of named dependencies for the project.
-- `project_type`: The type of project. Example values are "CMake".
-- `cmake_package_name`: The name of the package if it's a CMake Package.
+Located in `toolchains/<toolchain_name>/toolchain.yml`.
 
-A dependency has the form of `<sourcename>[/<subtarget>]`, where `<sourcename>` is the name of a source target,
-and optionally `<subtarget>` is a subtarget of that build system.
+```yaml
+target_arch: "x64"
+target_system: "linux"
+cmake_toolchain:
+  <host_key>:
+    cmake_toolchain_file: "path/to/toolchain.cmake"
+```
+
+The `<host_key>` typically follows the format `host-<os>-<arch>` (e.g., `host-linux-x64`).
 
 
 
