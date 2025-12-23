@@ -2,9 +2,9 @@ package ccommon
 
 import (
 	"bufio"
-	"cbuild-go/pkg/cmake"
-	"cbuild-go/pkg/host"
 	"fmt"
+	"gitlab.com/rpnx/cbuild-go/pkg/cmake"
+	"gitlab.com/rpnx/cbuild-go/pkg/host"
 	"io/ioutil"
 	"os"
 	"os/exec"

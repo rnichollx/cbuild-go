@@ -1,4 +1,4 @@
-module cbuild-go
+module gitlab.com/rpnx/cbuild-go
 
 go 1.25.5
 

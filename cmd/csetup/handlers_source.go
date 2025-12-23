@@ -1,10 +1,10 @@
 package main
 
 import (
-	"cbuild-go/pkg/ccommon"
-	"cbuild-go/pkg/cli"
 	"context"
 	"fmt"
+	"gitlab.com/rpnx/cbuild-go/pkg/ccommon"
+	"gitlab.com/rpnx/cbuild-go/pkg/cli"
 	"os"
 	"os/exec"
 	"path/filepath"

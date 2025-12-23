@@ -1,7 +1,7 @@
 package ccommon
 
 import (
-	"cbuild-go/pkg/cli"
+	"gitlab.com/rpnx/cbuild-go/pkg/cli"
 )
 
 const (

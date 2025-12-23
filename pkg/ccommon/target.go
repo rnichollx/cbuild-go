@@ -1,7 +1,7 @@
 package ccommon
 
 import (
-	"cbuild-go/pkg/cmake"
+	"gitlab.com/rpnx/cbuild-go/pkg/cmake"
 
 	"gopkg.in/yaml.v3"
 )

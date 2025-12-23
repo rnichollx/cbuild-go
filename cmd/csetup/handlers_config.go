@@ -1,9 +1,9 @@
 package main
 
 import (
-	"cbuild-go/pkg/ccommon"
 	"context"
 	"fmt"
+	"gitlab.com/rpnx/cbuild-go/pkg/ccommon"
 )
 
 func handleSetCXXVersion(ctx context.Context, workspacePath string, args []string) error {

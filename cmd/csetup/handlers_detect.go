@@ -1,14 +1,15 @@
 package main
 
 import (
-	"cbuild-go/pkg/ccommon"
-	"cbuild-go/pkg/host"
 	"context"
 	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
+
+	"gitlab.com/rpnx/cbuild-go/pkg/ccommon"
+	"gitlab.com/rpnx/cbuild-go/pkg/host"
 
 	"gopkg.in/yaml.v3"
 )
