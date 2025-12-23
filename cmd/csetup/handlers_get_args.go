@@ -8,7 +8,7 @@ import (
 
 func handleGetArgs(workspacePath string, args []string) error {
 	if len(args) < 1 {
-		return fmt.Errorf("usage: csetup get-args <target> [--toolchain <toolchain>] [--build-type <type>]")
+		return fmt.Errorf("usage: csetup get-args <target> [-T|--toolchain <toolchain>] [-c|--config <type>]")
 	}
 
 	targetName := args[0]
@@ -16,10 +16,10 @@ func handleGetArgs(workspacePath string, args []string) error {
 	buildType := "Debug"
 
 	for i := 1; i < len(args); i++ {
-		if args[i] == "--toolchain" && i+1 < len(args) {
+		if (args[i] == "-T" || args[i] == "--toolchain") && i+1 < len(args) {
 			toolchain = args[i+1]
 			i++
-		} else if args[i] == "--build-type" && i+1 < len(args) {
+		} else if (args[i] == "-c" || args[i] == "--config" || args[i] == "--build-type") && i+1 < len(args) {
 			buildType = args[i+1]
 			i++
 		}

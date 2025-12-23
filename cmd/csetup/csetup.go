@@ -136,7 +136,7 @@ func printUsage() {
 	fmt.Println("  enable-staging <source>")
 	fmt.Println("  disable-staging <source>")
 	fmt.Println("  list-sources")
-	fmt.Println("  get-args <target> [--toolchain <toolchain>] [--build-type <type>]")
+	fmt.Println("  get-args <target> [-T|--toolchain <toolchain>] [-c|--config <type>]")
 	fmt.Println("  detect-toolchains")
 	fmt.Println("  add-config <configname>")
 	fmt.Println("  remove-config <configname>")

@@ -40,7 +40,7 @@ func main() {
 			command = args[0]
 			if command == "build-deps" {
 				if len(args) < 2 {
-					fmt.Fprintf(os.Stderr, "Usage: cbuild build-deps <sourcename>\n")
+					fmt.Fprintf(os.Stderr, "Usage: cbuild build-deps <sourcename> [-T toolchain] [-c config]\n")
 					os.Exit(1)
 				}
 				targetName = args[1]
@@ -59,10 +59,29 @@ func main() {
 	}
 
 	if command == "clean" {
-		err = ws.Clean(toolchain, dryRun)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error cleaning workspace: %v\n", err)
-			os.Exit(1)
+		configs := []string{}
+		if buildConfig == "" {
+			configs = ws.Configurations
+		} else {
+			configs = strings.Split(buildConfig, ",")
+		}
+
+		if len(configs) == 0 {
+			// If no configs in workspace and none specified, just clean the toolchain directory
+			err = ws.Clean(toolchain, "", dryRun)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Error cleaning workspace: %v\n", err)
+				os.Exit(1)
+			}
+		} else {
+			for _, cfg := range configs {
+				cfg = strings.TrimSpace(cfg)
+				err = ws.Clean(toolchain, cfg, dryRun)
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "Error cleaning workspace for toolchain %s, config %s: %v\n", toolchain, cfg, err)
+					os.Exit(1)
+				}
+			}
 		}
 		fmt.Println("Clean completed successfully")
 		return

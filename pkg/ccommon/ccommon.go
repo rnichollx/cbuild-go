@@ -433,10 +433,35 @@ func (w *Workspace) BuildDependencies(targetName string, bp BuildParameters) err
 	return nil
 }
 
-func (w *Workspace) Clean(toolchain string, dryRun bool) error {
+func (w *Workspace) Clean(toolchain string, config string, dryRun bool) error {
 	cleanPath := filepath.Join(w.WorkspacePath, "buildspaces")
 	if toolchain != "all" && toolchain != "" {
 		cleanPath = filepath.Join(cleanPath, toolchain)
+		if config != "" {
+			cleanPath = filepath.Join(cleanPath, config)
+		}
+	} else if config != "" {
+		// If toolchain is all/empty, but config is specified, we can't easily clean only that config
+		// across all toolchains without iterating.
+		// For now, let's just support toolchain-specific config cleaning or all-toolchain cleaning.
+		// If toolchain is "all" and config is specified, we might want to iterate.
+		if toolchain == "all" {
+			toolchainDir := filepath.Join(w.WorkspacePath, "toolchains")
+			files, err := os.ReadDir(toolchainDir)
+			if err != nil {
+				return fmt.Errorf("failed to read toolchains directory for clean: %w", err)
+			}
+			for _, file := range files {
+				if file.IsDir() {
+					tcCleanPath := filepath.Join(w.WorkspacePath, "buildspaces", file.Name(), config)
+					fmt.Printf("Cleaning: %s\n", tcCleanPath)
+					if !dryRun {
+						os.RemoveAll(tcCleanPath)
+					}
+				}
+			}
+			return nil
+		}
 	}
 
 	fmt.Printf("Cleaning: %s\n", cleanPath)
