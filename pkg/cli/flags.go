@@ -54,12 +54,17 @@ func (b *BoolFlag) NeedsValue() bool         { return false }
 
 type FlagKey string
 
-func ParseFlags(ctx context.Context, args []string, flags []Flag) (context.Context, []string, error) {
+type ParseOptions struct {
+	AllowUnknownFlags bool
+	Flags             []Flag
+}
+
+func ParseFlags(ctx context.Context, opts ParseOptions, args []string) (context.Context, []string, error) {
 
 	shortFlagMap := make(map[string]Flag)
 	longFlagMap := make(map[string]Flag)
 
-	for _, flag := range flags {
+	for _, flag := range opts.Flags {
 
 		if flag.Short() != "" {
 			if _, exists := shortFlagMap[flag.Short()]; exists {
@@ -81,7 +86,11 @@ func ParseFlags(ctx context.Context, args []string, flags []Flag) (context.Conte
 
 		arg := args[i]
 		if arg == "--" {
-			nonFlagArgs = append(nonFlagArgs, args[i+1:]...)
+			if opts.AllowUnknownFlags {
+				nonFlagArgs = append(nonFlagArgs, args[i:]...)
+			} else {
+				nonFlagArgs = append(nonFlagArgs, args[i+1:]...)
+			}
 			break
 		}
 
@@ -89,6 +98,10 @@ func ParseFlags(ctx context.Context, args []string, flags []Flag) (context.Conte
 			name := arg[2:]
 			flag, ok := longFlagMap[name]
 			if !ok {
+				if opts.AllowUnknownFlags {
+					nonFlagArgs = append(nonFlagArgs, arg)
+					continue
+				}
 				return nil, nil, fmt.Errorf("unknown flag: %s", arg)
 			}
 			if flag.NeedsValue() {
@@ -106,10 +119,15 @@ func ParseFlags(ctx context.Context, args []string, flags []Flag) (context.Conte
 			}
 		} else if strings.HasPrefix(arg, "-") && len(arg) > 1 {
 			cluster := arg[1:]
-			for j, char := range cluster {
+			for j := 0; j < len(cluster); j++ {
+				char := cluster[j]
 				name := string(char)
 				flag, ok := shortFlagMap[name]
 				if !ok {
+					if opts.AllowUnknownFlags {
+						nonFlagArgs = append(nonFlagArgs, "-"+name)
+						continue
+					}
 					return nil, nil, fmt.Errorf("unknown flag: -%s", name)
 				}
 

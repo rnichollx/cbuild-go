@@ -19,7 +19,7 @@ func main() {
 		ccommon.DeleteFlag,
 	}
 
-	ctx, args, parseErr := cli.ParseFlags(context.Background(), os.Args[1:], flags)
+	ctx, args, parseErr := cli.ParseFlags(context.Background(), cli.ParseOptions{Flags: flags}, os.Args[1:])
 	if parseErr != nil {
 		fmt.Fprintf(os.Stderr, "Error parsing flags: %v\n", parseErr)
 		os.Exit(1)

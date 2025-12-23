@@ -19,7 +19,7 @@ func main() {
 		ccommon.DryRunFlag,
 	}
 
-	ctx, args, err := cli.ParseFlags(context.Background(), os.Args[1:], flags)
+	ctx, args, err := cli.ParseFlags(context.Background(), cli.ParseOptions{Flags: flags}, os.Args[1:])
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error parsing flags: %v\n", err)
 		os.Exit(1)
