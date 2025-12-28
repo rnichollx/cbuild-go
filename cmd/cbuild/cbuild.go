@@ -3,11 +3,12 @@ package main
 import (
 	"context"
 	"fmt"
-	"gitlab.com/rpnx/cbuild-go/pkg/ccommon"
-	"gitlab.com/rpnx/cbuild-go/pkg/cli"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"gitlab.com/rpnx/cbuild-go/pkg/ccommon"
+	"gitlab.com/rpnx/cbuild-go/pkg/cli"
 )
 
 func main() {
@@ -62,42 +63,64 @@ func main() {
 func runClean(ctx context.Context, args []string) error {
 	buildConfig := cli.GetString(ctx, cli.FlagKey(ccommon.FlagConfig))
 	workspacePath := cli.GetString(ctx, cli.FlagKey(ccommon.FlagWorkspace))
+	targetFlag := cli.GetString(ctx, cli.FlagKey(ccommon.FlagTarget))
 	if workspacePath == "" {
 		workspacePath = "."
 	}
-	toolchain := cli.GetString(ctx, cli.FlagKey(ccommon.FlagToolchain))
-	if toolchain == "" {
-		toolchain = "all"
-	}
+
 	dryRun := cli.GetBool(ctx, cli.FlagKey(ccommon.FlagDryRun))
 
-	ws := &ccommon.Workspace{}
+	ws := &ccommon.WorkspaceContext{}
 	err := ws.Load(workspacePath)
 	if err != nil {
 		return fmt.Errorf("error loading configuration: %w", err)
 	}
 
+	toolchainFlag := cli.GetString(ctx, cli.FlagKey(ccommon.FlagToolchain))
+
+	var toolchainNames []string
+	if len(toolchainFlag) == 0 {
+		toolchainNames, err = ws.ListToolchains()
+		if err != nil {
+			return fmt.Errorf("error listing toolchains: %w", err)
+		}
+	} else {
+		toolchainNames = strings.Split(toolchainFlag, ",")
+	}
+
 	configs := []string{}
 	if buildConfig == "" {
-		configs = ws.Configurations
+		configs = ws.Config.Configurations
 	} else {
 		configs = strings.Split(buildConfig, ",")
 	}
 
-	if len(configs) == 0 {
-		err = ws.Clean(toolchain, "", dryRun)
-		if err != nil {
-			return fmt.Errorf("error cleaning workspace: %w", err)
-		}
+	var targets []string
+	if len(targetFlag) == 0 {
+		targets = ws.ListTargets()
 	} else {
-		for _, cfg := range configs {
-			cfg = strings.TrimSpace(cfg)
-			err = ws.Clean(toolchain, cfg, dryRun)
-			if err != nil {
-				return fmt.Errorf("error cleaning workspace for toolchain %s, config %s: %w", toolchain, cfg, err)
+		targets = strings.Split(targetFlag, ",")
+	}
+
+	//fmt.Printf("Cleaning %d targets: %s\n", len(targets), targets)
+
+	for _, target := range targets {
+		for _, toolchain := range toolchainNames {
+			for _, config := range configs {
+				bp := ccommon.TargetBuildParameters{
+					Toolchain: toolchain,
+					BuildType: config,
+					DryRun:    dryRun,
+				}
+				err = ws.CleanTarget(target, bp)
+				if err != nil {
+					return fmt.Errorf("error cleaning target %q: %w", target, err)
+				}
 			}
 		}
+
 	}
+
 	fmt.Println("Clean completed successfully")
 	return nil
 }
@@ -119,7 +142,7 @@ func runBuild(ctx context.Context, command string, args []string) error {
 		targetName = args[0]
 	}
 
-	ws := &ccommon.Workspace{}
+	ws := &ccommon.WorkspaceContext{}
 	err := ws.Load(workspacePath)
 	if err != nil {
 		return fmt.Errorf("error loading configuration: %w", err)
@@ -147,7 +170,7 @@ func runBuild(ctx context.Context, command string, args []string) error {
 
 	configs := []string{}
 	if buildConfig == "" {
-		configs = ws.Configurations
+		configs = ws.Config.Configurations
 	} else {
 		configs = strings.Split(buildConfig, ",")
 	}
@@ -157,7 +180,7 @@ func runBuild(ctx context.Context, command string, args []string) error {
 			cfg = strings.TrimSpace(cfg)
 			fmt.Printf("Building with toolchain: %s, config: %s\n", tc, cfg)
 
-			bp := ccommon.BuildParameters{
+			bp := ccommon.TargetBuildParameters{
 				Toolchain: tc,
 				BuildType: cfg,
 				DryRun:    dryRun,

@@ -2,54 +2,46 @@ package host
 
 import (
 	"runtime"
+
+	"gitlab.com/rpnx/cbuild-go/pkg/system"
 )
 
 // DetectHostPlatform returns the host platform name as used in toolchain definitions
-func DetectHostPlatform() string {
+func DetectHostPlatform() system.Platform {
 	os := runtime.GOOS
 	switch os {
 	case "linux":
-		return "linux"
+		return system.PlatformLinux
 	case "windows":
-		return "windows"
+		return system.PlatformUnknown
 	case "darwin":
-		return "macos"
+		return system.PlatformMac
 	default:
-		return os
+		return system.PlatformUnknown
 	}
 }
 
-type HostArch int
-
-const (
-	ArchUnknown HostArch = iota
-	ArchX86_32
-	ArchX86_64
-	ArchARM_32
-	ArchARM_64
-)
-
 // DetectHostArch returns the host architecture name as used in toolchain definitions
-func DetectHostArch() string {
+func DetectHostProcessor() system.Processor {
 	arch := runtime.GOARCH
 	switch arch {
 	case "amd64":
 		{
-			return "x64"
+			return system.ProcessorX64
 		}
 	case "386":
 		{
-			return "x86"
+			return system.ProcessorX86
 		}
 	case "arm64":
 		{
-			return "arm64"
+			return system.ProcessorArm64
 		}
 	case "arm":
 		{
-			return "arm32"
+			return system.ProcessorArm32
 		}
 	default:
-		return arch
+		return system.ProcessorUnknown
 	}
 }

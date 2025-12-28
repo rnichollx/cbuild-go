@@ -23,23 +23,23 @@ func handleGetArgs(ctx context.Context, workspacePath string, args []string) err
 		buildType = "Debug"
 	}
 
-	ws := &ccommon.Workspace{}
+	ws := &ccommon.WorkspaceContext{}
 	err := ws.Load(workspacePath)
 	if err != nil {
 		return fmt.Errorf("error loading workspace: %w", err)
 	}
 
-	target, ok := ws.Targets[targetName]
-	if !ok {
-		return fmt.Errorf("target %s not found in workspace", targetName)
+	target, err := ws.GetTarget(targetName)
+	if err != nil {
+		return err
 	}
 
-	bp := ccommon.BuildParameters{
+	bp := ccommon.TargetBuildParameters{
 		Toolchain: toolchain,
 		BuildType: buildType,
 	}
 
-	fullArgs, err := target.CMakeConfigureArgs(ws, targetName, bp)
+	fullArgs, err := target.CMakeConfigureArgs(context.Background(), ws, bp)
 	if err != nil {
 		return fmt.Errorf("error getting cmake args: %w", err)
 	}

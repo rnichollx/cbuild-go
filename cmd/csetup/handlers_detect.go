@@ -6,7 +6,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strings"
 
 	"gitlab.com/rpnx/cbuild-go/pkg/ccommon"
 	"gitlab.com/rpnx/cbuild-go/pkg/host"
@@ -15,28 +14,18 @@ import (
 )
 
 func handleDetectToolchains(ctx context.Context, workspacePath string, args []string) error {
-	ws := &ccommon.Workspace{}
+	ws := &ccommon.WorkspaceContext{}
 	err := ws.Load(workspacePath)
 	if err != nil {
 		return fmt.Errorf("error loading workspace: %w", err)
 	}
 
 	hostOS := host.DetectHostPlatform()
-	hostArch := host.DetectHostArch()
-	hostKey := fmt.Sprintf("host-%s-%s", hostOS, hostArch)
+	hostProcessor := host.DetectHostProcessor()
+	hostKey := fmt.Sprintf("host-%s-%s", hostOS.StringLower(), hostProcessor.StringLower())
 
-	targetSystem := strings.Title(hostOS)
-	if targetSystem == "Macos" {
-		targetSystem = "Darwin"
-	}
-	targetArch := hostArch
-	if targetArch == "x64" {
-		targetArch = "x86_64"
-	} else if targetArch == "x86" {
-		targetArch = "i386"
-	} else if targetArch == "arm32" {
-		targetArch = "arm"
-	}
+	targetSystem := hostOS
+	targetArch := hostProcessor
 
 	detectors := []struct {
 		name          string

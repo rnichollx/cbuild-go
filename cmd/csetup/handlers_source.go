@@ -3,16 +3,20 @@ package main
 import (
 	"context"
 	"fmt"
-	"gitlab.com/rpnx/cbuild-go/pkg/ccommon"
-	"gitlab.com/rpnx/cbuild-go/pkg/cli"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
+
+	"gitlab.com/rpnx/cbuild-go/pkg/ccommon"
+	"gitlab.com/rpnx/cbuild-go/pkg/cli"
 )
 
 func handleListSources(ctx context.Context, workspacePath string, args []string) error {
-	ws := &ccommon.Workspace{}
+	if len(args) != 0 {
+		return fmt.Errorf("Unexpected args: %v", args)
+	}
+	ws := &ccommon.WorkspaceContext{}
 	err := ws.Load(workspacePath)
 	if err != nil {
 		return fmt.Errorf("error loading workspace: %w", err)
@@ -27,12 +31,16 @@ func handleListSources(ctx context.Context, workspacePath string, args []string)
 	trackedDirs := make(map[string]bool)
 
 	// First, list all targets from the workspace configuration
-	for name, target := range ws.Targets {
+	for name := range ws.Config.Targets {
 		status := "[MISSING]"
-		srcPath, err := target.CMakeSourcePath(ws, name)
+		target, err := ws.GetTarget(name)
+		if err != nil {
+			return err
+		}
+		srcPath, err := target.CMakeSourcePath(ws)
 		if err == nil {
 			if info, err := os.Stat(srcPath); err == nil && info.IsDir() {
-				if target.ExternalSourceOverride != nil {
+				if target.Config.ExternalSourceOverride != nil {
 					status = "[OK EXTERNAL]"
 				} else {
 					status = "[OK]"
@@ -43,7 +51,7 @@ func handleListSources(ctx context.Context, workspacePath string, args []string)
 		fmt.Printf("%s %s\n", name, status)
 
 		// If it's a standard source (in the sources/ directory), mark it as tracked
-		if target.ExternalSourceOverride == nil {
+		if target.Config.ExternalSourceOverride == nil {
 			trackedDirs[name] = true
 		} else {
 			// If it's an override, check if it points into our sources dir anyway
@@ -71,7 +79,7 @@ func handleListSources(ctx context.Context, workspacePath string, args []string)
 }
 
 func handleRemoveSource(ctx context.Context, workspacePath string, args []string) error {
-	if len(args) < 1 {
+	if len(args) != 1 {
 		return fmt.Errorf("usage: csetup remove-source <source> [-D|--delete]")
 	}
 
@@ -82,17 +90,17 @@ func handleRemoveSource(ctx context.Context, workspacePath string, args []string
 		return fmt.Errorf("usage: csetup remove-source <source> [-D|--delete]")
 	}
 
-	ws := &ccommon.Workspace{}
+	ws := &ccommon.WorkspaceContext{}
 	err := ws.Load(workspacePath)
 	if err != nil {
 		return fmt.Errorf("error loading workspace: %w", err)
 	}
 
-	if _, ok := ws.Targets[source]; !ok {
+	if _, ok := ws.Config.Targets[source]; !ok {
 		return fmt.Errorf("source %s not found in workspace", source)
 	}
 
-	delete(ws.Targets, source)
+	delete(ws.Config.Targets, source)
 	err = ws.Save()
 	if err != nil {
 		return fmt.Errorf("error saving workspace: %w", err)
@@ -118,7 +126,7 @@ func handleRemoveSource(ctx context.Context, workspacePath string, args []string
 }
 
 func handleGitClone(ctx context.Context, workspacePath string, args []string) error {
-	if len(args) < 1 {
+	if len(args) < 1 || len(args) > 2 {
 		return fmt.Errorf("usage: csetup git-clone <repo_url> [dest_name] [--download-deps]")
 	}
 
@@ -165,21 +173,21 @@ func handleGitClone(ctx context.Context, workspacePath string, args []string) er
 	}
 
 	// 3. Update cbuild_workspace.yml
-	ws := &ccommon.Workspace{}
+	ws := &ccommon.WorkspaceContext{}
 	ws.DownloadDeps = downloadDeps
 	err = ws.Load(workspacePath)
 	if err != nil {
 		return fmt.Errorf("error loading workspace for update: %w", err)
 	}
 
-	if ws.Targets == nil {
-		ws.Targets = make(map[string]*ccommon.TargetConfiguration)
+	if ws.Config.Targets == nil {
+		ws.Config.Targets = make(map[string]*ccommon.TargetConfiguration)
 	}
 
-	if _, exists := ws.Targets[destName]; exists {
+	if _, ok := ws.Config.Targets[destName]; ok {
 		fmt.Printf("TargetConfiguration %s already exists in cbuild_workspace.yml. Skipping update.\n", destName)
 	} else {
-		ws.Targets[destName] = &ccommon.TargetConfiguration{
+		ws.Config.Targets[destName] = &ccommon.TargetConfiguration{
 			ProjectType: "CMake",
 		}
 		err = ws.Save()

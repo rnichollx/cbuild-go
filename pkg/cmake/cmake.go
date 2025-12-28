@@ -1,11 +1,14 @@
 package cmake
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 
+	"gitlab.com/rpnx/cbuild-go/pkg/system"
 	"gopkg.in/yaml.v3"
 )
 
@@ -14,13 +17,73 @@ type GenerateToolchainFileOptions struct {
 	CXXCompiler     string
 	Linker          string
 	ExtraCXXFlags   []string
-	SystemName      string
-	SystemProcessor string
+	SystemPlatform  system.Platform
+	SystemProcessor system.Processor
 	WorkspaceDir    string
 	OutputFile      string
 }
 
-func GenerateToolchainFile(opts GenerateToolchainFileOptions) error {
+func PlatformToCMakeName(platform system.Platform) (string, error) {
+	switch platform {
+	case system.PlatformMac:
+		return "Darwin", nil
+	case system.PlatformLinux:
+		return "Linux", nil
+	case system.PlatformFreeBSD:
+		return "FreeBSD", nil
+	case system.PlatformWindows:
+		return "Windows", nil
+	default:
+		return "", errors.New("platform not supported")
+	}
+}
+
+func ProcessorToCMakeName(platform system.Platform, cpu system.Processor) (string, error) {
+	switch platform {
+	case system.PlatformLinux, system.PlatformFreeBSD:
+		switch cpu {
+		case system.ProcessorX86:
+			if platform == system.PlatformFreeBSD {
+				return "i386", nil
+			}
+			return "i686", nil
+		case system.ProcessorX64:
+			if platform == system.PlatformFreeBSD {
+				return "amd64", nil
+			}
+			return "x86_64", nil
+		case system.ProcessorArm32:
+			return "armv7l", nil
+		case system.ProcessorArm64:
+			return "aarch64", nil
+		case system.ProcessorRISCV32:
+			return "riscv32", nil
+		case system.ProcessorRISCV64:
+			return "riscv64", nil
+		}
+	case system.PlatformMac:
+		switch cpu {
+		case system.ProcessorX64:
+			return "x86_64", nil
+		case system.ProcessorArm64:
+			return "arm64", nil
+		}
+	case system.PlatformWindows:
+		switch cpu {
+		case system.ProcessorX86:
+			return "x86", nil
+		case system.ProcessorX64:
+			return "AMD64", nil
+		case system.ProcessorArm32:
+			return "ARM", nil
+		case system.ProcessorArm64:
+			return "ARM64", nil
+		}
+	}
+	return "", fmt.Errorf("unsupported platform/processor combination: %s/%v", platform, cpu)
+}
+
+func GenerateToolchainFile(ctx context.Context, opts GenerateToolchainFileOptions) error {
 	absWorkspaceDir, err := filepath.Abs(opts.WorkspaceDir)
 	if err != nil {
 		return fmt.Errorf("failed to get absolute workspace directory: %w", err)
@@ -30,24 +93,14 @@ func GenerateToolchainFile(opts GenerateToolchainFileOptions) error {
 	cxxCompiler := opts.CXXCompiler
 	linker := opts.Linker
 
-	systemProcessor := opts.SystemProcessor
-	switch strings.ToLower(systemProcessor) {
-	case "x64":
-		systemProcessor = "x86_64"
-	case "x86":
-		systemProcessor = "i386"
-	case "arm32":
-		systemProcessor = "arm"
+	systemName, err := PlatformToCMakeName(opts.SystemPlatform)
+	if err != nil {
+		return fmt.Errorf("failed to get CMake platform name: %w", err)
 	}
 
-	systemName := opts.SystemName
-	switch strings.ToLower(systemName) {
-	case "linux":
-		systemName = "Linux"
-	case "windows":
-		systemName = "Windows"
-	case "macos":
-		systemName = "Darwin"
+	systemProcessor, err := ProcessorToCMakeName(opts.SystemPlatform, opts.SystemProcessor)
+	if err != nil {
+		return fmt.Errorf("failed to get CMake processor name: %w", err)
 	}
 
 	var sb strings.Builder

@@ -47,10 +47,12 @@ func handleInit(ctx context.Context, workspacePath string, args []string) error 
 		}
 	}
 
-	ws := &ccommon.Workspace{
+	ws := &ccommon.WorkspaceContext{
 		WorkspacePath: targetPath,
-		Targets:       make(map[string]*ccommon.TargetConfiguration),
-		CXXVersion:    "20",
+		Config: ccommon.WorkspaceConfig{
+			Targets:    make(map[string]*ccommon.TargetConfiguration),
+			CXXVersion: "20",
+		},
 	}
 
 	err := ws.Save()

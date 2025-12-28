@@ -12,7 +12,7 @@ type GitSource struct {
 	Revision   *string `yaml:"revision,omitempty"`
 }
 
-func (ws *Workspace) GetFromGit(name string, source GitSource) error {
+func (ws *WorkspaceContext) GetFromGit(name string, source GitSource) error {
 	destDir := filepath.Join(ws.WorkspacePath, "sources", name)
 	fmt.Printf("Downloading '%s' from '%s'...\n", name, source.Repository)
 

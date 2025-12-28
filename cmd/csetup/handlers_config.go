@@ -17,21 +17,21 @@ func handleSetCXXVersion(ctx context.Context, workspacePath string, args []strin
 		source = args[1]
 	}
 
-	ws := &ccommon.Workspace{}
+	ws := &ccommon.WorkspaceContext{}
 	err := ws.Load(workspacePath)
 	if err != nil {
 		return fmt.Errorf("error loading workspace: %w", err)
 	}
 
 	if source != "" {
-		target, ok := ws.Targets[source]
+		target, ok := ws.Config.Targets[source]
 		if !ok {
 			return fmt.Errorf("source %s not found in workspace", source)
 		}
 		target.CxxStandard = &version
 		fmt.Printf("Set CXX version for %s to %s\n", source, version)
 	} else {
-		ws.CXXVersion = version
+		ws.Config.CXXVersion = version
 		fmt.Printf("Set global CXX version to %s\n", version)
 	}
 
@@ -50,13 +50,13 @@ func handleEnableStaging(ctx context.Context, workspacePath string, args []strin
 
 	source := args[0]
 
-	ws := &ccommon.Workspace{}
+	ws := &ccommon.WorkspaceContext{}
 	err := ws.Load(workspacePath)
 	if err != nil {
 		return fmt.Errorf("error loading workspace: %w", err)
 	}
 
-	target, ok := ws.Targets[source]
+	target, ok := ws.Config.Targets[source]
 	if !ok {
 		return fmt.Errorf("source %s not found in workspace", source)
 	}
@@ -80,13 +80,13 @@ func handleDisableStaging(ctx context.Context, workspacePath string, args []stri
 
 	source := args[0]
 
-	ws := &ccommon.Workspace{}
+	ws := &ccommon.WorkspaceContext{}
 	err := ws.Load(workspacePath)
 	if err != nil {
 		return fmt.Errorf("error loading workspace: %w", err)
 	}
 
-	target, ok := ws.Targets[source]
+	target, ok := ws.Config.Targets[source]
 	if !ok {
 		return fmt.Errorf("source %s not found in workspace", source)
 	}
@@ -110,20 +110,20 @@ func handleAddConfig(ctx context.Context, workspacePath string, args []string) e
 
 	configName := args[0]
 
-	ws := &ccommon.Workspace{}
+	ws := &ccommon.WorkspaceContext{}
 	err := ws.Load(workspacePath)
 	if err != nil {
 		return fmt.Errorf("error loading workspace: %w", err)
 	}
 
-	for _, cfg := range ws.Configurations {
+	for _, cfg := range ws.Config.Configurations {
 		if cfg == configName {
 			fmt.Printf("Configuration %s already exists\n", configName)
 			return nil
 		}
 	}
 
-	ws.Configurations = append(ws.Configurations, configName)
+	ws.Config.Configurations = append(ws.Config.Configurations, configName)
 
 	err = ws.Save()
 	if err != nil {
@@ -141,7 +141,7 @@ func handleRemoveConfig(ctx context.Context, workspacePath string, args []string
 
 	configName := args[0]
 
-	ws := &ccommon.Workspace{}
+	ws := &ccommon.WorkspaceContext{}
 	err := ws.Load(workspacePath)
 	if err != nil {
 		return fmt.Errorf("error loading workspace: %w", err)
@@ -149,7 +149,7 @@ func handleRemoveConfig(ctx context.Context, workspacePath string, args []string
 
 	found := false
 	newConfigs := []string{}
-	for _, cfg := range ws.Configurations {
+	for _, cfg := range ws.Config.Configurations {
 		if cfg == configName {
 			found = true
 			continue
@@ -161,7 +161,7 @@ func handleRemoveConfig(ctx context.Context, workspacePath string, args []string
 		return fmt.Errorf("configuration %s not found", configName)
 	}
 
-	ws.Configurations = newConfigs
+	ws.Config.Configurations = newConfigs
 
 	err = ws.Save()
 	if err != nil {

@@ -14,13 +14,13 @@ func handleAddDependency(ctx context.Context, workspacePath string, args []strin
 	source := args[0]
 	depname := args[1]
 
-	ws := &ccommon.Workspace{}
+	ws := &ccommon.WorkspaceContext{}
 	err := ws.Load(workspacePath)
 	if err != nil {
 		return fmt.Errorf("error loading workspace: %w", err)
 	}
 
-	target, ok := ws.Targets[source]
+	target, ok := ws.Config.Targets[source]
 	if !ok {
 		return fmt.Errorf("source %s not found in workspace", source)
 	}
@@ -51,13 +51,13 @@ func handleRemoveDependency(ctx context.Context, workspacePath string, args []st
 	source := args[0]
 	depname := args[1]
 
-	ws := &ccommon.Workspace{}
+	ws := &ccommon.WorkspaceContext{}
 	err := ws.Load(workspacePath)
 	if err != nil {
 		return fmt.Errorf("error loading workspace: %w", err)
 	}
 
-	target, ok := ws.Targets[source]
+	target, ok := ws.Config.Targets[source]
 	if !ok {
 		return fmt.Errorf("source %s not found in workspace", source)
 	}
