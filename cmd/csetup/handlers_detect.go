@@ -6,9 +6,11 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 
 	"gitlab.com/rpnx/cbuild-go/pkg/ccommon"
 	"gitlab.com/rpnx/cbuild-go/pkg/host"
+	"gitlab.com/rpnx/cbuild-go/pkg/system"
 
 	"gopkg.in/yaml.v3"
 )
@@ -50,6 +52,20 @@ func handleDetectToolchains(ctx context.Context, workspacePath string, args []st
 		_, errCXX := exec.LookPath(d.cxxCompiler)
 
 		if errC == nil && errCXX == nil {
+
+			if hostOS == system.PlatformMac && strings.Contains(d.name, "libcxx") {
+				continue
+			}
+
+			if d.cCompiler == "gcc" {
+				isGCCReal, err := ccommon.GCCIsRealGCC(d.cCompiler)
+				if err != nil {
+					return fmt.Errorf("error checking GCCIsRealGCC: %w", err)
+				}
+				if !isGCCReal {
+					continue
+				}
+			}
 			// Check if compilers actually work by building a minimal CMake project
 			testDir, err := os.MkdirTemp("", "csetup_detect_test")
 			if err != nil {
