@@ -17,12 +17,28 @@ type TargetContext struct {
 }
 
 type TargetConfiguration struct {
-	Depends                 []string                `yaml:"depends"`
-	ProjectType             string                  `yaml:"project_type"`
-	CMakePackageName        string                  `yaml:"cmake_package_name,omitempty"`
-	FindPackageRoot         *string                 `yaml:"find_package_root,omitempty"`
-	Staged                  *bool                   `yaml:"staged,omitempty"`
-	ExternalSourceOverride  *string                 `yaml:"external_source_override,omitempty"`
+	/// The source to use from workspace sources, if empty, it's the source
+	/// of the same name as the target.
+	Source string `yaml:"source,omitempty"`
+
+	/// If not empty, a relative path from within the source to treat as the target source when building.
+	/// This can be useful for example, if a git repository has multiple subproject targets to build.
+	RootPath string `yaml:"root_path,omitempty"`
+
+	/// A list of build targets that this target depends on
+	Depends []string `yaml:"depends"`
+
+	/// The project type, such as CMake.
+	ProjectType string `yaml:"project_type"`
+
+	/// The CMake moniker used for find_package, if it's different from the target name
+	CMakePackageName string `yaml:"cmake_package_name,omitempty"`
+
+	FindPackageRoot        *string `yaml:"find_package_root,omitempty"`
+	Staged                 *bool   `yaml:"staged,omitempty"`
+	ExternalSourceOverride *string `yaml:"external_source_override,omitempty"`
+
+	/// If config is generated in a subdirectory of the build tree, it needs to be  put into OverrirdeCMakeConfigPath
 	OverrideCMakeConfigPath *string                 `yaml:"override_cmake_config_path,omitempty"`
 	ExtraCMakeConfigureArgs []string                `yaml:"extra_cmake_configure_args,omitempty"`
 	CMakeOptions            map[string]cmake.Option `yaml:"cmake_options,omitempty"`
@@ -168,16 +184,25 @@ func (t *TargetContext) CMakeSourcePath(workspace *WorkspaceContext) (string, er
 	if t.Name == "" {
 		panic("target context must have a name")
 	}
-	path := t.Config.ExternalSourceOverride
-	if path == nil {
-		return filepath.Join(workspace.WorkspacePath, "sources", t.Name), nil
+
+	if t.Config.ExternalSourceOverride != nil {
+		path := *t.Config.ExternalSourceOverride
+		if filepath.IsAbs(path) {
+			return path, nil
+		}
+		return filepath.Join(workspace.WorkspacePath, "sources", path), nil
 	}
 
-	if filepath.IsAbs(*path) {
-		return *path, nil
+	sourceName := t.Config.Source
+	if sourceName == "" {
+		sourceName = t.Name
 	}
 
-	return filepath.Join(workspace.WorkspacePath, "sources", *path), nil
+	sourcePath := filepath.Join(workspace.WorkspacePath, "sources", sourceName)
+	if t.Config.RootPath != "" {
+		sourcePath = filepath.Join(sourcePath, t.Config.RootPath)
+	}
+	return sourcePath, nil
 }
 
 func (t *TargetContext) CMakeConfigPath(workspace *WorkspaceContext, bp TargetBuildParameters) (string, error) {

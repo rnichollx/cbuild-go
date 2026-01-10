@@ -95,6 +95,21 @@ func main() {
 			return handleRemoveSource(ctx, getWorkspacePath(ctx), args)
 		},
 	}
+	runner.Subcommands["remove-target"] = &cli.Subcommand{
+		Description: "Remove a target from the workspace",
+		AllowArgs:   true,
+		Exec: func(ctx context.Context, args []string) error {
+			return handleRemoveTarget(ctx, getWorkspacePath(ctx), args)
+		},
+	}
+	runner.Subcommands["remove-project"] = &cli.Subcommand{
+		Description:  "Remove a source and all its associated targets from the workspace",
+		AllowArgs:    true,
+		AcceptsFlags: []cli.Flag{ccommon.DeleteFlag},
+		Exec: func(ctx context.Context, args []string) error {
+			return handleRemoveProject(ctx, getWorkspacePath(ctx), args)
+		},
+	}
 	runner.Subcommands["set-cxx-version"] = &cli.Subcommand{
 		Description: "Set the C++ version for a source or the whole workspace",
 		AllowArgs:   true,

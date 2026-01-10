@@ -49,10 +49,13 @@ func handleListSources(ctx context.Context, workspacePath string, args []string)
 		}
 
 		fmt.Printf("%s %s\n", name, status)
-
 		// If it's a standard source (in the sources/ directory), mark it as tracked
 		if target.Config.ExternalSourceOverride == nil {
-			trackedDirs[name] = true
+			sourceName := target.Config.Source
+			if sourceName == "" {
+				sourceName = name
+			}
+			trackedDirs[sourceName] = true
 		} else {
 			// If it's an override, check if it points into our sources dir anyway
 			rel, err := filepath.Rel(sourcesDir, srcPath)
@@ -80,14 +83,14 @@ func handleListSources(ctx context.Context, workspacePath string, args []string)
 
 func handleRemoveSource(ctx context.Context, workspacePath string, args []string) error {
 	if len(args) != 1 {
-		return fmt.Errorf("usage: csetup remove-source <source> [-D|--delete]")
+		return fmt.Errorf("usage: csetup remove-source <source> [-X|--delete]")
 	}
 
-	source := args[0]
+	sourceName := args[0]
 	removeFolder := cli.GetBool(ctx, cli.FlagKey(ccommon.FlagDelete))
 
-	if source == "" {
-		return fmt.Errorf("usage: csetup remove-source <source> [-D|--delete]")
+	if sourceName == "" {
+		return fmt.Errorf("usage: csetup remove-source <source> [-X|--delete]")
 	}
 
 	ws := &ccommon.WorkspaceContext{}
@@ -96,20 +99,25 @@ func handleRemoveSource(ctx context.Context, workspacePath string, args []string
 		return fmt.Errorf("error loading workspace: %w", err)
 	}
 
-	if _, ok := ws.Config.Targets[source]; !ok {
-		return fmt.Errorf("source %s not found in workspace", source)
+	if ws.Config.Sources == nil {
+		return fmt.Errorf("no sources defined in workspace")
 	}
 
-	delete(ws.Config.Targets, source)
+	if _, ok := ws.Config.Sources[sourceName]; !ok {
+		return fmt.Errorf("source %s not found in workspace", sourceName)
+	}
+
+	delete(ws.Config.Sources, sourceName)
+
 	err = ws.Save()
 	if err != nil {
 		return fmt.Errorf("error saving workspace: %w", err)
 	}
 
-	fmt.Printf("Removed source %s from workspace\n", source)
+	fmt.Printf("Removed source %s from workspace\n", sourceName)
 
 	if removeFolder {
-		sourceDir := filepath.Join(workspacePath, "sources", source)
+		sourceDir := filepath.Join(workspacePath, "sources", sourceName)
 		if _, err := os.Stat(sourceDir); err == nil {
 			fmt.Printf("Deleting source folder: %s\n", sourceDir)
 			err = os.RemoveAll(sourceDir)
@@ -120,8 +128,114 @@ func handleRemoveSource(ctx context.Context, workspacePath string, args []string
 			fmt.Printf("Source folder %s not found, skipping deletion.\n", sourceDir)
 		}
 	} else {
-		fmt.Printf("Note: files in sources/%s were NOT deleted. Use -X to delete them.\n", source)
+		fmt.Printf("Note: files in sources/%s were NOT deleted. Use -X to delete them.\n", sourceName)
 	}
+	return nil
+}
+
+func handleRemoveTarget(ctx context.Context, workspacePath string, args []string) error {
+	if len(args) != 1 {
+		return fmt.Errorf("usage: csetup remove-target <target>")
+	}
+
+	targetName := args[0]
+	if targetName == "" {
+		return fmt.Errorf("usage: csetup remove-target <target>")
+	}
+
+	ws := &ccommon.WorkspaceContext{}
+	err := ws.Load(workspacePath)
+	if err != nil {
+		return fmt.Errorf("error loading workspace: %w", err)
+	}
+
+	if _, ok := ws.Config.Targets[targetName]; !ok {
+		return fmt.Errorf("target %s not found in workspace", targetName)
+	}
+
+	delete(ws.Config.Targets, targetName)
+
+	err = ws.Save()
+	if err != nil {
+		return fmt.Errorf("error saving workspace: %w", err)
+	}
+
+	fmt.Printf("Removed target %s from workspace\n", targetName)
+	return nil
+}
+
+func handleRemoveProject(ctx context.Context, workspacePath string, args []string) error {
+	if len(args) != 1 {
+		return fmt.Errorf("usage: csetup remove-project <source> [-X|--delete]")
+	}
+
+	sourceName := args[0]
+	removeFolder := cli.GetBool(ctx, cli.FlagKey(ccommon.FlagDelete))
+
+	if sourceName == "" {
+		return fmt.Errorf("usage: csetup remove-project <source> [-X|--delete]")
+	}
+
+	ws := &ccommon.WorkspaceContext{}
+	err := ws.Load(workspacePath)
+	if err != nil {
+		return fmt.Errorf("error loading workspace: %w", err)
+	}
+
+	sourceFound := false
+	if ws.Config.Sources != nil {
+		if _, ok := ws.Config.Sources[sourceName]; ok {
+			delete(ws.Config.Sources, sourceName)
+			sourceFound = true
+		}
+	}
+
+	targetsToRemove := []string{}
+	for targetName, targetConfig := range ws.Config.Targets {
+		targetSource := targetConfig.Source
+		if targetSource == "" {
+			targetSource = targetName
+		}
+		if targetSource == sourceName {
+			targetsToRemove = append(targetsToRemove, targetName)
+		}
+	}
+
+	for _, targetName := range targetsToRemove {
+		delete(ws.Config.Targets, targetName)
+	}
+
+	if !sourceFound && len(targetsToRemove) == 0 {
+		return fmt.Errorf("source or targets for %s not found in workspace", sourceName)
+	}
+
+	err = ws.Save()
+	if err != nil {
+		return fmt.Errorf("error saving workspace: %w", err)
+	}
+
+	if sourceFound {
+		fmt.Printf("Removed source %s from workspace\n", sourceName)
+	}
+	for _, targetName := range targetsToRemove {
+		fmt.Printf("Removed target %s from workspace\n", targetName)
+	}
+
+	if removeFolder {
+		sourceDir := filepath.Join(workspacePath, "sources", sourceName)
+		if _, err := os.Stat(sourceDir); err == nil {
+			fmt.Printf("Deleting source folder: %s\n", sourceDir)
+			err = os.RemoveAll(sourceDir)
+			if err != nil {
+				return fmt.Errorf("error deleting source folder: %w", err)
+			}
+		} else {
+			fmt.Printf("Source folder %s not found, skipping deletion.\n", sourceDir)
+		}
+	} else if sourceFound {
+		fmt.Printf("Note: files in sources/%s were NOT deleted. Use -X to delete them.\n", sourceName)
+	}
+
 	return nil
 }
 
@@ -203,8 +317,18 @@ func handleGitClone(ctx context.Context, workspacePath string, args []string) er
 	if _, ok := ws.Config.Targets[destName]; ok {
 		fmt.Printf("TargetConfiguration %s already exists in cbuild_workspace.yml. Skipping update.\n", destName)
 	} else {
+		if ws.Config.Sources == nil {
+			ws.Config.Sources = make(map[string]*ccommon.CodeSource)
+		}
+		ws.Config.Sources[destName] = &ccommon.CodeSource{
+			Git: &ccommon.GitSource{
+				Repository: repoURL,
+			},
+		}
+
 		ws.Config.Targets[destName] = &ccommon.TargetConfiguration{
 			ProjectType: "CMake",
+			Source:      destName,
 		}
 		err = ws.Save()
 		if err != nil {

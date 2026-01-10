@@ -25,6 +25,7 @@ type WorkspaceContext struct {
 }
 
 type WorkspaceConfig struct {
+	Sources map[string]*CodeSource          `yaml:"sources"`
 	Targets map[string]*TargetConfiguration `yaml:"targets"`
 
 	CMakeBinary    *string  `yaml:"cmake_binary"`
@@ -383,11 +384,13 @@ func (w *WorkspaceContext) ProcessCSetupFile(ctx context.Context, targetName str
 	reader := bufio.NewReader(os.Stdin)
 
 	// Replace all fields of TargetConfiguration with the DefaultConfiguration from the CSetup file,
-	// *except* ExternalSourceOverride if it is present, making sure to nil any existing fields not present
-	// in the DefaultConfiguration, excluding ExternalSourceOverride.
+	// *except* ExternalSourceOverride and Source if they are present, making sure to nil any existing fields not present
+	// in the DefaultConfiguration, excluding ExternalSourceOverride and Source.
 	externalOverride := target.Config.ExternalSourceOverride
+	source := target.Config.Source
 	target.Config = csetup.DefaultConfig
 	target.Config.ExternalSourceOverride = externalOverride
+	target.Config.Source = source
 	w.Config.Targets[targetName] = &target.Config
 
 	// Process Suggested Dependencies
@@ -416,8 +419,15 @@ func (w *WorkspaceContext) ProcessCSetupFile(ctx context.Context, targetName str
 					return fmt.Errorf("failed to download '%s': %w", depName, err)
 				}
 
+				if w.Config.Sources == nil {
+					w.Config.Sources = make(map[string]*CodeSource)
+				}
+				w.Config.Sources[depName] = &sdep
+
 				// Add to workspace targets
-				w.Config.Targets[depName] = &TargetConfiguration{}
+				w.Config.Targets[depName] = &TargetConfiguration{
+					Source: depName,
+				}
 				fmt.Printf("Added target '%s' to workspace.\n", depName)
 
 				// Also add it as a dependency to the current target
