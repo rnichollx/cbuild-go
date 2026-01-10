@@ -68,7 +68,7 @@ func main() {
 	runner.Subcommands["git-clone"] = &cli.Subcommand{
 		Description:  "Clone a git repository into the workspace",
 		AllowArgs:    true,
-		AcceptsFlags: []cli.Flag{ccommon.DownloadDepsFlag},
+		AcceptsFlags: []cli.Flag{ccommon.DownloadDepsFlag, ccommon.SubmoduleFlag},
 		Exec: func(ctx context.Context, args []string) error {
 			return handleGitClone(ctx, getWorkspacePath(ctx), args)
 		},

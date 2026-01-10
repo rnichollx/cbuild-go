@@ -12,6 +12,7 @@ const (
 	FlagDryRun    FlagKey = "dry-run"
 	FlagReinit    FlagKey = "reinit"
 	FlagDownload  FlagKey = "download-deps"
+	FlagSubmodule FlagKey = "submodule"
 	FlagDelete    FlagKey = "delete"
 	FlagHelp      FlagKey = "help"
 )
@@ -32,6 +33,8 @@ var (
 	ReinitFlag = cli.NewBoolFlag("", "reinit", cli.FlagKey(FlagReinit), "reinitialize the workspace")
 
 	DownloadDepsFlag = cli.NewBoolFlag("", "download-deps", cli.FlagKey(FlagDownload), "download dependencies during clone")
+
+	SubmoduleFlag = cli.NewBoolFlag("", "submodule", cli.FlagKey(FlagSubmodule), "add as a git submodule instead of cloning")
 
 	DeleteFlag = cli.NewBoolFlag("X", "delete", cli.FlagKey(FlagDelete), "delete files when removing source")
 

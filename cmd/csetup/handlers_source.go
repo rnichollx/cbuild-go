@@ -127,12 +127,13 @@ func handleRemoveSource(ctx context.Context, workspacePath string, args []string
 
 func handleGitClone(ctx context.Context, workspacePath string, args []string) error {
 	if len(args) < 1 || len(args) > 2 {
-		return fmt.Errorf("usage: csetup git-clone <repo_url> [dest_name] [--download-deps]")
+		return fmt.Errorf("usage: csetup git-clone <repo_url> [dest_name] [--download-deps] [--submodule]")
 	}
 
 	repoURL := ""
 	destName := ""
 	downloadDeps := cli.GetBool(ctx, cli.FlagKey(ccommon.FlagDownload))
+	useSubmodule := cli.GetBool(ctx, cli.FlagKey(ccommon.FlagSubmodule))
 
 	for _, arg := range args {
 		if repoURL == "" {
@@ -143,7 +144,7 @@ func handleGitClone(ctx context.Context, workspacePath string, args []string) er
 	}
 
 	if repoURL == "" {
-		return fmt.Errorf("usage: csetup git-clone <repo_url> [dest_name] [--download-deps]")
+		return fmt.Errorf("usage: csetup git-clone <repo_url> [dest_name] [--download-deps] [--submodule]")
 	}
 
 	if destName == "" {
@@ -161,14 +162,29 @@ func handleGitClone(ctx context.Context, workspacePath string, args []string) er
 	// 2. Clone into sources/<destName>
 	destDir := filepath.Join(workspacePath, "sources", destName)
 
-	fmt.Printf("Cloning %s into %s...\n", repoURL, destDir)
+	if useSubmodule {
+		fmt.Printf("Adding submodule %s into %s...\n", repoURL, destDir)
+	} else {
+		fmt.Printf("Cloning %s into %s...\n", repoURL, destDir)
+	}
 
-	cmd := exec.Command("git", "clone", repoURL, destDir)
+	var cmd *exec.Cmd
+	if useSubmodule {
+		// Use relative path for submodule add to ensure .gitmodules is correct
+		relDestDir := filepath.Join("sources", destName)
+		cmd = exec.Command("git", "submodule", "add", repoURL, relDestDir)
+	} else {
+		cmd = exec.Command("git", "clone", repoURL, destDir)
+	}
+	cmd.Dir = workspacePath
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 
 	err := cmd.Run()
 	if err != nil {
+		if useSubmodule {
+			return fmt.Errorf("error adding submodule: %w", err)
+		}
 		return fmt.Errorf("error cloning repository: %w", err)
 	}
 
@@ -198,7 +214,7 @@ func handleGitClone(ctx context.Context, workspacePath string, args []string) er
 	}
 
 	// 4. Process csetup.yml if it exists
-	err = ws.ProcessCSetupFile(destName)
+	err = ws.ProcessCSetupFile(ctx, destName)
 	if err != nil {
 		return fmt.Errorf("error processing csetup file: %w", err)
 	}

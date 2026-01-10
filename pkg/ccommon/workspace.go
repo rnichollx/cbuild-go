@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"gitlab.com/rpnx/cbuild-go/pkg/cli"
 	"gitlab.com/rpnx/cbuild-go/pkg/cmake"
 	"gitlab.com/rpnx/cbuild-go/pkg/host"
 	"gitlab.com/rpnx/cbuild-go/pkg/system"
@@ -338,7 +339,7 @@ func (w *WorkspaceContext) buildModule(mod *TargetContext, modname string, built
 	return nil
 }
 
-func (w *WorkspaceContext) ProcessCSetupFile(targetName string) error {
+func (w *WorkspaceContext) ProcessCSetupFile(ctx context.Context, targetName string) error {
 	targetConfig, ok := w.Config.Targets[targetName]
 	if !ok {
 		return fmt.Errorf("target %s not found in workspace", targetName)
@@ -396,7 +397,7 @@ func (w *WorkspaceContext) ProcessCSetupFile(targetName string) error {
 		}
 
 		if _, exists := w.Config.Targets[depName]; !exists {
-			autoDownload := w.DownloadDeps
+			autoDownload := cli.GetBool(ctx, cli.FlagKey(FlagDownload))
 			if !autoDownload {
 				fmt.Printf("Dependency '%s' is not present in sources, module '%s' suggests getting it from '%s', download it? [Y/n] ", depName, targetName, sdep.From())
 				response, err := reader.ReadString('\n')
@@ -410,7 +411,7 @@ func (w *WorkspaceContext) ProcessCSetupFile(targetName string) error {
 			}
 
 			if autoDownload {
-				err := w.Get(depName, sdep)
+				err := w.Get(ctx, depName, sdep)
 				if err != nil {
 					return fmt.Errorf("failed to download '%s': %w", depName, err)
 				}
@@ -424,7 +425,7 @@ func (w *WorkspaceContext) ProcessCSetupFile(targetName string) error {
 				fmt.Printf("Added dependency '%s' to target '%s'.\n", depName, targetName)
 
 				// Recursively process the new target's csetup file
-				err = w.ProcessCSetupFile(depName)
+				err = w.ProcessCSetupFile(ctx, depName)
 				if err != nil {
 					return fmt.Errorf("error processing csetup file for %s: %w", depName, err)
 				}

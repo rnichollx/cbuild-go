@@ -1,6 +1,9 @@
 package ccommon
 
-import "errors"
+import (
+	"context"
+	"errors"
+)
 
 type CodeSource struct {
 	Git   *GitSource `yaml:"git,omitempty"`
@@ -47,9 +50,9 @@ func (cs *CodeSource) From() string {
 	return cs.Local
 }
 
-func (ws *WorkspaceContext) Get(name string, source CodeSource) error {
+func (ws *WorkspaceContext) Get(ctx context.Context, name string, source CodeSource) error {
 	if source.hasGit() {
-		return ws.GetFromGit(name, *source.Git)
+		return ws.GetFromGit(ctx, name, *source.Git)
 	}
 	return errors.New("unsupported source type")
 }
