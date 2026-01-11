@@ -153,6 +153,13 @@ func main() {
 			return handleListSources(ctx, getWorkspacePath(ctx), args)
 		},
 	}
+	runner.Subcommands["drop-files"] = &cli.Subcommand{
+		Description: "Delete local source files without removing them from configuration",
+		AllowArgs:   true,
+		Exec: func(ctx context.Context, args []string) error {
+			return handleDropFiles(ctx, getWorkspacePath(ctx), args)
+		},
+	}
 	runner.Subcommands["get-args"] = &cli.Subcommand{
 		Description:  "Get build arguments for a target",
 		AllowArgs:    true,

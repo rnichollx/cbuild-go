@@ -238,6 +238,48 @@ func handleRemoveProject(ctx context.Context, workspacePath string, args []strin
 	return nil
 }
 
+func handleDropFiles(ctx context.Context, workspacePath string, args []string) error {
+	if len(args) > 1 {
+		return fmt.Errorf("usage: csetup drop-files [<source>]")
+	}
+
+	ws := &ccommon.WorkspaceContext{}
+	err := ws.Load(workspacePath)
+	if err != nil {
+		return fmt.Errorf("error loading workspace: %w", err)
+	}
+
+	sourcesToDrop := []string{}
+	if len(args) == 1 {
+		sourceName := args[0]
+		if _, ok := ws.Config.Sources[sourceName]; !ok {
+			return fmt.Errorf("source %s not found in workspace configuration", sourceName)
+		}
+		sourcesToDrop = append(sourcesToDrop, sourceName)
+	} else {
+		for name := range ws.Config.Sources {
+			sourcesToDrop = append(sourcesToDrop, name)
+		}
+	}
+
+	for _, sourceName := range sourcesToDrop {
+		sourceDir := filepath.Join(workspacePath, "sources", sourceName)
+		if info, err := os.Stat(sourceDir); err == nil && info.IsDir() {
+			fmt.Printf("Deleting source folder: %s\n", sourceDir)
+			err = os.RemoveAll(sourceDir)
+			if err != nil {
+				return fmt.Errorf("error deleting source folder %s: %w", sourceDir, err)
+			}
+		} else {
+			if len(args) == 1 {
+				fmt.Printf("Source folder %s not found or is not a directory, skipping.\n", sourceDir)
+			}
+		}
+	}
+
+	return nil
+}
+
 func handleGitClone(ctx context.Context, workspacePath string, args []string) error {
 	if len(args) < 1 || len(args) > 2 {
 		return fmt.Errorf("usage: csetup git-clone <repo_url> [dest_name] [--download-deps] [--submodule] [--no-setup]")
