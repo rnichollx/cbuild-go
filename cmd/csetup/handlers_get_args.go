@@ -24,14 +24,9 @@ func handleGetArgs(ctx context.Context, workspacePath string, args []string) err
 	}
 
 	ws := &ccommon.WorkspaceContext{}
-	err := ws.Load(workspacePath)
+	err := ws.Load(ctx, workspacePath)
 	if err != nil {
 		return fmt.Errorf("error loading workspace: %w", err)
-	}
-
-	target, err := ws.GetTarget(targetName)
-	if err != nil {
-		return err
 	}
 
 	bp := ccommon.TargetBuildParameters{
@@ -39,19 +34,9 @@ func handleGetArgs(ctx context.Context, workspacePath string, args []string) err
 		BuildType: buildType,
 	}
 
-	fullArgs, err := target.CMakeConfigureArgs(context.Background(), ws, bp)
+	filteredArgs, err := ws.GetBuildArgs(ctx, targetName, bp)
 	if err != nil {
-		return fmt.Errorf("error getting cmake args: %w", err)
-	}
-
-	filteredArgs := []string{}
-	for i := 0; i < len(fullArgs); i++ {
-		arg := fullArgs[i]
-		if arg == "-S" || arg == "-B" {
-			i++ // skip the next argument too (the path)
-			continue
-		}
-		filteredArgs = append(filteredArgs, arg)
+		return err
 	}
 
 	fmt.Println(strings.Join(filteredArgs, " "))

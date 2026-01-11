@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"gitlab.com/rpnx/cbuild-go/pkg/ccommon"
 	"gitlab.com/rpnx/cbuild-go/pkg/cli"
-	"os"
-	"path/filepath"
 	"strings"
 )
 
@@ -24,42 +22,15 @@ func handleInit(ctx context.Context, workspacePath string, args []string) error 
 		return fmt.Errorf("usage: csetup init <workspace name> [--reinit]")
 	}
 
-	// Use workspaceName as the workspacePath for init
-	targetPath := workspaceName
-
-	// Create directory if it doesn't exist
-	if err := os.MkdirAll(targetPath, 0755); err != nil {
-		return fmt.Errorf("error creating workspace directory: %w", err)
-	}
-
-	workspaceConfig := filepath.Join(targetPath, "cbuild_workspace.yml")
-	if _, err := os.Stat(workspaceConfig); err == nil {
-		if !reinit {
-			return fmt.Errorf("%s already exists. Use --reinit to overwrite", workspaceConfig)
-		} else {
-			// Delete toolchains, sources and buildspaces
-			dirsToDelete := []string{"toolchains", "sources", "buildspaces"}
-			for _, d := range dirsToDelete {
-				dirPath := filepath.Join(targetPath, d)
-				fmt.Printf("Cleaning %s...\n", dirPath)
-				os.RemoveAll(dirPath)
-			}
-		}
-	}
-
 	ws := &ccommon.WorkspaceContext{
-		WorkspacePath: targetPath,
-		Config: ccommon.WorkspaceConfig{
-			Targets:    make(map[string]*ccommon.TargetConfiguration),
-			CXXVersion: "20",
-		},
+		WorkspacePath: workspaceName,
 	}
 
-	err := ws.Save()
+	err := ws.Init(ctx, reinit)
 	if err != nil {
-		return fmt.Errorf("error saving workspace: %w", err)
+		return err
 	}
 
-	fmt.Printf("Initialized empty workspace in %s\n", targetPath)
+	fmt.Printf("Initialized empty workspace in %s\n", workspaceName)
 	return nil
 }

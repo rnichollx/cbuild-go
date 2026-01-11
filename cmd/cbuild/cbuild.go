@@ -71,7 +71,7 @@ func runClean(ctx context.Context, args []string) error {
 	dryRun := cli.GetBool(ctx, cli.FlagKey(ccommon.FlagDryRun))
 
 	ws := &ccommon.WorkspaceContext{}
-	err := ws.Load(workspacePath)
+	err := ws.Load(ctx, workspacePath)
 	if err != nil {
 		return fmt.Errorf("error loading configuration: %w", err)
 	}
@@ -80,7 +80,7 @@ func runClean(ctx context.Context, args []string) error {
 
 	var toolchainNames []string
 	if len(toolchainFlag) == 0 {
-		toolchainNames, err = ws.ListToolchains()
+		toolchainNames, err = ws.ListToolchains(ctx)
 		if err != nil {
 			return fmt.Errorf("error listing toolchains: %w", err)
 		}
@@ -97,7 +97,7 @@ func runClean(ctx context.Context, args []string) error {
 
 	var targets []string
 	if len(targetFlag) == 0 {
-		targets = ws.ListTargets()
+		targets = ws.ListTargets(ctx)
 	} else {
 		targets = strings.Split(targetFlag, ",")
 	}
@@ -112,7 +112,7 @@ func runClean(ctx context.Context, args []string) error {
 					BuildType: config,
 					DryRun:    dryRun,
 				}
-				err = ws.CleanTarget(target, bp)
+				err = ws.CleanTarget(ctx, target, bp)
 				if err != nil {
 					return fmt.Errorf("error cleaning target %q: %w", target, err)
 				}
@@ -143,7 +143,7 @@ func runBuild(ctx context.Context, command string, args []string) error {
 	}
 
 	ws := &ccommon.WorkspaceContext{}
-	err := ws.Load(workspacePath)
+	err := ws.Load(ctx, workspacePath)
 	if err != nil {
 		return fmt.Errorf("error loading configuration: %w", err)
 	}
@@ -187,11 +187,11 @@ func runBuild(ctx context.Context, command string, args []string) error {
 			}
 
 			if command == "build-deps" {
-				err = ws.BuildDependencies(targetName, bp)
+				err = ws.BuildDependencies(ctx, targetName, bp)
 			} else if targetName != "" {
-				err = ws.BuildTarget(targetName, bp)
+				err = ws.BuildTarget(ctx, targetName, bp)
 			} else {
-				err = ws.Build(bp)
+				err = ws.Build(ctx, bp)
 			}
 
 			if err != nil {

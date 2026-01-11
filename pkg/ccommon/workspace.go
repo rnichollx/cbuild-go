@@ -33,7 +33,7 @@ type WorkspaceConfig struct {
 	Configurations []string `yaml:"configurations"`
 }
 
-func (w *WorkspaceContext) Load(path string) error {
+func (w *WorkspaceContext) Load(ctx context.Context, path string) error {
 	w.WorkspacePath = path
 	// Load the configuration from the file
 	yamlFile, err := os.ReadFile(filepath.Join(path, "cbuild_workspace.yml"))
@@ -56,7 +56,7 @@ func (w *WorkspaceContext) Load(path string) error {
 	return nil
 }
 
-func (w *WorkspaceContext) GetTarget(name string) (*TargetContext, error) {
+func (w *WorkspaceContext) GetTarget(ctx context.Context, name string) (*TargetContext, error) {
 	targetConfig, ok := w.Config.Targets[name]
 	if !ok {
 		return nil, fmt.Errorf("target %s not found in workspace", name)
@@ -68,7 +68,7 @@ func (w *WorkspaceContext) GetTarget(name string) (*TargetContext, error) {
 	}, nil
 }
 
-func (w *WorkspaceContext) Save() error {
+func (w *WorkspaceContext) Save(ctx context.Context) error {
 	yamlFile, err := yaml.Marshal(w.Config)
 	if err != nil {
 		return fmt.Errorf("failed to marshal config: %w", err)
@@ -82,8 +82,8 @@ func (w *WorkspaceContext) Save() error {
 	return nil
 }
 
-func (w *WorkspaceContext) GenerateToolchainFile(opts *CMakeGenerateToolchainFileOptions, systemName system.Platform, systemProcessor system.Processor, targetPath string) error {
-	return cmake.GenerateToolchainFile(context.Background(), cmake.GenerateToolchainFileOptions{
+func (w *WorkspaceContext) GenerateToolchainFile(ctx context.Context, opts *CMakeGenerateToolchainFileOptions, systemName system.Platform, systemProcessor system.Processor, targetPath string) error {
+	return cmake.GenerateToolchainFile(ctx, cmake.GenerateToolchainFileOptions{
 		CCompiler:       opts.CCompiler,
 		CXXCompiler:     opts.CXXCompiler,
 		Linker:          opts.Linker,
@@ -95,7 +95,7 @@ func (w *WorkspaceContext) GenerateToolchainFile(opts *CMakeGenerateToolchainFil
 	})
 }
 
-func (w *WorkspaceContext) LoadToolchain(toolchainName string) (*Toolchain, string, error) {
+func (w *WorkspaceContext) LoadToolchain(ctx context.Context, toolchainName string) (*Toolchain, string, error) {
 	toolchainDir := filepath.Join(w.WorkspacePath, "toolchains", toolchainName)
 	toolchainFile := filepath.Join(toolchainDir, "toolchain.yml")
 
@@ -113,8 +113,8 @@ func (w *WorkspaceContext) LoadToolchain(toolchainName string) (*Toolchain, stri
 	return tc, toolchainDir, nil
 }
 
-func (w *WorkspaceContext) ToolchainFilePath(modConfig *TargetConfiguration, bp TargetBuildParameters) (string, error) {
-	tc, tcPath, err := w.LoadToolchain(bp.Toolchain)
+func (w *WorkspaceContext) ToolchainFilePath(ctx context.Context, modConfig *TargetConfiguration, bp TargetBuildParameters) (string, error) {
+	tc, tcPath, err := w.LoadToolchain(ctx, bp.Toolchain)
 	if err != nil {
 		return "", fmt.Errorf("failed to load toolchain: %w", err)
 	}
@@ -138,20 +138,20 @@ func (w *WorkspaceContext) ToolchainFilePath(modConfig *TargetConfiguration, bp 
 	return "", nil
 }
 
-func (w *WorkspaceContext) Prebuild(bp TargetBuildParameters) (string, error) {
-	tc, _, err := w.LoadToolchain(bp.Toolchain)
+func (w *WorkspaceContext) Prebuild(ctx context.Context, bp TargetBuildParameters) (string, error) {
+	tc, _, err := w.LoadToolchain(ctx, bp.Toolchain)
 	if err != nil {
 		return "", fmt.Errorf("failed to load toolchain: %w", err)
 	}
 
 	hostPlatform := fmt.Sprintf("host-%s-%s", host.DetectHostPlatform().StringLower(), host.DetectHostProcessor().StringLower())
 	if tcf, ok := tc.CMakeToolchain[hostPlatform]; ok {
-		tcfPath, err := w.ToolchainFilePath(nil, bp)
+		tcfPath, err := w.ToolchainFilePath(ctx, nil, bp)
 		if err != nil {
 			return "", err
 		}
 		if tcf.Generate != nil {
-			err := w.GenerateToolchainFile(tcf.Generate, tc.TargetSystem, tc.TargetArch, tcfPath)
+			err := w.GenerateToolchainFile(ctx, tcf.Generate, tc.TargetSystem, tc.TargetArch, tcfPath)
 			if err != nil {
 				return "", fmt.Errorf("failed to generate toolchain file: %w", err)
 			}
@@ -161,8 +161,8 @@ func (w *WorkspaceContext) Prebuild(bp TargetBuildParameters) (string, error) {
 	return "", nil
 }
 
-func (w *WorkspaceContext) Build(bp TargetBuildParameters) error {
-	_, err := w.Prebuild(bp)
+func (w *WorkspaceContext) Build(ctx context.Context, bp TargetBuildParameters) error {
+	_, err := w.Prebuild(ctx, bp)
 	if err != nil {
 		return err
 	}
@@ -170,11 +170,11 @@ func (w *WorkspaceContext) Build(bp TargetBuildParameters) error {
 	var builtModules = make(map[string]bool)
 
 	for name := range w.Config.Targets {
-		mod, err := w.GetTarget(name)
+		mod, err := w.GetTarget(ctx, name)
 		if err != nil {
 			return err
 		}
-		err = w.buildModule(mod, name, builtModules, bp)
+		err = w.buildModule(ctx, mod, name, builtModules, bp)
 		if err != nil {
 			return fmt.Errorf("failed to build module %s: %w", name, err)
 		}
@@ -183,31 +183,31 @@ func (w *WorkspaceContext) Build(bp TargetBuildParameters) error {
 	return nil
 }
 
-func (w *WorkspaceContext) BuildTarget(targetName string, bp TargetBuildParameters) error {
-	_, err := w.Prebuild(bp)
+func (w *WorkspaceContext) BuildTarget(ctx context.Context, targetName string, bp TargetBuildParameters) error {
+	_, err := w.Prebuild(ctx, bp)
 	if err != nil {
 		return err
 	}
 
 	var builtModules = make(map[string]bool)
 
-	mod, err := w.GetTarget(targetName)
+	mod, err := w.GetTarget(ctx, targetName)
 	if err != nil {
 		return err
 	}
 
-	return w.buildModule(mod, targetName, builtModules, bp)
+	return w.buildModule(ctx, mod, targetName, builtModules, bp)
 }
 
-func (w *WorkspaceContext) BuildDependencies(targetName string, bp TargetBuildParameters) error {
-	_, err := w.Prebuild(bp)
+func (w *WorkspaceContext) BuildDependencies(ctx context.Context, targetName string, bp TargetBuildParameters) error {
+	_, err := w.Prebuild(ctx, bp)
 	if err != nil {
 		return err
 	}
 
 	var builtModules = make(map[string]bool)
 
-	mod, err := w.GetTarget(targetName)
+	mod, err := w.GetTarget(ctx, targetName)
 	if err != nil {
 		return err
 	}
@@ -215,11 +215,11 @@ func (w *WorkspaceContext) BuildDependencies(targetName string, bp TargetBuildPa
 	for _, dep := range mod.Config.Depends {
 		parts := strings.SplitN(dep, "/", 2)
 		depTargetName := parts[0]
-		depMod, err := w.GetTarget(depTargetName)
+		depMod, err := w.GetTarget(ctx, depTargetName)
 		if err != nil {
 			return err
 		}
-		err = w.buildModule(depMod, depTargetName, builtModules, bp)
+		err = w.buildModule(ctx, depMod, depTargetName, builtModules, bp)
 		if err != nil {
 			return fmt.Errorf("failed to build dependency %s: %w", depTargetName, err)
 		}
@@ -228,13 +228,13 @@ func (w *WorkspaceContext) BuildDependencies(targetName string, bp TargetBuildPa
 	return nil
 }
 
-func (w *WorkspaceContext) CleanTarget(targetName string, bp TargetBuildParameters) error {
-	mod, err := w.GetTarget(targetName)
+func (w *WorkspaceContext) CleanTarget(ctx context.Context, targetName string, bp TargetBuildParameters) error {
+	mod, err := w.GetTarget(ctx, targetName)
 	if err != nil {
 		return err
 	}
 
-	buildPath, err := mod.CMakeBuildPath(w, bp)
+	buildPath, err := mod.CMakeBuildPath(ctx, w, bp)
 	if err != nil {
 		return err
 	}
@@ -246,7 +246,7 @@ func (w *WorkspaceContext) CleanTarget(targetName string, bp TargetBuildParamete
 	return os.RemoveAll(buildPath)
 }
 
-func (w *WorkspaceContext) Exec(command string, args []string, dryRun bool) error {
+func (w *WorkspaceContext) Exec(ctx context.Context, command string, args []string, dryRun bool) error {
 	fmt.Printf("Executing: %s", command)
 	for _, arg := range args {
 		fmt.Printf(" %s", arg)
@@ -257,13 +257,13 @@ func (w *WorkspaceContext) Exec(command string, args []string, dryRun bool) erro
 		return nil
 	}
 
-	cmd := exec.Command(command, args...)
+	cmd := exec.CommandContext(ctx, command, args...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	return cmd.Run()
 }
 
-func (w *WorkspaceContext) buildModule(mod *TargetContext, modname string, builtModules map[string]bool, bp TargetBuildParameters) error {
+func (w *WorkspaceContext) buildModule(ctx context.Context, mod *TargetContext, modname string, builtModules map[string]bool, bp TargetBuildParameters) error {
 
 	if builtModules[modname] {
 		return nil
@@ -272,11 +272,11 @@ func (w *WorkspaceContext) buildModule(mod *TargetContext, modname string, built
 	for _, dep := range mod.Config.Depends {
 		parts := strings.SplitN(dep, "/", 2)
 		targetName := parts[0]
-		depMod, err := w.GetTarget(targetName)
+		depMod, err := w.GetTarget(ctx, targetName)
 		if err != nil {
 			return err
 		}
-		err = w.buildModule(depMod, targetName, builtModules, bp)
+		err = w.buildModule(ctx, depMod, targetName, builtModules, bp)
 		if err != nil {
 			return fmt.Errorf("failed to build dependency %s: %w", targetName, err)
 		}
@@ -291,17 +291,17 @@ func (w *WorkspaceContext) buildModule(mod *TargetContext, modname string, built
 		return fmt.Errorf("unsupported project type: %s", mod.Config.ProjectType)
 	}
 
-	cMakeConfigureArgs, err := mod.CMakeConfigureArgs(context.Background(), w, bp)
+	cMakeConfigureArgs, err := mod.CMakeConfigureArgs(ctx, w, bp)
 	if err != nil {
 		return fmt.Errorf("failed to get cmake configure args: %w", err)
 	}
 
-	err = w.Exec(cmakeBinary, cMakeConfigureArgs, bp.DryRun)
+	err = w.Exec(ctx, cmakeBinary, cMakeConfigureArgs, bp.DryRun)
 	if err != nil {
 		return fmt.Errorf("failed to configure module %s: %w", modname, err)
 	}
 
-	buildPath, err := mod.CMakeBuildPath(w, bp)
+	buildPath, err := mod.CMakeBuildPath(ctx, w, bp)
 	if err != nil {
 		return fmt.Errorf("failed to get build path: %w", err)
 	}
@@ -313,13 +313,13 @@ func (w *WorkspaceContext) buildModule(mod *TargetContext, modname string, built
 	// Build the module
 	buildCmd := []string{"--build", buildPath, "--config", bp.BuildType}
 
-	err = w.Exec(cmakeBinary, buildCmd, bp.DryRun)
+	err = w.Exec(ctx, cmakeBinary, buildCmd, bp.DryRun)
 	if err != nil {
 		return fmt.Errorf("failed to build module %s: %w", modname, err)
 	}
 
 	if mod.Config.Staged != nil && *mod.Config.Staged {
-		stagingPath, err := mod.CMakeStagingPath(w, bp)
+		stagingPath, err := mod.CMakeStagingPath(ctx, w, bp)
 		if err != nil {
 			return fmt.Errorf("failed to get staging path: %w", err)
 		}
@@ -329,7 +329,7 @@ func (w *WorkspaceContext) buildModule(mod *TargetContext, modname string, built
 		}
 
 		installCmd := []string{"--install", buildPath, "--prefix", stagingPath, "--config", bp.BuildType}
-		err = w.Exec(cmakeBinary, installCmd, bp.DryRun)
+		err = w.Exec(ctx, cmakeBinary, installCmd, bp.DryRun)
 		if err != nil {
 			return fmt.Errorf("failed to install module %s to staging: %w", modname, err)
 		}
@@ -454,7 +454,7 @@ func (w *WorkspaceContext) ProcessCSetupConfig(ctx context.Context, sourceName s
 		}
 	}
 
-	return w.Save()
+	return w.Save(ctx)
 }
 
 func (w *WorkspaceContext) ProcessCSetupFile(ctx context.Context, targetName string) error {
@@ -482,10 +482,10 @@ func (w *WorkspaceContext) DownloadSource(ctx context.Context, sourceName string
 		return err
 	}
 
-	return w.Save()
+	return w.Save(ctx)
 }
 
-func (ws *WorkspaceContext) ListToolchains() ([]string, error) {
+func (ws *WorkspaceContext) ListToolchains(ctx context.Context) ([]string, error) {
 	toolchainsDir := filepath.Join(ws.WorkspacePath, "toolchains")
 	entries, err := os.ReadDir(toolchainsDir)
 	if err != nil {
@@ -505,10 +505,482 @@ func (ws *WorkspaceContext) ListToolchains() ([]string, error) {
 	return toolchains, nil
 }
 
-func (ws *WorkspaceContext) ListTargets() []string {
+func (ws *WorkspaceContext) ListTargets(ctx context.Context) []string {
 	var targets []string
 	for k, _ := range ws.Config.Targets {
 		targets = append(targets, k)
 	}
 	return targets
+}
+
+func (w *WorkspaceContext) Init(ctx context.Context, reinit bool) error {
+	// Create directory if it doesn't exist
+	if err := os.MkdirAll(w.WorkspacePath, 0755); err != nil {
+		return fmt.Errorf("error creating workspace directory: %w", err)
+	}
+
+	workspaceConfig := filepath.Join(w.WorkspacePath, "cbuild_workspace.yml")
+	if _, err := os.Stat(workspaceConfig); err == nil {
+		if !reinit {
+			return fmt.Errorf("%s already exists. Use --reinit to overwrite", workspaceConfig)
+		} else {
+			// Delete toolchains, sources and buildspaces
+			dirsToDelete := []string{"toolchains", "sources", "buildspaces"}
+			for _, d := range dirsToDelete {
+				dirPath := filepath.Join(w.WorkspacePath, d)
+				fmt.Printf("Cleaning %s...\n", dirPath)
+				os.RemoveAll(dirPath)
+			}
+		}
+	}
+
+	w.Config = WorkspaceConfig{
+		Targets:    make(map[string]*TargetConfiguration),
+		CXXVersion: "20",
+	}
+
+	return w.Save(ctx)
+}
+
+func (w *WorkspaceContext) AddDependency(ctx context.Context, targetName string, depName string) error {
+	target, ok := w.Config.Targets[targetName]
+	if !ok {
+		return fmt.Errorf("target %s not found in workspace", targetName)
+	}
+
+	// Check if dependency already exists
+	for _, d := range target.Depends {
+		if d == depName {
+			fmt.Printf("Dependency %s already exists for %s\n", depName, targetName)
+			return nil
+		}
+	}
+
+	target.Depends = append(target.Depends, depName)
+	return w.Save(ctx)
+}
+
+func (w *WorkspaceContext) RemoveDependency(ctx context.Context, targetName string, depName string) error {
+	target, ok := w.Config.Targets[targetName]
+	if !ok {
+		return fmt.Errorf("target %s not found in workspace", targetName)
+	}
+
+	newDepends := []string{}
+	found := false
+	for _, d := range target.Depends {
+		if d == depName {
+			found = true
+			continue
+		}
+		newDepends = append(newDepends, d)
+	}
+
+	if !found {
+		fmt.Printf("Dependency %s not found for %s\n", depName, targetName)
+		return nil
+	}
+
+	target.Depends = newDepends
+	return w.Save(ctx)
+}
+
+func (w *WorkspaceContext) RemoveSource(ctx context.Context, sourceName string, removeFolder bool) error {
+	if w.Config.Sources == nil {
+		return fmt.Errorf("no sources defined in workspace")
+	}
+
+	if _, ok := w.Config.Sources[sourceName]; !ok {
+		return fmt.Errorf("source %s not found in workspace", sourceName)
+	}
+
+	delete(w.Config.Sources, sourceName)
+
+	err := w.Save(ctx)
+	if err != nil {
+		return fmt.Errorf("error saving workspace: %w", err)
+	}
+
+	fmt.Printf("Removed source %s from workspace\n", sourceName)
+
+	if removeFolder {
+		sourceDir := filepath.Join(w.WorkspacePath, "sources", sourceName)
+		if _, err := os.Stat(sourceDir); err == nil {
+			fmt.Printf("Deleting source folder: %s\n", sourceDir)
+			err = os.RemoveAll(sourceDir)
+			if err != nil {
+				return fmt.Errorf("error deleting source folder: %w", err)
+			}
+		} else {
+			fmt.Printf("Source folder %s not found, skipping deletion.\n", sourceDir)
+		}
+	} else {
+		fmt.Printf("Note: files in sources/%s were NOT deleted. Use -X to delete them.\n", sourceName)
+	}
+	return nil
+}
+
+func (w *WorkspaceContext) RemoveTarget(ctx context.Context, targetName string) error {
+	if _, ok := w.Config.Targets[targetName]; !ok {
+		return fmt.Errorf("target %s not found in workspace", targetName)
+	}
+
+	delete(w.Config.Targets, targetName)
+
+	err := w.Save(ctx)
+	if err != nil {
+		return fmt.Errorf("error saving workspace: %w", err)
+	}
+
+	fmt.Printf("Removed target %s from workspace\n", targetName)
+	return nil
+}
+
+func (w *WorkspaceContext) RemoveProject(ctx context.Context, sourceName string, removeFolder bool) error {
+	sourceFound := false
+	if w.Config.Sources != nil {
+		if _, ok := w.Config.Sources[sourceName]; ok {
+			delete(w.Config.Sources, sourceName)
+			sourceFound = true
+		}
+	}
+
+	targetsToRemove := []string{}
+	for targetName, targetConfig := range w.Config.Targets {
+		targetSource := targetConfig.Source
+		if targetSource == "" {
+			targetSource = targetName
+		}
+		if targetSource == sourceName {
+			targetsToRemove = append(targetsToRemove, targetName)
+		}
+	}
+
+	for _, targetName := range targetsToRemove {
+		delete(w.Config.Targets, targetName)
+	}
+
+	if !sourceFound && len(targetsToRemove) == 0 {
+		return fmt.Errorf("source or targets for %s not found in workspace", sourceName)
+	}
+
+	err := w.Save(ctx)
+	if err != nil {
+		return fmt.Errorf("error saving workspace: %w", err)
+	}
+
+	if sourceFound {
+		fmt.Printf("Removed source %s from workspace\n", sourceName)
+	}
+	for _, targetName := range targetsToRemove {
+		fmt.Printf("Removed target %s from workspace\n", targetName)
+	}
+
+	if removeFolder {
+		sourceDir := filepath.Join(w.WorkspacePath, "sources", sourceName)
+		if _, err := os.Stat(sourceDir); err == nil {
+			fmt.Printf("Deleting source folder: %s\n", sourceDir)
+			err = os.RemoveAll(sourceDir)
+			if err != nil {
+				return fmt.Errorf("error deleting source folder: %w", err)
+			}
+		} else {
+			fmt.Printf("Source folder %s not found, skipping deletion.\n", sourceDir)
+		}
+	} else if sourceFound {
+		fmt.Printf("Note: files in sources/%s were NOT deleted. Use -X to delete them.\n", sourceName)
+	}
+
+	return nil
+}
+
+func (w *WorkspaceContext) SetCXXVersion(ctx context.Context, version string, source string) error {
+	if source != "" {
+		target, ok := w.Config.Targets[source]
+		if !ok {
+			return fmt.Errorf("source %s not found in workspace", source)
+		}
+		target.CxxStandard = &version
+		fmt.Printf("Set CXX version for %s to %s\n", source, version)
+	} else {
+		w.Config.CXXVersion = version
+		fmt.Printf("Set global CXX version to %s\n", version)
+	}
+
+	return w.Save(ctx)
+}
+
+func (w *WorkspaceContext) SetStaging(ctx context.Context, source string, enabled bool) error {
+	target, ok := w.Config.Targets[source]
+	if !ok {
+		return fmt.Errorf("source %s not found in workspace", source)
+	}
+
+	target.Staged = &enabled
+
+	err := w.Save(ctx)
+	if err != nil {
+		return err
+	}
+
+	if enabled {
+		fmt.Printf("Enabled staging for %s\n", source)
+	} else {
+		fmt.Printf("Disabled staging for %s\n", source)
+	}
+	return nil
+}
+
+func (w *WorkspaceContext) AddConfiguration(ctx context.Context, configName string) error {
+	for _, cfg := range w.Config.Configurations {
+		if cfg == configName {
+			fmt.Printf("Configuration %s already exists\n", configName)
+			return nil
+		}
+	}
+
+	w.Config.Configurations = append(w.Config.Configurations, configName)
+	err := w.Save(ctx)
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("Added configuration %s\n", configName)
+	return nil
+}
+
+func (w *WorkspaceContext) RemoveConfiguration(ctx context.Context, configName string) error {
+	found := false
+	newConfigs := []string{}
+	for _, cfg := range w.Config.Configurations {
+		if cfg == configName {
+			found = true
+			continue
+		}
+		newConfigs = append(newConfigs, cfg)
+	}
+
+	if !found {
+		return fmt.Errorf("configuration %s not found", configName)
+	}
+
+	w.Config.Configurations = newConfigs
+	err := w.Save(ctx)
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("Removed configuration %s\n", configName)
+	return nil
+}
+
+func (ws *WorkspaceContext) DetectToolchains(ctx context.Context) error {
+	hostOS := host.DetectHostPlatform()
+	hostProcessor := host.DetectHostProcessor()
+	hostKey := fmt.Sprintf("host-%s-%s", hostOS.StringLower(), hostProcessor.StringLower())
+
+	targetSystem := hostOS
+	targetArch := hostProcessor
+
+	detectors := []struct {
+		name          string
+		cCompiler     string
+		cxxCompiler   string
+		extraCXXFlags []string
+	}{
+		{"system-gcc", "gcc", "g++", nil},
+		{"system-clang", "clang", "clang++", nil},
+		{"system-clang-libcxx", "clang", "clang++", []string{"-stdlib=libc++"}},
+		{"system-gcc-libcxx", "gcc", "g++", []string{"-stdlib=libc++"}},
+	}
+
+	toolchainsDir := filepath.Join(ws.WorkspacePath, "toolchains")
+	err := os.MkdirAll(toolchainsDir, 0755)
+	if err != nil {
+		return fmt.Errorf("failed to create toolchains directory: %w", err)
+	}
+
+	for _, d := range detectors {
+		_, errC := exec.LookPath(d.cCompiler)
+		_, errCXX := exec.LookPath(d.cxxCompiler)
+
+		if errC == nil && errCXX == nil {
+
+			if hostOS == system.PlatformMac && strings.Contains(d.name, "libcxx") {
+				continue
+			}
+
+			if d.cCompiler == "gcc" {
+				isGCCReal, err := GCCIsRealGCC(d.cCompiler)
+				if err != nil {
+					return fmt.Errorf("error checking GCCIsRealGCC: %w", err)
+				}
+				if !isGCCReal {
+					continue
+				}
+			}
+			// Check if compilers actually work by building a minimal CMake project
+			testDir, err := os.MkdirTemp("", "csetup_detect_test")
+			if err != nil {
+				return fmt.Errorf("failed to create temp dir: %w", err)
+			}
+			defer os.RemoveAll(testDir)
+
+			err = os.MkdirAll(filepath.Join(testDir, "build"), 0755)
+			if err != nil {
+				return fmt.Errorf("failed to create build dir: %w", err)
+			}
+
+			err = os.WriteFile(filepath.Join(testDir, "CMakeLists.txt"), []byte("cmake_minimum_required(VERSION 3.10)\nproject(test)\nadd_executable(test main.cpp)\n"), 0644)
+			if err != nil {
+				return fmt.Errorf("failed to create CMakeLists.txt: %w", err)
+			}
+
+			err = os.WriteFile(filepath.Join(testDir, "main.cpp"), []byte("int main() { return 0; }\n"), 0644)
+			if err != nil {
+				return fmt.Errorf("failed to create main.cpp: %w", err)
+			}
+
+			// Generate a temporary toolchain file for the test
+			tcFilePath := filepath.Join(testDir, "toolchain.cmake")
+			tc := Toolchain{
+				TargetArch:   targetArch,
+				TargetSystem: targetSystem,
+				CMakeToolchain: map[string]CMakeToolchainOptions{
+					hostKey: {
+						Generate: &CMakeGenerateToolchainFileOptions{
+							CCompiler:     d.cCompiler,
+							CXXCompiler:   d.cxxCompiler,
+							ExtraCXXFlags: d.extraCXXFlags,
+						},
+					},
+				},
+			}
+
+			// We need a workspace to call GenerateToolchainFile, but we can call cmake.GenerateToolchainFile directly
+			err = ws.GenerateToolchainFile(ctx, tc.CMakeToolchain[hostKey].Generate, targetSystem, targetArch, tcFilePath)
+			if err != nil {
+				return fmt.Errorf("failed to generate test toolchain file: %w", err)
+			}
+
+			// Run CMake configure
+			cmd := exec.CommandContext(ctx, "cmake", "-S", testDir, "-B", filepath.Join(testDir, "build"), "-G", "Ninja", "-DCMAKE_TOOLCHAIN_FILE="+tcFilePath)
+			err = cmd.Run()
+			if err != nil {
+				fmt.Printf("Detected %s, but %s cannot build a hello world program, skipping.\n", d.cxxCompiler, d.name)
+				continue
+			}
+
+			// Run CMake build
+			cmd = exec.CommandContext(ctx, "cmake", "--build", filepath.Join(testDir, "build"))
+			err = cmd.Run()
+			if err != nil {
+				fmt.Printf("Detected %s, but %s cannot build a hello world program, skipping.\n", d.cxxCompiler, d.name)
+				continue
+			}
+
+			fmt.Printf("Detected %s, creating toolchain...\n", d.name)
+
+			finalTc := Toolchain{
+				TargetArch:   targetArch,
+				TargetSystem: targetSystem,
+				CMakeToolchain: map[string]CMakeToolchainOptions{
+					hostKey: {
+						Generate: &CMakeGenerateToolchainFileOptions{
+							CCompiler:     d.cCompiler,
+							CXXCompiler:   d.cxxCompiler,
+							ExtraCXXFlags: d.extraCXXFlags,
+						},
+					},
+				},
+			}
+
+			tcDir := filepath.Join(toolchainsDir, d.name)
+			err = os.MkdirAll(tcDir, 0755)
+			if err != nil {
+				return fmt.Errorf("failed to create toolchain directory for %s: %w", d.name, err)
+			}
+
+			yamlFile, err := yaml.Marshal(finalTc)
+			if err != nil {
+				return fmt.Errorf("failed to marshal toolchain %s: %w", d.name, err)
+			}
+
+			err = os.WriteFile(filepath.Join(tcDir, "toolchain.yml"), yamlFile, 0644)
+			if err != nil {
+				return fmt.Errorf("failed to write toolchain file for %s: %w", d.name, err)
+			}
+		} else {
+			fmt.Printf("Compilers for %s not found (tried %s and %s), skipping.\n", d.name, d.cCompiler, d.cxxCompiler)
+		}
+	}
+
+	return nil
+}
+
+func (ws *WorkspaceContext) GetBuildArgs(ctx context.Context, targetName string, bp TargetBuildParameters) ([]string, error) {
+	target, err := ws.GetTarget(ctx, targetName)
+	if err != nil {
+		return nil, err
+	}
+
+	fullArgs, err := target.CMakeConfigureArgs(ctx, ws, bp)
+	if err != nil {
+		return nil, fmt.Errorf("error getting cmake args: %w", err)
+	}
+
+	filteredArgs := []string{}
+	for i := 0; i < len(fullArgs); i++ {
+		arg := fullArgs[i]
+		if arg == "-S" || arg == "-B" {
+			i++ // skip the next argument too (the path)
+			continue
+		}
+		filteredArgs = append(filteredArgs, arg)
+	}
+
+	return filteredArgs, nil
+}
+
+func (w *WorkspaceContext) LoadDefaults(ctx context.Context, sourceName string) error {
+	if w.Config.Sources == nil {
+		return fmt.Errorf("no sources defined in workspace")
+	}
+
+	if _, ok := w.Config.Sources[sourceName]; !ok {
+		return fmt.Errorf("source %s not found in workspace", sourceName)
+	}
+
+	// Create a new target with that source name if it doesn't exist
+	if w.Config.Targets == nil {
+		w.Config.Targets = make(map[string]*TargetConfiguration)
+	}
+
+	if _, ok := w.Config.Targets[sourceName]; !ok {
+		w.Config.Targets[sourceName] = &TargetConfiguration{
+			Source: sourceName,
+		}
+		fmt.Printf("Created target %s for source %s\n", sourceName, sourceName)
+	}
+
+	return w.ProcessCSetupConfig(ctx, sourceName)
+}
+
+func (w *WorkspaceContext) DropSourceFiles(ctx context.Context, sourceName string) error {
+	if _, ok := w.Config.Sources[sourceName]; !ok {
+		return fmt.Errorf("source %s not found in workspace configuration", sourceName)
+	}
+
+	sourceDir := filepath.Join(w.WorkspacePath, "sources", sourceName)
+	if info, err := os.Stat(sourceDir); err == nil && info.IsDir() {
+		fmt.Printf("Deleting source folder: %s\n", sourceDir)
+		err = os.RemoveAll(sourceDir)
+		if err != nil {
+			return fmt.Errorf("error deleting source folder %s: %w", sourceDir, err)
+		}
+	} else {
+		// If it's not there, it's already "dropped"
+		return nil
+	}
+	return nil
 }

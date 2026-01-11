@@ -72,7 +72,7 @@ func (t *TargetContext) CMakeConfigureArgs(ctx context.Context, workspace *Works
 
 	args := []string{}
 
-	src, err := t.CMakeSourcePath(workspace)
+	src, err := t.CMakeSourcePath(ctx, workspace)
 	if err != nil {
 		return nil, err
 	}
@@ -84,7 +84,7 @@ func (t *TargetContext) CMakeConfigureArgs(ctx context.Context, workspace *Works
 	args = append(args, "-S")
 	args = append(args, src)
 
-	bld, err := t.CMakeBuildPath(workspace, bp)
+	bld, err := t.CMakeBuildPath(ctx, workspace, bp)
 	if err != nil {
 		return nil, err
 	}
@@ -112,7 +112,7 @@ func (t *TargetContext) CMakeConfigureArgs(ctx context.Context, workspace *Works
 		args = append(args, fmt.Sprintf("-DCMAKE_CXX_STANDARD=%s", cxxStandard))
 	}
 
-	toolchainFile, err := workspace.ToolchainFilePath(&t.Config, bp)
+	toolchainFile, err := workspace.ToolchainFilePath(ctx, &t.Config, bp)
 	if err != nil {
 		return nil, err
 	}
@@ -125,13 +125,13 @@ func (t *TargetContext) CMakeConfigureArgs(ctx context.Context, workspace *Works
 		parts := strings.SplitN(dep, "/", 2)
 		targetName := parts[0]
 
-		depMod, err := workspace.GetTarget(targetName)
+		depMod, err := workspace.GetTarget(ctx, targetName)
 		if err != nil {
 			return nil, err
 		}
 
 		if depMod.Config.Staged != nil && *depMod.Config.Staged {
-			stagingPath, err := depMod.CMakeStagingPath(workspace, bp)
+			stagingPath, err := depMod.CMakeStagingPath(ctx, workspace, bp)
 			if err != nil {
 				return nil, err
 			}
@@ -151,7 +151,7 @@ func (t *TargetContext) CMakeConfigureArgs(ctx context.Context, workspace *Works
 		parts := strings.SplitN(dep, "/", 2)
 		targetName := parts[0]
 
-		mod, err := workspace.GetTarget(targetName)
+		mod, err := workspace.GetTarget(ctx, targetName)
 		if err != nil {
 			return nil, err
 		}
@@ -160,7 +160,7 @@ func (t *TargetContext) CMakeConfigureArgs(ctx context.Context, workspace *Works
 			continue
 		}
 
-		mod_args, err := mod.CMakeDependencyArgs(workspace, bp)
+		mod_args, err := mod.CMakeDependencyArgs(ctx, workspace, bp)
 		if err != nil {
 			return nil, err
 		}
@@ -180,7 +180,7 @@ func (t *TargetContext) CMakeConfigureArgs(ctx context.Context, workspace *Works
 	return args, nil
 }
 
-func (t *TargetContext) CMakeSourcePath(workspace *WorkspaceContext) (string, error) {
+func (t *TargetContext) CMakeSourcePath(ctx context.Context, workspace *WorkspaceContext) (string, error) {
 	if t.Name == "" {
 		panic("target context must have a name")
 	}
@@ -205,12 +205,12 @@ func (t *TargetContext) CMakeSourcePath(workspace *WorkspaceContext) (string, er
 	return sourcePath, nil
 }
 
-func (t *TargetContext) CMakeConfigPath(workspace *WorkspaceContext, bp TargetBuildParameters) (string, error) {
+func (t *TargetContext) CMakeConfigPath(ctx context.Context, workspace *WorkspaceContext, bp TargetBuildParameters) (string, error) {
 
 	if t.Name == "" {
 		panic("target context must have a name")
 	}
-	buildPath, err := t.CMakeBuildPath(workspace, bp)
+	buildPath, err := t.CMakeBuildPath(ctx, workspace, bp)
 	if err != nil {
 		return "", err
 	}
@@ -222,24 +222,24 @@ func (t *TargetContext) CMakeConfigPath(workspace *WorkspaceContext, bp TargetBu
 	return buildPath, nil
 }
 
-func (t *TargetContext) CMakeBuildPath(workspace *WorkspaceContext, bp TargetBuildParameters) (string, error) {
+func (t *TargetContext) CMakeBuildPath(ctx context.Context, workspace *WorkspaceContext, bp TargetBuildParameters) (string, error) {
 	return filepath.Join(workspace.WorkspacePath, "buildspaces", bp.Toolchain, t.Name, bp.BuildType), nil
 }
 
-func (t *TargetContext) CMakeStagingPath(workspace *WorkspaceContext, bp TargetBuildParameters) (string, error) {
+func (t *TargetContext) CMakeStagingPath(ctx context.Context, workspace *WorkspaceContext, bp TargetBuildParameters) (string, error) {
 	return filepath.Join(workspace.WorkspacePath, "staging", bp.Toolchain, bp.BuildType, t.Name), nil
 }
 
-func (t *TargetContext) CMakeExportPath(workspace *WorkspaceContext, bp TargetBuildParameters) (string, error) {
+func (t *TargetContext) CMakeExportPath(ctx context.Context, workspace *WorkspaceContext, bp TargetBuildParameters) (string, error) {
 	return filepath.Join(workspace.WorkspacePath, "exports", bp.Toolchain, t.Name, bp.BuildType), nil
 }
 
 // CMakeDependencyArgs returns the arguments to pass to cmake when configuring another module that depends on this module
-func (t *TargetContext) CMakeDependencyArgs(workspace *WorkspaceContext, bp TargetBuildParameters) ([]string, error) {
+func (t *TargetContext) CMakeDependencyArgs(ctx context.Context, workspace *WorkspaceContext, bp TargetBuildParameters) ([]string, error) {
 	args := []string{}
 
 	if t.Config.Staged != nil && *t.Config.Staged {
-		stagingPath, err := t.CMakeStagingPath(workspace, bp)
+		stagingPath, err := t.CMakeStagingPath(ctx, workspace, bp)
 		if err != nil {
 			return nil, err
 		}
@@ -260,7 +260,7 @@ func (t *TargetContext) CMakeDependencyArgs(workspace *WorkspaceContext, bp Targ
 	if packageName != "" {
 		dirname := packageName + "_DIR"
 
-		configPath, err := t.CMakeConfigPath(workspace, bp)
+		configPath, err := t.CMakeConfigPath(ctx, workspace, bp)
 		if err != nil {
 			return nil, err
 		}
@@ -274,7 +274,7 @@ func (t *TargetContext) CMakeDependencyArgs(workspace *WorkspaceContext, bp Targ
 	if t.Config.FindPackageRoot != nil {
 		dirname := *t.Config.FindPackageRoot + "_ROOT"
 
-		sourcePath, err := t.CMakeSourcePath(workspace)
+		sourcePath, err := t.CMakeSourcePath(ctx, workspace)
 		if err != nil {
 			return nil, err
 		}

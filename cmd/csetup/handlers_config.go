@@ -18,29 +18,12 @@ func handleSetCXXVersion(ctx context.Context, workspacePath string, args []strin
 	}
 
 	ws := &ccommon.WorkspaceContext{}
-	err := ws.Load(workspacePath)
+	err := ws.Load(ctx, workspacePath)
 	if err != nil {
 		return fmt.Errorf("error loading workspace: %w", err)
 	}
 
-	if source != "" {
-		target, ok := ws.Config.Targets[source]
-		if !ok {
-			return fmt.Errorf("source %s not found in workspace", source)
-		}
-		target.CxxStandard = &version
-		fmt.Printf("Set CXX version for %s to %s\n", source, version)
-	} else {
-		ws.Config.CXXVersion = version
-		fmt.Printf("Set global CXX version to %s\n", version)
-	}
-
-	err = ws.Save()
-	if err != nil {
-		return fmt.Errorf("error saving workspace: %w", err)
-	}
-
-	return nil
+	return ws.SetCXXVersion(ctx, version, source)
 }
 
 func handleEnableStaging(ctx context.Context, workspacePath string, args []string) error {
@@ -51,26 +34,12 @@ func handleEnableStaging(ctx context.Context, workspacePath string, args []strin
 	source := args[0]
 
 	ws := &ccommon.WorkspaceContext{}
-	err := ws.Load(workspacePath)
+	err := ws.Load(ctx, workspacePath)
 	if err != nil {
 		return fmt.Errorf("error loading workspace: %w", err)
 	}
 
-	target, ok := ws.Config.Targets[source]
-	if !ok {
-		return fmt.Errorf("source %s not found in workspace", source)
-	}
-
-	staged := true
-	target.Staged = &staged
-
-	err = ws.Save()
-	if err != nil {
-		return fmt.Errorf("error saving workspace: %w", err)
-	}
-
-	fmt.Printf("Enabled staging for %s\n", source)
-	return nil
+	return ws.SetStaging(ctx, source, true)
 }
 
 func handleDisableStaging(ctx context.Context, workspacePath string, args []string) error {
@@ -81,26 +50,12 @@ func handleDisableStaging(ctx context.Context, workspacePath string, args []stri
 	source := args[0]
 
 	ws := &ccommon.WorkspaceContext{}
-	err := ws.Load(workspacePath)
+	err := ws.Load(ctx, workspacePath)
 	if err != nil {
 		return fmt.Errorf("error loading workspace: %w", err)
 	}
 
-	target, ok := ws.Config.Targets[source]
-	if !ok {
-		return fmt.Errorf("source %s not found in workspace", source)
-	}
-
-	staged := false
-	target.Staged = &staged
-
-	err = ws.Save()
-	if err != nil {
-		return fmt.Errorf("error saving workspace: %w", err)
-	}
-
-	fmt.Printf("Disabled staging for %s\n", source)
-	return nil
+	return ws.SetStaging(ctx, source, false)
 }
 
 func handleAddConfig(ctx context.Context, workspacePath string, args []string) error {
@@ -111,27 +66,12 @@ func handleAddConfig(ctx context.Context, workspacePath string, args []string) e
 	configName := args[0]
 
 	ws := &ccommon.WorkspaceContext{}
-	err := ws.Load(workspacePath)
+	err := ws.Load(ctx, workspacePath)
 	if err != nil {
 		return fmt.Errorf("error loading workspace: %w", err)
 	}
 
-	for _, cfg := range ws.Config.Configurations {
-		if cfg == configName {
-			fmt.Printf("Configuration %s already exists\n", configName)
-			return nil
-		}
-	}
-
-	ws.Config.Configurations = append(ws.Config.Configurations, configName)
-
-	err = ws.Save()
-	if err != nil {
-		return fmt.Errorf("error saving workspace: %w", err)
-	}
-
-	fmt.Printf("Added configuration %s\n", configName)
-	return nil
+	return ws.AddConfiguration(ctx, configName)
 }
 
 func handleRemoveConfig(ctx context.Context, workspacePath string, args []string) error {
@@ -142,32 +82,10 @@ func handleRemoveConfig(ctx context.Context, workspacePath string, args []string
 	configName := args[0]
 
 	ws := &ccommon.WorkspaceContext{}
-	err := ws.Load(workspacePath)
+	err := ws.Load(ctx, workspacePath)
 	if err != nil {
 		return fmt.Errorf("error loading workspace: %w", err)
 	}
 
-	found := false
-	newConfigs := []string{}
-	for _, cfg := range ws.Config.Configurations {
-		if cfg == configName {
-			found = true
-			continue
-		}
-		newConfigs = append(newConfigs, cfg)
-	}
-
-	if !found {
-		return fmt.Errorf("configuration %s not found", configName)
-	}
-
-	ws.Config.Configurations = newConfigs
-
-	err = ws.Save()
-	if err != nil {
-		return fmt.Errorf("error saving workspace: %w", err)
-	}
-
-	fmt.Printf("Removed configuration %s\n", configName)
-	return nil
+	return ws.RemoveConfiguration(ctx, configName)
 }
