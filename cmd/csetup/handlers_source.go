@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 
@@ -241,13 +240,13 @@ func handleRemoveProject(ctx context.Context, workspacePath string, args []strin
 
 func handleGitClone(ctx context.Context, workspacePath string, args []string) error {
 	if len(args) < 1 || len(args) > 2 {
-		return fmt.Errorf("usage: csetup git-clone <repo_url> [dest_name] [--download-deps] [--submodule]")
+		return fmt.Errorf("usage: csetup git-clone <repo_url> [dest_name] [--download-deps] [--submodule] [--no-setup]")
 	}
 
 	repoURL := ""
 	destName := ""
 	downloadDeps := cli.GetBool(ctx, cli.FlagKey(ccommon.FlagDownload))
-	useSubmodule := cli.GetBool(ctx, cli.FlagKey(ccommon.FlagSubmodule))
+	noSetup := cli.GetBool(ctx, cli.FlagKey(ccommon.FlagNoSetup))
 
 	for _, arg := range args {
 		if repoURL == "" {
@@ -258,7 +257,7 @@ func handleGitClone(ctx context.Context, workspacePath string, args []string) er
 	}
 
 	if repoURL == "" {
-		return fmt.Errorf("usage: csetup git-clone <repo_url> [dest_name] [--download-deps] [--submodule]")
+		return fmt.Errorf("usage: csetup git-clone <repo_url> [dest_name] [--download-deps] [--submodule] [--no-setup]")
 	}
 
 	if destName == "" {
@@ -273,62 +272,40 @@ func handleGitClone(ctx context.Context, workspacePath string, args []string) er
 		return fmt.Errorf("%s not found. csetup must be run in a cbuild workspace", workspaceConfig)
 	}
 
-	// 2. Clone into sources/<destName>
-	destDir := filepath.Join(workspacePath, "sources", destName)
-
-	if useSubmodule {
-		fmt.Printf("Adding submodule %s into %s...\n", repoURL, destDir)
-	} else {
-		fmt.Printf("Cloning %s into %s...\n", repoURL, destDir)
-	}
-
-	var cmd *exec.Cmd
-	if useSubmodule {
-		// Use relative path for submodule add to ensure .gitmodules is correct
-		relDestDir := filepath.Join("sources", destName)
-		cmd = exec.Command("git", "submodule", "add", repoURL, relDestDir)
-	} else {
-		cmd = exec.Command("git", "clone", repoURL, destDir)
-	}
-	cmd.Dir = workspacePath
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-
-	err := cmd.Run()
-	if err != nil {
-		if useSubmodule {
-			return fmt.Errorf("error adding submodule: %w", err)
-		}
-		return fmt.Errorf("error cloning repository: %w", err)
-	}
-
-	// 3. Update cbuild_workspace.yml
 	ws := &ccommon.WorkspaceContext{}
 	ws.DownloadDeps = downloadDeps
-	err = ws.Load(workspacePath)
+	err := ws.Load(workspacePath)
 	if err != nil {
-		return fmt.Errorf("error loading workspace for update: %w", err)
+		return fmt.Errorf("error loading workspace: %w", err)
 	}
 
+	// 2. Clone into sources/<destName>
+	if ws.Config.Sources == nil {
+		ws.Config.Sources = make(map[string]*ccommon.CodeSource)
+	}
+	ws.Config.Sources[destName] = &ccommon.CodeSource{
+		Git: &ccommon.GitSource{
+			Repository: repoURL,
+		},
+	}
+
+	err = ws.DownloadSource(ctx, destName)
+	if err != nil {
+		return fmt.Errorf("error downloading source: %w", err)
+	}
+
+	// 3. Update cbuild_workspace.yml with target if it doesn't exist
+	targetExists := false
 	if ws.Config.Targets == nil {
 		ws.Config.Targets = make(map[string]*ccommon.TargetConfiguration)
 	}
 
 	if _, ok := ws.Config.Targets[destName]; ok {
-		fmt.Printf("TargetConfiguration %s already exists in cbuild_workspace.yml. Skipping update.\n", destName)
+		fmt.Printf("Target %s already exists in cbuild_workspace.yml. Skipping target creation.\n", destName)
+		targetExists = true
 	} else {
-		if ws.Config.Sources == nil {
-			ws.Config.Sources = make(map[string]*ccommon.CodeSource)
-		}
-		ws.Config.Sources[destName] = &ccommon.CodeSource{
-			Git: &ccommon.GitSource{
-				Repository: repoURL,
-			},
-		}
-
 		ws.Config.Targets[destName] = &ccommon.TargetConfiguration{
-			ProjectType: "CMake",
-			Source:      destName,
+			Source: destName,
 		}
 		err = ws.Save()
 		if err != nil {
@@ -337,12 +314,116 @@ func handleGitClone(ctx context.Context, workspacePath string, args []string) er
 		fmt.Printf("Added target %s to cbuild_workspace.yml.\n", destName)
 	}
 
-	// 4. Process csetup.yml if it exists
-	err = ws.ProcessCSetupFile(ctx, destName)
+	// 4. Process csetup.yml if it exists and setup is not disabled
+	if !noSetup && !targetExists {
+		err = ws.ProcessCSetupConfig(ctx, destName)
+		if err != nil {
+			return fmt.Errorf("error processing csetup file: %w", err)
+		}
+	} else if noSetup {
+		fmt.Println("Skipping setup as requested by --no-setup.")
+	} else if targetExists {
+		fmt.Printf("Skipping setup as target %s already exists.\n", destName)
+	}
+
+	fmt.Println("Repository cloned successfully.")
+	return nil
+}
+
+func handleDownload(ctx context.Context, workspacePath string, args []string) error {
+	if len(args) > 1 {
+		return fmt.Errorf("usage: csetup download [source_name] [--download-deps] [--no-setup] [--submodule]")
+	}
+
+	downloadDeps := cli.GetBool(ctx, cli.FlagKey(ccommon.FlagDownload))
+	noSetup := cli.GetBool(ctx, cli.FlagKey(ccommon.FlagNoSetup))
+
+	ws := &ccommon.WorkspaceContext{}
+	ws.DownloadDeps = downloadDeps
+	err := ws.Load(workspacePath)
+	if err != nil {
+		return fmt.Errorf("error loading workspace: %w", err)
+	}
+
+	sourcesToDownload := []string{}
+	if len(args) == 1 {
+		sourceName := args[0]
+		if _, ok := ws.Config.Sources[sourceName]; !ok {
+			return fmt.Errorf("source %s not found in workspace configuration", sourceName)
+		}
+		sourcesToDownload = append(sourcesToDownload, sourceName)
+	} else {
+		for name := range ws.Config.Sources {
+			sourcesToDownload = append(sourcesToDownload, name)
+		}
+	}
+
+	for _, sourceName := range sourcesToDownload {
+		sourceDir := filepath.Join(workspacePath, "sources", sourceName)
+		if _, err := os.Stat(sourceDir); err == nil {
+			if len(args) == 1 {
+				fmt.Printf("Source %s already exists at %s\n", sourceName, sourceDir)
+			}
+			continue
+		}
+
+		err = ws.DownloadSource(ctx, sourceName)
+		if err != nil {
+			return fmt.Errorf("error downloading source %s: %w", sourceName, err)
+		}
+
+		if !noSetup {
+			err = ws.ProcessCSetupConfig(ctx, sourceName)
+			if err != nil {
+				fmt.Printf("Warning: error processing csetup for %s: %v\n", sourceName, err)
+			}
+		}
+	}
+
+	return nil
+}
+
+func handleLoadDefaults(ctx context.Context, workspacePath string, args []string) error {
+	if len(args) != 1 {
+		return fmt.Errorf("usage: csetup load-defaults <source>")
+	}
+
+	sourceName := args[0]
+	if sourceName == "" {
+		return fmt.Errorf("usage: csetup load-defaults <source>")
+	}
+
+	ws := &ccommon.WorkspaceContext{}
+	err := ws.Load(workspacePath)
+	if err != nil {
+		return fmt.Errorf("error loading workspace: %w", err)
+	}
+
+	if ws.Config.Sources == nil {
+		return fmt.Errorf("no sources defined in workspace")
+	}
+
+	if _, ok := ws.Config.Sources[sourceName]; !ok {
+		return fmt.Errorf("source %s not found in workspace", sourceName)
+	}
+
+	// Create a new target with that source name if it doesn't exist
+	if ws.Config.Targets == nil {
+		ws.Config.Targets = make(map[string]*ccommon.TargetConfiguration)
+	}
+
+	if _, ok := ws.Config.Targets[sourceName]; !ok {
+		ws.Config.Targets[sourceName] = &ccommon.TargetConfiguration{
+			Source: sourceName,
+		}
+		fmt.Printf("Created target %s for source %s\n", sourceName, sourceName)
+	}
+
+	err = ws.ProcessCSetupConfig(ctx, sourceName)
 	if err != nil {
 		return fmt.Errorf("error processing csetup file: %w", err)
 	}
 
-	fmt.Println("Repository cloned successfully.")
+	fmt.Printf("Defaults loaded for source %s\n", sourceName)
 	return nil
 }

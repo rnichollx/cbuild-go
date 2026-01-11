@@ -68,9 +68,24 @@ func main() {
 	runner.Subcommands["git-clone"] = &cli.Subcommand{
 		Description:  "Clone a git repository into the workspace",
 		AllowArgs:    true,
-		AcceptsFlags: []cli.Flag{ccommon.DownloadDepsFlag, ccommon.SubmoduleFlag},
+		AcceptsFlags: []cli.Flag{ccommon.DownloadDepsFlag, ccommon.SubmoduleFlag, ccommon.NoSetupFlag},
 		Exec: func(ctx context.Context, args []string) error {
 			return handleGitClone(ctx, getWorkspacePath(ctx), args)
+		},
+	}
+	runner.Subcommands["download"] = &cli.Subcommand{
+		Description:  "Download missing sources",
+		AllowArgs:    true,
+		AcceptsFlags: []cli.Flag{ccommon.DownloadDepsFlag, ccommon.NoSetupFlag, ccommon.SubmoduleFlag},
+		Exec: func(ctx context.Context, args []string) error {
+			return handleDownload(ctx, getWorkspacePath(ctx), args)
+		},
+	}
+	runner.Subcommands["load-defaults"] = &cli.Subcommand{
+		Description: "Load default configuration for a source from its csetup.yml",
+		AllowArgs:   true,
+		Exec: func(ctx context.Context, args []string) error {
+			return handleLoadDefaults(ctx, getWorkspacePath(ctx), args)
 		},
 	}
 	runner.Subcommands["add-dependency"] = &cli.Subcommand{

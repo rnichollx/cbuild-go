@@ -14,6 +14,7 @@ const (
 	FlagDownload  FlagKey = "download-deps"
 	FlagSubmodule FlagKey = "submodule"
 	FlagDelete    FlagKey = "delete"
+	FlagNoSetup   FlagKey = "no-setup"
 	FlagHelp      FlagKey = "help"
 )
 
@@ -37,6 +38,8 @@ var (
 	SubmoduleFlag = cli.NewBoolFlag("", "submodule", cli.FlagKey(FlagSubmodule), "add as a git submodule instead of cloning")
 
 	DeleteFlag = cli.NewBoolFlag("X", "delete", cli.FlagKey(FlagDelete), "delete files when removing source")
+
+	NoSetupFlag = cli.NewBoolFlag("", "no-setup", cli.FlagKey(FlagNoSetup), "don't run setup after downloading or cloning")
 
 	HelpFlag = cli.NewBoolFlag("h", "help", cli.FlagKey(FlagHelp), "show this help message")
 )

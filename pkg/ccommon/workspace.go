@@ -340,21 +340,8 @@ func (w *WorkspaceContext) buildModule(mod *TargetContext, modname string, built
 	return nil
 }
 
-func (w *WorkspaceContext) ProcessCSetupFile(ctx context.Context, targetName string) error {
-	targetConfig, ok := w.Config.Targets[targetName]
-	if !ok {
-		return fmt.Errorf("target %s not found in workspace", targetName)
-	}
-
-	target := &TargetContext{
-		Name:   targetName,
-		Config: *targetConfig,
-	}
-
-	sourcePath, err := target.CMakeSourcePath(w)
-	if err != nil {
-		return fmt.Errorf("failed to get source path for target %s: %w", targetName, err)
-	}
+func (w *WorkspaceContext) ProcessCSetupConfig(ctx context.Context, sourceName string) error {
+	sourcePath := filepath.Join(w.WorkspacePath, "sources", sourceName)
 
 	csetupFiles := []string{"csetup.yml", "csetuplists.yml", "CSetup.yml", "CSetupLists.yml"}
 	var csetupFile string
@@ -383,15 +370,22 @@ func (w *WorkspaceContext) ProcessCSetupFile(ctx context.Context, targetName str
 
 	reader := bufio.NewReader(os.Stdin)
 
-	// Replace all fields of TargetConfiguration with the DefaultConfiguration from the CSetup file,
-	// *except* ExternalSourceOverride and Source if they are present, making sure to nil any existing fields not present
-	// in the DefaultConfiguration, excluding ExternalSourceOverride and Source.
-	externalOverride := target.Config.ExternalSourceOverride
-	source := target.Config.Source
-	target.Config = csetup.DefaultConfig
-	target.Config.ExternalSourceOverride = externalOverride
-	target.Config.Source = source
-	w.Config.Targets[targetName] = &target.Config
+	// Update targets that use this source
+	for targetName, targetConfig := range w.Config.Targets {
+		targetSourceName := targetConfig.Source
+		if targetSourceName == "" {
+			targetSourceName = targetName
+		}
+
+		if targetSourceName == sourceName {
+			externalOverride := targetConfig.ExternalSourceOverride
+			source := targetConfig.Source
+			newConfig := csetup.DefaultConfig
+			newConfig.ExternalSourceOverride = externalOverride
+			newConfig.Source = source
+			w.Config.Targets[targetName] = &newConfig
+		}
+	}
 
 	// Process Suggested Dependencies
 	for depName, sdep := range csetup.SuggestedSources {
@@ -402,7 +396,7 @@ func (w *WorkspaceContext) ProcessCSetupFile(ctx context.Context, targetName str
 		if _, exists := w.Config.Targets[depName]; !exists {
 			autoDownload := cli.GetBool(ctx, cli.FlagKey(FlagDownload))
 			if !autoDownload {
-				fmt.Printf("Dependency '%s' is not present in sources, module '%s' suggests getting it from '%s', download it? [Y/n] ", depName, targetName, sdep.From())
+				fmt.Printf("Dependency '%s' is not present in sources, source '%s' suggests getting it from '%s', download it? [Y/n] ", depName, sourceName, sdep.From())
 				response, err := reader.ReadString('\n')
 				if err != nil {
 					return fmt.Errorf("error reading input: %w", err)
@@ -414,15 +408,15 @@ func (w *WorkspaceContext) ProcessCSetupFile(ctx context.Context, targetName str
 			}
 
 			if autoDownload {
-				err := w.Get(ctx, depName, sdep)
-				if err != nil {
-					return fmt.Errorf("failed to download '%s': %w", depName, err)
-				}
-
 				if w.Config.Sources == nil {
 					w.Config.Sources = make(map[string]*CodeSource)
 				}
 				w.Config.Sources[depName] = &sdep
+
+				err := w.DownloadSource(ctx, depName)
+				if err != nil {
+					return fmt.Errorf("failed to download '%s': %w", depName, err)
+				}
 
 				// Add to workspace targets
 				w.Config.Targets[depName] = &TargetConfiguration{
@@ -430,17 +424,62 @@ func (w *WorkspaceContext) ProcessCSetupFile(ctx context.Context, targetName str
 				}
 				fmt.Printf("Added target '%s' to workspace.\n", depName)
 
-				// Also add it as a dependency to the current target
-				target.Config.Depends = append(target.Config.Depends, depName)
-				fmt.Printf("Added dependency '%s' to target '%s'.\n", depName, targetName)
+				// Also add it as a dependency to the targets using current source
+				for targetName, targetConfig := range w.Config.Targets {
+					targetSourceName := targetConfig.Source
+					if targetSourceName == "" {
+						targetSourceName = targetName
+					}
+					if targetSourceName == sourceName {
+						found := false
+						for _, d := range targetConfig.Depends {
+							if d == depName {
+								found = true
+								break
+							}
+						}
+						if !found {
+							targetConfig.Depends = append(targetConfig.Depends, depName)
+							fmt.Printf("Added dependency '%s' to target '%s'.\n", depName, targetName)
+						}
+					}
+				}
 
 				// Recursively process the new target's csetup file
-				err = w.ProcessCSetupFile(ctx, depName)
+				err = w.ProcessCSetupConfig(ctx, depName)
 				if err != nil {
 					return fmt.Errorf("error processing csetup file for %s: %w", depName, err)
 				}
 			}
 		}
+	}
+
+	return w.Save()
+}
+
+func (w *WorkspaceContext) ProcessCSetupFile(ctx context.Context, targetName string) error {
+	targetConfig, ok := w.Config.Targets[targetName]
+	if !ok {
+		return fmt.Errorf("target %s not found in workspace", targetName)
+	}
+
+	sourceName := targetConfig.Source
+	if sourceName == "" {
+		sourceName = targetName
+	}
+
+	return w.ProcessCSetupConfig(ctx, sourceName)
+}
+
+func (w *WorkspaceContext) DownloadSource(ctx context.Context, sourceName string) error {
+	source, ok := w.Config.Sources[sourceName]
+	if !ok {
+		return fmt.Errorf("source %s not found in workspace configuration", sourceName)
+	}
+
+	err := w.Get(ctx, sourceName, *source)
+	if err != nil {
+		return err
 	}
 
 	return w.Save()
