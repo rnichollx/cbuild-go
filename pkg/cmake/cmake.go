@@ -125,8 +125,10 @@ var gccRE = regexp.MustCompile("(gcc|g\\+\\+)(-\\d+)$")
 var msvcRE = regexp.MustCompile("(?i)^cl(\\.exe)?$")
 
 func guessCompilerType(opts *GenerateToolchainFileOptions) CompilerType {
+
 	if opts.CCompiler != "" {
 		base := filepath.Base(opts.CCompiler)
+		fmt.Printf("Generate options cc: %q", base)
 		if clangRE.MatchString(base) {
 			return CompilerTypeClang
 		}
@@ -138,7 +140,9 @@ func guessCompilerType(opts *GenerateToolchainFileOptions) CompilerType {
 		}
 	}
 	if opts.CXXCompiler != "" {
+
 		base := filepath.Base(opts.CXXCompiler)
+		fmt.Printf("Generate options c++: %q", base)
 		if clangRE.MatchString(base) {
 			return CompilerTypeClang
 		}
