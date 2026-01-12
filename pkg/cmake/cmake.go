@@ -156,6 +156,7 @@ func GenerateToolchainFile(ctx context.Context, opts GenerateToolchainFileOption
 
 	if opts.CompilerType == CompilerTypeUnknown {
 		opts.CompilerType = guessCompilerType(&opts)
+		fmt.Printf("Guessing compiler type: %s\n", opts.CompilerType)
 		if opts.CompilerType == CompilerTypeUnknown {
 			return errors.New("unknown compiler")
 		}
