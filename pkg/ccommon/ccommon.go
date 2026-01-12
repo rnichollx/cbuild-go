@@ -1,6 +1,7 @@
 package ccommon
 
 import (
+	"gitlab.com/rpnx/cbuild-go/pkg/cmake"
 	"gitlab.com/rpnx/cbuild-go/pkg/system"
 )
 
@@ -10,10 +11,13 @@ type CMakeToolchainOptions struct {
 }
 
 type CMakeGenerateToolchainFileOptions struct {
-	CCompiler     string   `yaml:"c_compiler"`
-	CXXCompiler   string   `yaml:"cxx_compiler"`
-	Linker        string   `yaml:"linker,omitempty"`
-	ExtraCXXFlags []string `yaml:"extra_cxx_flags,omitempty"`
+	CompilerType       cmake.CompilerType `yaml:"compiler_type,omitempty"`
+	CCompiler          string             `yaml:"c_compiler"`
+	CXXCompiler        string             `yaml:"cxx_compiler"`
+	Linker             string             `yaml:"linker,omitempty"`
+	ExtraCompilerFlags []string           `yaml:"extra_compiler_flags,omitempty"`
+	ExtraCXXFlags      []string           `yaml:"extra_cxx_flags,omitempty"`
+	ExtraCFlags        []string           `yaml:"extra_c_flags,omitempty"`
 }
 
 type Toolchain struct {
