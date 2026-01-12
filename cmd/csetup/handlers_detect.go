@@ -7,6 +7,9 @@ import (
 )
 
 func handleDetectToolchains(ctx context.Context, workspacePath string, args []string) error {
+	if len(args) != 0 {
+		return fmt.Errorf("usage: csetup detect-toolchains")
+	}
 	ws := &ccommon.WorkspaceContext{}
 	err := ws.Load(ctx, workspacePath)
 	if err != nil {

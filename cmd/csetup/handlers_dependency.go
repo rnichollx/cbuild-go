@@ -7,7 +7,7 @@ import (
 )
 
 func handleAddDependency(ctx context.Context, workspacePath string, args []string) error {
-	if len(args) < 2 {
+	if len(args) != 2 {
 		return fmt.Errorf("usage: csetup add-dependency <source> <depname>")
 	}
 
@@ -30,7 +30,7 @@ func handleAddDependency(ctx context.Context, workspacePath string, args []strin
 }
 
 func handleRemoveDependency(ctx context.Context, workspacePath string, args []string) error {
-	if len(args) < 2 {
+	if len(args) != 2 {
 		return fmt.Errorf("usage: csetup remove-dependency <source> <depname>")
 	}
 

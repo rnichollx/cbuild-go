@@ -9,7 +9,7 @@ import (
 )
 
 func handleGetArgs(ctx context.Context, workspacePath string, args []string) error {
-	if len(args) < 1 {
+	if len(args) != 1 {
 		return fmt.Errorf("usage: csetup get-args <target> [-T|--toolchain <toolchain>] [-c|--config <type>]")
 	}
 

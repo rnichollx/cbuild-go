@@ -7,7 +7,7 @@ import (
 )
 
 func handleSetCXXVersion(ctx context.Context, workspacePath string, args []string) error {
-	if len(args) < 1 {
+	if len(args) < 1 || len(args) > 2 {
 		return fmt.Errorf("usage: csetup set-cxx-version <version> [<source>]")
 	}
 
@@ -27,7 +27,7 @@ func handleSetCXXVersion(ctx context.Context, workspacePath string, args []strin
 }
 
 func handleEnableStaging(ctx context.Context, workspacePath string, args []string) error {
-	if len(args) < 1 {
+	if len(args) != 1 {
 		return fmt.Errorf("usage: csetup enable-staging <source>")
 	}
 
@@ -43,7 +43,7 @@ func handleEnableStaging(ctx context.Context, workspacePath string, args []strin
 }
 
 func handleDisableStaging(ctx context.Context, workspacePath string, args []string) error {
-	if len(args) < 1 {
+	if len(args) != 1 {
 		return fmt.Errorf("usage: csetup disable-staging <source>")
 	}
 
@@ -59,7 +59,7 @@ func handleDisableStaging(ctx context.Context, workspacePath string, args []stri
 }
 
 func handleAddConfig(ctx context.Context, workspacePath string, args []string) error {
-	if len(args) < 1 {
+	if len(args) != 1 {
 		return fmt.Errorf("usage: csetup add-config <configname>")
 	}
 
@@ -75,7 +75,7 @@ func handleAddConfig(ctx context.Context, workspacePath string, args []string) e
 }
 
 func handleRemoveConfig(ctx context.Context, workspacePath string, args []string) error {
-	if len(args) < 1 {
+	if len(args) != 1 {
 		return fmt.Errorf("usage: csetup remove-config <configname>")
 	}
 

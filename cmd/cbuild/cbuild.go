@@ -26,7 +26,7 @@ func main() {
 
 	runner.Subcommands["build"] = &cli.Subcommand{
 		Description:  "Build the project",
-		AllowArgs:    true,
+		AllowArgs:    false,
 		AcceptsFlags: []cli.Flag{ccommon.ConfigFlag, ccommon.ToolchainFlag, ccommon.TargetFlag},
 		Exec: func(ctx context.Context, args []string) error {
 			return runBuild(ctx, "build", args)
@@ -35,7 +35,7 @@ func main() {
 
 	runner.Subcommands["clean"] = &cli.Subcommand{
 		Description:  "Clean build artifacts",
-		AllowArgs:    true,
+		AllowArgs:    false,
 		AcceptsFlags: []cli.Flag{ccommon.ConfigFlag, ccommon.ToolchainFlag},
 		Exec: func(ctx context.Context, args []string) error {
 			return runClean(ctx, args)
@@ -47,7 +47,7 @@ func main() {
 		AllowArgs:    true,
 		AcceptsFlags: []cli.Flag{ccommon.ConfigFlag, ccommon.ToolchainFlag},
 		Exec: func(ctx context.Context, args []string) error {
-			if len(args) < 1 {
+			if len(args) != 1 {
 				return fmt.Errorf("usage: cbuild build-deps <sourcename>")
 			}
 			return runBuild(ctx, "build-deps", args)

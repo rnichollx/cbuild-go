@@ -18,7 +18,7 @@ func handleInit(ctx context.Context, workspacePath string, args []string) error 
 		}
 	}
 
-	if workspaceName == "" {
+	if workspaceName == "" || len(args) > 1 {
 		return fmt.Errorf("usage: csetup init <workspace name> [--reinit]")
 	}
 
