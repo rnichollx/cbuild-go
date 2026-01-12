@@ -3,17 +3,27 @@ package cli
 import (
 	"context"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
+	"time"
 )
 
+type Argument struct {
+	Name        string
+	Description string
+	Required    bool
+}
+
 type Subcommand struct {
-	Name              string
-	Description       string
-	HelpText          string
-	AcceptsFlags      []Flag
-	AllowArgs         bool
-	AllowUnknownFlags bool
-	Exec              func(ctx context.Context, args []string) error
+	Name                  string
+	Description           string
+	HelpText              string
+	AcceptsFlags          []Flag
+	Arguments             []Argument
+	AllowUnrecognizedArgs bool
+	AllowUnknownFlags     bool
+	Exec                  func(ctx context.Context, args []string) error
 }
 
 type Runner struct {
@@ -130,8 +140,9 @@ func (r *Runner) Run(ctx context.Context, args []string) error {
 		return err
 	}
 
-	if !subcmd.AllowArgs && len(remainingArgs) > 0 {
-		return fmt.Errorf("subcommand %s does not accept arguments", subcmdName)
+	if !subcmd.AllowUnrecognizedArgs && len(remainingArgs) > len(subcmd.Arguments) {
+		// If we have more arguments than explicitly defined, and unrecognized ones aren't allowed
+		return fmt.Errorf("subcommand %s does not accept unrecognized arguments", subcmdName)
 	}
 
 	return subcmd.Exec(ctx, remainingArgs)
@@ -140,7 +151,26 @@ func (r *Runner) Run(ctx context.Context, args []string) error {
 func (r *Runner) PrintUsage(subcmdName string) {
 	if subcmdName != "" {
 		subcmd := r.Subcommands[subcmdName]
-		fmt.Printf("Usage: %s [flags] %s [args]\n\n", r.Name, subcmdName)
+		argsSyn := ""
+		for _, f := range subcmd.AcceptsFlags {
+			if f.FromArgument() {
+				if f.Required() {
+					argsSyn += " <" + f.Long() + "_from_argument>"
+				} else {
+					argsSyn += " [" + f.Long() + "_from_argument]"
+				}
+			}
+		}
+
+		for _, arg := range subcmd.Arguments {
+			if arg.Required {
+				argsSyn += " <" + arg.Name + ">"
+			} else {
+				argsSyn += " [" + arg.Name + "]"
+			}
+		}
+
+		fmt.Printf("Usage: %s %s%s\n\n", r.Name, subcmdName, argsSyn)
 		if subcmd.Description != "" {
 			fmt.Printf("%s\n\n", subcmd.Description)
 		}
@@ -160,12 +190,19 @@ func (r *Runner) PrintUsage(subcmdName string) {
 		maxFlagLen := 0
 		formatFlag := func(f Flag) string {
 			s := ""
+			val := ""
+			if f.NeedsValue() {
+				val = " <value>"
+			}
 			if f.Short() != "" {
-				s += "-" + f.Short() + ", "
+				s += "-" + f.Short() + val + ", "
 			} else {
 				s += "    "
 			}
-			s += "--" + f.Long()
+			s += "--" + f.Long() + val
+			if f.FromArgument() {
+				s += ", <" + f.Long() + "_from_argument>"
+			}
 			return s
 		}
 
@@ -193,6 +230,9 @@ func (r *Runner) PrintUsage(subcmdName string) {
 				s := formatFlag(f)
 				indent := "  "
 				desc := f.Description()
+				if f.FromArgument() {
+					desc = "[POS] " + desc
+				}
 				if gf, ok := findGlobalFlag(r.GlobalFlags, f.Key()); ok {
 					if f.Description() != "" && f.Description() != gf.Description() {
 						desc += fmt.Sprintf(" (overrides global: %s)", gf.Description())
@@ -206,7 +246,7 @@ func (r *Runner) PrintUsage(subcmdName string) {
 		return
 	}
 
-	fmt.Printf("Usage: %s [flags] <subcommand> [args]\n\n", r.Name)
+	fmt.Printf("Usage: %s <subcommand>\n\n", r.Name)
 	if r.Description != "" {
 		fmt.Printf("%s\n\n", r.Description)
 	}
@@ -250,12 +290,19 @@ func (r *Runner) PrintUsage(subcmdName string) {
 	maxFlagLen := 0
 	formatFlag := func(f Flag) string {
 		s := ""
+		val := ""
+		if f.NeedsValue() {
+			val = " <value>"
+		}
 		if f.Short() != "" {
-			s += "-" + f.Short() + ", "
+			s += "-" + f.Short() + val + ", "
 		} else {
 			s += "    "
 		}
-		s += "--" + f.Long()
+		s += "--" + f.Long() + val
+		if f.FromArgument() {
+			s += ", <" + f.Long() + "_from_argument>"
+		}
 		return s
 	}
 
@@ -340,6 +387,9 @@ func (r *Runner) PrintUsage(subcmdName string) {
 					s := formatFlag(f)
 					indent := "    "
 					desc := f.Description()
+					if f.FromArgument() {
+						desc = "[POS] " + desc
+					}
 					if gf, ok := findGlobalFlag(r.GlobalFlags, f.Key()); ok {
 						if f.Description() != "" && f.Description() != gf.Description() {
 							desc += fmt.Sprintf(" (overrides global: %s)", gf.Description())
@@ -352,6 +402,124 @@ func (r *Runner) PrintUsage(subcmdName string) {
 			}
 		}
 	}
+}
+
+func (r *Runner) generateManpage(dir string) error {
+	filename := filepath.Join(dir, r.Name+".1")
+	f, err := os.Create(filename)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	w := f
+	date := time.Now().Format("2006-01-02")
+	fmt.Fprintf(w, ".TH %s 1 \"%s\" \"\" \"\"\n", strings.ToUpper(r.Name), date)
+
+	fmt.Fprintf(w, ".SH NAME\n%s \\- %s\n", r.Name, r.Description)
+
+	fmt.Fprintf(w, ".SH SYNOPSIS\n")
+	fmt.Fprintf(w, ".B %s\n<\\fIsubcommand\\fR>\n", r.Name)
+
+	fmt.Fprintf(w, ".SH DESCRIPTION\n")
+	fmt.Fprintf(w, "%s\n", r.Description)
+
+	if len(r.GlobalFlags) > 0 {
+		fmt.Fprintf(w, ".SH GLOBAL OPTIONS\n")
+		for _, f := range r.GlobalFlags {
+			fmt.Fprintf(w, ".TP\n")
+			val := ""
+			if f.NeedsValue() {
+				val = " <value>"
+			}
+			if f.Short() != "" {
+				fmt.Fprintf(w, ".B \\-%s%s, \\-\\-%s%s", f.Short(), val, f.Long(), val)
+			} else {
+				fmt.Fprintf(w, ".B \\-\\-%s%s", f.Long(), val)
+			}
+			if f.FromArgument() {
+				fmt.Fprintf(w, ", <%s_from_argument>", f.Long())
+			}
+			fmt.Fprintf(w, "\n")
+			fmt.Fprintf(w, "%s\n", f.Description())
+		}
+	}
+
+	fmt.Fprintf(w, ".SH SUBCOMMANDS\n")
+	for _, subName := range sortedSubcommandNames(r.Subcommands) {
+		sub := r.Subcommands[subName]
+		name := subName
+		if sub.Name != "" {
+			name = sub.Name
+		}
+
+		fmt.Fprintf(w, ".SS %s\n", name)
+		fmt.Fprintf(w, "%s\n\n", sub.Description)
+		if sub.HelpText != "" {
+			fmt.Fprintf(w, "%s\n\n", sub.HelpText)
+		}
+
+		fmt.Fprintf(w, ".B Synopsis:\n")
+		argsSyn := ""
+		for _, f := range sub.AcceptsFlags {
+			if f.FromArgument() {
+				if f.Required() {
+					argsSyn += " <" + f.Long() + "_from_argument>"
+				} else {
+					argsSyn += " [" + f.Long() + "_from_argument]"
+				}
+			}
+		}
+
+		for _, arg := range sub.Arguments {
+			if arg.Required {
+				argsSyn += " <" + arg.Name + ">"
+			} else {
+				argsSyn += " [" + arg.Name + "]"
+			}
+		}
+		fmt.Fprintf(w, ".B %s %s\n%s\n\n", r.Name, name, argsSyn)
+
+		// Subcommand flags
+		if len(sub.AcceptsFlags) > 0 {
+			fmt.Fprintf(w, ".B Options for %s:\n", name)
+			for _, f := range sub.AcceptsFlags {
+				fmt.Fprintf(w, ".TP\n")
+				val := ""
+				if f.NeedsValue() {
+					val = " <value>"
+				}
+				if f.Short() != "" {
+					fmt.Fprintf(w, ".B \\-%s%s, \\-\\-%s%s", f.Short(), val, f.Long(), val)
+				} else {
+					fmt.Fprintf(w, ".B \\-\\-%s%s", f.Long(), val)
+				}
+				if f.FromArgument() {
+					fmt.Fprintf(w, ", <%s_from_argument>", f.Long())
+				}
+				fmt.Fprintf(w, "\n")
+				desc := f.Description()
+				if f.FromArgument() {
+					desc = "[POS] " + desc
+				}
+				if gf, ok := findGlobalFlag(r.GlobalFlags, f.Key()); ok {
+					if f.Description() != "" && f.Description() != gf.Description() {
+						desc += fmt.Sprintf(" (overrides global: %s)", gf.Description())
+					} else if f.Required() && !gf.Required() {
+						desc += fmt.Sprintf(" (required for %s)", name)
+					}
+				}
+				fmt.Fprintf(w, "%s\n", desc)
+			}
+			fmt.Fprintf(w, "\n")
+		}
+	}
+
+	return nil
+}
+
+func (r *Runner) GenerateManpages(dir string) error {
+	return r.generateManpage(dir)
 }
 
 func isFlagInGlobalList(flags []Flag, key FlagKey) bool {

@@ -16,6 +16,7 @@ const (
 	FlagDelete    FlagKey = "delete"
 	FlagNoSetup   FlagKey = "no-setup"
 	FlagHelp      FlagKey = "help"
+	FlagSource    FlagKey = "source"
 )
 
 type FlagKey string
@@ -25,7 +26,9 @@ var (
 
 	ConfigFlag = cli.NewStringFlag("c", "config", cli.FlagKey(FlagConfig), "build configuration to use (e.g., Debug, Release), comma separated")
 
-	TargetFlag = cli.NewStringFlag("t", "target", cli.FlagKey(FlagTarget), "specific target to build")
+	TargetFlag = cli.NewStringFlagFromArgument("t", "target", cli.FlagKey(FlagTarget), "specific target to build")
+
+	SourceFlag = cli.NewStringFlagFromArgument("s", "source", cli.FlagKey(FlagSource), "specific source to operate on")
 
 	ToolchainFlag = cli.NewStringFlag("T", "toolchain", cli.FlagKey(FlagToolchain), "toolchain to use")
 
