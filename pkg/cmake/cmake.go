@@ -120,15 +120,15 @@ func ProcessorToCMakeName(platform system.Platform, cpu system.Processor) (strin
 	return "", fmt.Errorf("unsupported platform/processor combination: %s/%v", platform, cpu)
 }
 
-var clangRE = regexp.MustCompile("clang(\\+\\+)?(-\\d+)$")
-var gccRE = regexp.MustCompile("(gcc|g\\+\\+)(-\\d+)$")
+var clangRE = regexp.MustCompile("clang(\\+\\+)?(-\\d+)?$")
+var gccRE = regexp.MustCompile("(gcc|g\\+\\+)(-\\d+)?$")
 var msvcRE = regexp.MustCompile("(?i)^cl(\\.exe)?$")
 
 func guessCompilerType(opts *GenerateToolchainFileOptions) CompilerType {
 
 	if opts.CCompiler != "" {
 		base := filepath.Base(opts.CCompiler)
-		fmt.Printf("Generate options cc: %q", base)
+		fmt.Printf("Generate options cc: %q\n", base)
 		if clangRE.MatchString(base) {
 			return CompilerTypeClang
 		}
@@ -142,7 +142,7 @@ func guessCompilerType(opts *GenerateToolchainFileOptions) CompilerType {
 	if opts.CXXCompiler != "" {
 
 		base := filepath.Base(opts.CXXCompiler)
-		fmt.Printf("Generate options c++: %q", base)
+		fmt.Printf("Generate options c++: %q\n", base)
 		if clangRE.MatchString(base) {
 			return CompilerTypeClang
 		}
