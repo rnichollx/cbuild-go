@@ -126,7 +126,7 @@ func GenerateToolchainFile(ctx context.Context, opts GenerateToolchainFileOption
 	// Remap debug symbols
 	// We use -fdebug-prefix-map=OLD=NEW for GCC/Clang
 	// We want to map the absolute workspace directory to something relative or just "."
-	debugMapFlag := fmt.Sprintf("-fdebug-prefix-map=%s=.", absWorkspaceDir)
+	debugMapFlag := fmt.Sprintf("-fdebug-compilation-dir=. -fdebug-prefix-map=%s=.", absWorkspaceDir)
 	cFlags := debugMapFlag
 	cxxFlags := debugMapFlag
 
