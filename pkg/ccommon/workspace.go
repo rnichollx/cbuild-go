@@ -865,18 +865,34 @@ func (ws *WorkspaceContext) DetectToolchains(ctx context.Context) error {
 
 			// Run CMake configure
 			cmd := exec.CommandContext(ctx, "cmake", "-S", testDir, "-B", filepath.Join(testDir, "build"), "-G", "Ninja", "-DCMAKE_TOOLCHAIN_FILE="+tcFilePath)
+			if IsDebug(ctx) {
+				cmd.Stdout = os.Stdout
+				cmd.Stderr = os.Stderr
+			}
 			err = cmd.Run()
 			if err != nil {
-				fmt.Printf("Detected %s, but %s cannot build a hello world program, skipping.\n", d.cxxCompiler, d.name)
-				continue
+				fmt.Printf("Detected %s, but %s cannot build a hello world program.\n", d.cxxCompiler, d.name)
+				if !IsDebug(ctx) {
+					fmt.Printf("Skipping %s. Use --debug to see the error and force creation.\n", d.name)
+					continue
+				}
 			}
 
-			// Run CMake build
-			cmd = exec.CommandContext(ctx, "cmake", "--build", filepath.Join(testDir, "build"))
-			err = cmd.Run()
-			if err != nil {
-				fmt.Printf("Detected %s, but %s cannot build a hello world program, skipping.\n", d.cxxCompiler, d.name)
-				continue
+			if err == nil {
+				// Run CMake build
+				cmd = exec.CommandContext(ctx, "cmake", "--build", filepath.Join(testDir, "build"))
+				if IsDebug(ctx) {
+					cmd.Stdout = os.Stdout
+					cmd.Stderr = os.Stderr
+				}
+				err = cmd.Run()
+				if err != nil {
+					fmt.Printf("Detected %s, but %s cannot build a hello world program.\n", d.cxxCompiler, d.name)
+					if !IsDebug(ctx) {
+						fmt.Printf("Skipping %s. Use --debug to see the error and force creation.\n", d.name)
+						continue
+					}
+				}
 			}
 
 			fmt.Printf("Detected %s, creating toolchain...\n", d.name)

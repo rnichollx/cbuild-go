@@ -1,6 +1,8 @@
 package ccommon
 
 import (
+	"context"
+
 	"gitlab.com/rpnx/cbuild-go/pkg/cli"
 )
 
@@ -17,6 +19,7 @@ const (
 	FlagNoSetup   FlagKey = "no-setup"
 	FlagHelp      FlagKey = "help"
 	FlagSource    FlagKey = "source"
+	FlagDebug     FlagKey = "debug"
 )
 
 type FlagKey string
@@ -45,4 +48,10 @@ var (
 	NoSetupFlag = cli.NewBoolFlag("", "no-setup", cli.FlagKey(FlagNoSetup), "don't run setup after downloading or cloning")
 
 	HelpFlag = cli.NewBoolFlag("h", "help", cli.FlagKey(FlagHelp), "show this help message")
+
+	DebugFlag = cli.NewBoolFlag("", "debug", cli.FlagKey(FlagDebug), "show debug information")
 )
+
+func IsDebug(ctx context.Context) bool {
+	return cli.GetBool(ctx, cli.FlagKey(FlagDebug))
+}

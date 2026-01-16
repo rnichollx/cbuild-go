@@ -220,6 +220,7 @@ func init() {
 	CSetup.Subcommands["detect-toolchains"] = &cli.Subcommand{
 		Description:           "Detect system toolchains",
 		AllowUnrecognizedArgs: true,
+		AcceptsFlags:          []cli.Flag{ccommon.DebugFlag},
 		Exec: func(ctx context.Context, args []string) error {
 			return handleDetectToolchains(ctx, getWorkspacePath(ctx), args)
 		},
