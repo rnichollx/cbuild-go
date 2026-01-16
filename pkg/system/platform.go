@@ -15,6 +15,7 @@ const (
 	PlatformMac
 	PlatformLinux
 	PlatformFreeBSD
+	PlatformOpenBSD
 )
 
 func (p Platform) String() string {
@@ -27,6 +28,8 @@ func (p Platform) String() string {
 		return "Linux"
 	case PlatformFreeBSD:
 		return "FreeBSD"
+	case PlatformOpenBSD:
+		return "OpenBSD"
 	}
 	return "Unknown"
 }

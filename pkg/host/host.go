@@ -16,6 +16,10 @@ func DetectHostPlatform() system.Platform {
 		return system.PlatformUnknown
 	case "darwin":
 		return system.PlatformMac
+	case "freebsd":
+		return system.PlatformFreeBSD
+	case "openbsd":
+		return system.PlatformOpenBSD
 	default:
 		return system.PlatformUnknown
 	}
