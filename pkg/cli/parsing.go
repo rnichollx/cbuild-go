@@ -77,8 +77,6 @@ func ParseFlagsAndArgs(opts ParseOptions, input ParseInput) (ParseResult, error)
 
 	arguments := opts.Arguments
 
-	var fromArgumentFlag Flag
-
 	for _, flag := range opts.Flags {
 		if flag.Short() != "" {
 			if _, exists := shortFlagMap[flag.Short()]; exists {
@@ -96,9 +94,6 @@ func ParseFlagsAndArgs(opts ParseOptions, input ParseInput) (ParseResult, error)
 	}
 
 	seenParameters := make(map[ParameterKey]bool)
-
-	var encounterArg func(string) error
-	var encounterFlag func(string) error
 
 	unparsedTokens := input.Unparsed
 
@@ -193,12 +188,7 @@ func ParseFlagsAndArgs(opts ParseOptions, input ParseInput) (ParseResult, error)
 
 			var isList bool
 			switch flag.GetParameter().Type() {
-			case ParameterTypeStringList:
-			case ParameterTypeBoolList:
-			case ParameterTypeIntList:
-			case ParameterTypeDatetimeList:
-			case ParameterTypeDurationList:
-			case ParameterTypePathList:
+			case ParameterTypeStringList, ParameterTypeBoolList, ParameterTypeIntList, ParameterTypeDatetimeList, ParameterTypeDurationList, ParameterTypePathList, ParameterTypeURIList:
 				isList = true
 			default:
 				isList = false
@@ -208,7 +198,7 @@ func ParseFlagsAndArgs(opts ParseOptions, input ParseInput) (ParseResult, error)
 			// then we assume the the argument(s) follow
 			if requiresValue && value == nil {
 				i++
-				if i < len(unparsedTokens) {
+				if i >= len(unparsedTokens) {
 					return result, fmt.Errorf("expected value for %s, unexpected end of input", arg)
 				}
 
@@ -232,7 +222,7 @@ func ParseFlagsAndArgs(opts ParseOptions, input ParseInput) (ParseResult, error)
 						} else {
 							return result, fmt.Errorf("while parsing list spec for --%s, unexpected argument format in list spec: %s", name, arg2)
 						}
-
+						i++
 					}
 				} else if isList && flag.Greedy() {
 					// If greedy, accept as many normal args as appear in the input
@@ -245,8 +235,9 @@ func ParseFlagsAndArgs(opts ParseOptions, input ParseInput) (ParseResult, error)
 							// Stop and backoff this argument
 							i--
 							break
-						} else if arg == argTerminator {
+						} else if arg2 == argTerminator {
 							onlyArgs = true
+							i-- // back off so the outer loop handles terminator
 							break
 						} else {
 							values = append(values, arg2)
@@ -258,6 +249,10 @@ func ParseFlagsAndArgs(opts ParseOptions, input ParseInput) (ParseResult, error)
 				} else if isShortFlag(*value) || isLongFlag(*value) {
 					return result, fmt.Errorf("expected value for --%s, found %s", name, unparsedTokens[i])
 				} else if isList {
+					values = append(values, *value)
+				}
+			} else if value != nil {
+				if isList {
 					values = append(values, *value)
 				}
 			}
@@ -272,34 +267,37 @@ func ParseFlagsAndArgs(opts ParseOptions, input ParseInput) (ParseResult, error)
 			}
 
 			if seenParameters[flag.GetParameter().Key()] {
-
 				if policy == OverwritePolicyDisallowed {
 					return result, fmt.Errorf("duplicate flag --%s: parameter has already been set", flag.Long())
-				} else if policy == OverwritePolicyAppend {
-					if !isList {
-						return result, fmt.Errorf("flagspec error, flag --% has OverwritePolicyAppend but is not a list", flag.Long())
-					}
+				}
+			}
+
+			if isList {
+				if policy == OverwritePolicyAppend {
 					var err error
 					ctx, err = AppendParameter(ctx, flag.GetParameter(), values)
 					if err != nil {
 						return result, fmt.Errorf("flag --%s with args %v: %w", flag.Long(), values, err)
 					}
-				} else if policy == OverwritePolicyAllowed {
+				} else {
 					var err error
-					if isList {
-						ctx, err = SetParameterList(ctx, flag.GetParameter(), values)
-					} else {
-						if value != nil {
-							ctx, err = SetParameter(ctx, flag.GetParameter(), *value)
-						} else {
-							ctx, err = SetParameter(ctx, flag.GetParameter(), "enabled")
-						}
-					}
+					ctx, err = SetParameterList(ctx, flag.GetParameter(), values)
 					if err != nil {
 						return result, fmt.Errorf("flag --%s with args %v: %w", flag.Long(), values, err)
 					}
 				}
+			} else {
+				var err error
+				if value != nil {
+					ctx, err = SetParameter(ctx, flag.GetParameter(), *value)
+				} else {
+					ctx, err = SetParameter(ctx, flag.GetParameter(), "enabled")
+				}
+				if err != nil {
+					return result, fmt.Errorf("flag --%s with args %v: %w", flag.Long(), value, err)
+				}
 			}
+			seenParameters[flag.GetParameter().Key()] = true
 		} else if isShortFlag(arg) {
 			cluster := arg[1:]
 			for j := 0; j < len(cluster); j++ {
@@ -315,9 +313,16 @@ func ParseFlagsAndArgs(opts ParseOptions, input ParseInput) (ParseResult, error)
 					requiresValue = true
 				}
 
-				if seenParameters[flag.GetParameter().Key()] {
-					return result, fmt.Errorf("duplicate flag --%s: parameter has already been set", flag.Long())
+				var isList bool
+				switch flag.GetParameter().Type() {
+				case ParameterTypeStringList, ParameterTypeBoolList, ParameterTypeIntList, ParameterTypeDatetimeList, ParameterTypeDurationList, ParameterTypePathList, ParameterTypeURIList:
+					isList = true
+				default:
+					isList = false
 				}
+
+				var values []string
+				var value *string
 
 				if requiresValue {
 					if j != len(cluster)-1 {
@@ -326,61 +331,130 @@ func ParseFlagsAndArgs(opts ParseOptions, input ParseInput) (ParseResult, error)
 							// if this looks like -D= or /D:value then we skip
 							valueString = valueString[1:]
 						}
-						cluster = cluster[:j+1]
-						var err error
-						ctx, err = SetParameter(ctx, flag.GetParameter(), valueString)
-						if err != nil {
-							return result, fmt.Errorf("flag --%s with args %v: %w", flag.Long(), valueString, err)
+						value = &valueString
+						j = len(cluster) // consume the rest of the cluster
+					} else {
+						if i+1 >= len(unparsedTokens) {
+							return result, fmt.Errorf("missing value for flag: -%s", name)
 						}
-						break
+						i++
+						val := unparsedTokens[i]
+						value = &val
 					}
-					if i+1 >= len(unparsedTokens) {
-						return result, fmt.Errorf("missing value for flag: -%s", name)
+					if isList {
+						values = append(values, *value)
 					}
-					val := unparsedTokens[i+1]
-					var err error
-					ctx, err = SetParameter(ctx, flag.GetParameter(), val)
-					if err != nil {
-						return result, fmt.Errorf("flag --%s with args %v: %w", flag.Long(), val, err)
+				}
+
+				policy := flag.Overwrite()
+				if policy == OverwritePolicyDefault {
+					if isList {
+						policy = OverwritePolicyAppend
+					} else {
+						policy = OverwritePolicyDisallowed
 					}
-					i++
+				}
+
+				if seenParameters[flag.GetParameter().Key()] {
+					if policy == OverwritePolicyDisallowed {
+						return result, fmt.Errorf("duplicate flag -%s: parameter has already been set", name)
+					}
+				}
+
+				if isList {
+					if policy == OverwritePolicyAppend {
+						var err error
+						ctx, err = AppendParameter(ctx, flag.GetParameter(), values)
+						if err != nil {
+							return result, fmt.Errorf("flag -%s with args %v: %w", name, values, err)
+						}
+					} else {
+						var err error
+						ctx, err = SetParameterList(ctx, flag.GetParameter(), values)
+						if err != nil {
+							return result, fmt.Errorf("flag -%s with args %v: %w", name, values, err)
+						}
+					}
 				} else {
 					var err error
-					ctx, err = SetParameter(ctx, flag.GetParameter(), "enabled")
+					if value != nil {
+						ctx, err = SetParameter(ctx, flag.GetParameter(), *value)
+					} else {
+						ctx, err = SetParameter(ctx, flag.GetParameter(), "enabled")
+					}
 					if err != nil {
-						return result, fmt.Errorf("invalid value for flag -%s: %w", name, err)
+						return result, fmt.Errorf("flag -%s with args %v: %w", name, value, err)
 					}
 				}
+				seenParameters[flag.GetParameter().Key()] = true
 			}
 		} else {
-			var argument *Argument
+			var argument Argument
 			if argIndex >= len(arguments) {
 				if len(arguments) != 0 && arguments[len(arguments)-1].Variadic() {
-					argument = &arguments[len(arguments)-1]
+					argument = arguments[len(arguments)-1]
+				} else {
+					return result, fmt.Errorf("unexpected argument: %s", unparsedTokens[i])
 				}
-				return result, fmt.Errorf("unexpected argument: %s", unparsedTokens[i])
 			} else {
-				argument = &arguments[argIndex]
+				argument = arguments[argIndex]
 			}
 
 			var isList bool
-			switch (*argument).GetParameter().Type() {
-			case ParameterTypeStringList:
-			case ParameterTypeBoolList:
-			case ParameterTypeIntList:
-			case ParameterTypeDatetimeList:
-			case ParameterTypeDurationList:
-			case ParameterTypePathList:
+			switch argument.GetParameter().Type() {
+			case ParameterTypeStringList, ParameterTypeBoolList, ParameterTypeIntList, ParameterTypeDatetimeList, ParameterTypeDurationList, ParameterTypePathList, ParameterTypeURIList:
 				isList = true
 			default:
 				isList = false
 			}
 
 			if isList {
+				var values []string
+				if argument.Separator() != nil {
+					values = strings.Split(unparsedTokens[i], *argument.Separator())
+				} else {
+					values = []string{unparsedTokens[i]}
+				}
 
+				policy := argument.Overwrite()
+				if policy == OverwritePolicyDefault {
+					policy = OverwritePolicyAppend
+				}
+
+				if seenParameters[argument.GetParameter().Key()] && policy == OverwritePolicyDisallowed {
+					return result, fmt.Errorf("duplicate argument %s: parameter has already been set", argument.Name())
+				}
+
+				var err error
+				if policy == OverwritePolicyAppend {
+					ctx, err = AppendParameter(ctx, argument.GetParameter(), values)
+				} else {
+					ctx, err = SetParameterList(ctx, argument.GetParameter(), values)
+				}
+				if err != nil {
+					return result, fmt.Errorf("argument %s with args %v: %w", argument.Name(), values, err)
+				}
+			} else {
+				if seenParameters[argument.GetParameter().Key()] {
+					policy := argument.Overwrite()
+					if policy == OverwritePolicyDefault || policy == OverwritePolicyDisallowed {
+						return result, fmt.Errorf("duplicate argument %s: parameter has already been set", argument.Name())
+					}
+				}
+				var err error
+				ctx, err = SetParameter(ctx, argument.GetParameter(), unparsedTokens[i])
+				if err != nil {
+					return result, fmt.Errorf("argument %s with args %s: %w", argument.Name(), unparsedTokens[i], err)
+				}
 			}
-
+			seenParameters[argument.GetParameter().Key()] = true
+			if !argument.Variadic() {
+				argIndex++
+			}
 		}
 
 	}
+
+	result.Ctx = ctx
+	return result, nil
 }
