@@ -11,10 +11,8 @@ import (
 	"gitlab.com/rpnx/cbuild-go/pkg/cli"
 )
 
-func handleListSources(ctx context.Context, workspacePath string, args []string) error {
-	if len(args) != 0 {
-		return fmt.Errorf("Unexpected args: %v", args)
-	}
+func handleListSources(ctx context.Context) error {
+	workspacePath := getWorkspacePath(ctx)
 	ws := &ccommon.WorkspaceContext{}
 	err := ws.Load(ctx, workspacePath)
 	if err != nil {
@@ -80,13 +78,15 @@ func handleListSources(ctx context.Context, workspacePath string, args []string)
 	return nil
 }
 
-func handleRemoveSource(ctx context.Context, workspacePath string, args []string) error {
-	if len(args) != 1 {
-		return fmt.Errorf("usage: csetup remove-source <source> [-X|--delete]")
+func handleRemoveSource(ctx context.Context) error {
+	workspacePath := getWorkspacePath(ctx)
+	sourceVal, _ := cli.GetString(ctx, PSource)
+	sourceName := ""
+	if sourceVal != nil {
+		sourceName = *sourceVal
 	}
-
-	sourceName := args[0]
-	removeFolder := cli.GetBool(ctx, cli.FlagKey(ccommon.FlagDelete))
+	removeFolderRaw, _ := cli.GetBool(ctx, ccommon.PDelete)
+	removeFolder := removeFolderRaw != nil && *removeFolderRaw
 
 	if sourceName == "" {
 		return fmt.Errorf("usage: csetup remove-source <source> [-X|--delete]")
@@ -101,12 +101,13 @@ func handleRemoveSource(ctx context.Context, workspacePath string, args []string
 	return ws.RemoveSource(ctx, sourceName, removeFolder)
 }
 
-func handleRemoveTarget(ctx context.Context, workspacePath string, args []string) error {
-	if len(args) != 1 {
-		return fmt.Errorf("usage: csetup remove-target <target>")
+func handleRemoveTarget(ctx context.Context) error {
+	workspacePath := getWorkspacePath(ctx)
+	targetVal, _ := cli.GetString(ctx, PTarget)
+	targetName := ""
+	if targetVal != nil {
+		targetName = *targetVal
 	}
-
-	targetName := args[0]
 	if targetName == "" {
 		return fmt.Errorf("usage: csetup remove-target <target>")
 	}
@@ -120,13 +121,15 @@ func handleRemoveTarget(ctx context.Context, workspacePath string, args []string
 	return ws.RemoveTarget(ctx, targetName)
 }
 
-func handleRemoveProject(ctx context.Context, workspacePath string, args []string) error {
-	if len(args) != 1 {
-		return fmt.Errorf("usage: csetup remove-project <source> [-X|--delete]")
+func handleRemoveProject(ctx context.Context) error {
+	workspacePath := getWorkspacePath(ctx)
+	sourceVal, _ := cli.GetString(ctx, PSource)
+	sourceName := ""
+	if sourceVal != nil {
+		sourceName = *sourceVal
 	}
-
-	sourceName := args[0]
-	removeFolder := cli.GetBool(ctx, cli.FlagKey(ccommon.FlagDelete))
+	removeFolderRaw, _ := cli.GetBool(ctx, ccommon.PDelete)
+	removeFolder := removeFolderRaw != nil && *removeFolderRaw
 
 	if sourceName == "" {
 		return fmt.Errorf("usage: csetup remove-project <source> [-X|--delete]")
@@ -141,11 +144,8 @@ func handleRemoveProject(ctx context.Context, workspacePath string, args []strin
 	return ws.RemoveProject(ctx, sourceName, removeFolder)
 }
 
-func handleDropFiles(ctx context.Context, workspacePath string, args []string) error {
-	if len(args) > 1 {
-		return fmt.Errorf("usage: csetup drop-files [<source>]")
-	}
-
+func handleDropFiles(ctx context.Context) error {
+	workspacePath := getWorkspacePath(ctx)
 	ws := &ccommon.WorkspaceContext{}
 	err := ws.Load(ctx, workspacePath)
 	if err != nil {
@@ -153,8 +153,9 @@ func handleDropFiles(ctx context.Context, workspacePath string, args []string) e
 	}
 
 	sourcesToDrop := []string{}
-	if len(args) == 1 {
-		sourcesToDrop = append(sourcesToDrop, args[0])
+	sourceVal, _ := cli.GetString(ctx, PSourceReq)
+	if sourceVal != nil && *sourceVal != "" {
+		sourcesToDrop = append(sourcesToDrop, *sourceVal)
 	} else {
 		for name := range ws.Config.Sources {
 			sourcesToDrop = append(sourcesToDrop, name)
@@ -171,23 +172,22 @@ func handleDropFiles(ctx context.Context, workspacePath string, args []string) e
 	return nil
 }
 
-func handleGitClone(ctx context.Context, workspacePath string, args []string) error {
-	if len(args) < 1 || len(args) > 2 {
-		return fmt.Errorf("usage: csetup git-clone <repo_url> [dest_name] [--download-deps] [--submodule] [--no-setup]")
-	}
-
+func handleGitClone(ctx context.Context) error {
+	workspacePath := getWorkspacePath(ctx)
+	repoURLVal, _ := cli.GetURI(ctx, PUrl)
 	repoURL := ""
-	destName := ""
-	downloadDeps := cli.GetBool(ctx, cli.FlagKey(ccommon.FlagDownload))
-	noSetup := cli.GetBool(ctx, cli.FlagKey(ccommon.FlagNoSetup))
-
-	for _, arg := range args {
-		if repoURL == "" {
-			repoURL = arg
-		} else if destName == "" {
-			destName = arg
-		}
+	if repoURLVal != nil {
+		repoURL = repoURLVal.String()
 	}
+	destNameVal, _ := cli.GetPath(ctx, PPath)
+	destName := ""
+	if destNameVal != nil {
+		destName = *destNameVal
+	}
+	downloadDepsRaw, _ := cli.GetBool(ctx, ccommon.PDownloadDeps)
+	downloadDeps := downloadDepsRaw != nil && *downloadDepsRaw
+	noSetupRaw, _ := cli.GetBool(ctx, ccommon.PNoSetup)
+	noSetup := noSetupRaw != nil && *noSetupRaw
 
 	if repoURL == "" {
 		return fmt.Errorf("usage: csetup git-clone <repo_url> [dest_name] [--download-deps] [--submodule] [--no-setup]")
@@ -263,13 +263,12 @@ func handleGitClone(ctx context.Context, workspacePath string, args []string) er
 	return nil
 }
 
-func handleDownload(ctx context.Context, workspacePath string, args []string) error {
-	if len(args) > 1 {
-		return fmt.Errorf("usage: csetup download [source_name] [--download-deps] [--no-setup] [--submodule]")
-	}
-
-	downloadDeps := cli.GetBool(ctx, cli.FlagKey(ccommon.FlagDownload))
-	noSetup := cli.GetBool(ctx, cli.FlagKey(ccommon.FlagNoSetup))
+func handleDownload(ctx context.Context) error {
+	workspacePath := getWorkspacePath(ctx)
+	downloadDepsRaw, _ := cli.GetBool(ctx, ccommon.PDownloadDeps)
+	downloadDeps := downloadDepsRaw != nil && *downloadDepsRaw
+	noSetupRaw, _ := cli.GetBool(ctx, ccommon.PNoSetup)
+	noSetup := noSetupRaw != nil && *noSetupRaw
 
 	ws := &ccommon.WorkspaceContext{}
 	ws.DownloadDeps = downloadDeps
@@ -279,8 +278,9 @@ func handleDownload(ctx context.Context, workspacePath string, args []string) er
 	}
 
 	sourcesToDownload := []string{}
-	if len(args) == 1 {
-		sourceName := args[0]
+	sourceVal, _ := cli.GetString(ctx, PSource)
+	if sourceVal != nil && *sourceVal != "" {
+		sourceName := *sourceVal
 		if _, ok := ws.Config.Sources[sourceName]; !ok {
 			return fmt.Errorf("source %s not found in workspace configuration", sourceName)
 		}
@@ -294,9 +294,6 @@ func handleDownload(ctx context.Context, workspacePath string, args []string) er
 	for _, sourceName := range sourcesToDownload {
 		sourceDir := filepath.Join(workspacePath, "sources", sourceName)
 		if _, err := os.Stat(sourceDir); err == nil {
-			if len(args) == 1 {
-				fmt.Printf("Source %s already exists at %s\n", sourceName, sourceDir)
-			}
 			continue
 		}
 
@@ -316,12 +313,13 @@ func handleDownload(ctx context.Context, workspacePath string, args []string) er
 	return nil
 }
 
-func handleLoadDefaults(ctx context.Context, workspacePath string, args []string) error {
-	if len(args) != 1 {
-		return fmt.Errorf("usage: csetup load-defaults <source>")
+func handleLoadDefaults(ctx context.Context) error {
+	workspacePath := getWorkspacePath(ctx)
+	sourceVal, _ := cli.GetString(ctx, PSourceReq)
+	sourceName := ""
+	if sourceVal != nil {
+		sourceName = *sourceVal
 	}
-
-	sourceName := args[0]
 	if sourceName == "" {
 		return fmt.Errorf("usage: csetup load-defaults <source>")
 	}

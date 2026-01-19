@@ -3,18 +3,22 @@ package csetupapp
 import (
 	"context"
 	"fmt"
+
 	"gitlab.com/rpnx/cbuild-go/pkg/ccommon"
+	"gitlab.com/rpnx/cbuild-go/pkg/cli"
 )
 
-func handleSetCXXVersion(ctx context.Context, workspacePath string, args []string) error {
-	if len(args) < 1 || len(args) > 2 {
-		return fmt.Errorf("usage: csetup set-cxx-version <version> [<source>]")
+func handleSetCXXVersion(ctx context.Context) error {
+	workspacePath := getWorkspacePath(ctx)
+	versionVal, _ := cli.GetString(ctx, PVersion)
+	version := ""
+	if versionVal != nil {
+		version = *versionVal
 	}
-
-	version := args[0]
-	var source string
-	if len(args) > 1 {
-		source = args[1]
+	sourceVal, _ := cli.GetString(ctx, PSource)
+	source := ""
+	if sourceVal != nil {
+		source = *sourceVal
 	}
 
 	ws := &ccommon.WorkspaceContext{}
@@ -26,12 +30,13 @@ func handleSetCXXVersion(ctx context.Context, workspacePath string, args []strin
 	return ws.SetCXXVersion(ctx, version, source)
 }
 
-func handleEnableStaging(ctx context.Context, workspacePath string, args []string) error {
-	if len(args) != 1 {
-		return fmt.Errorf("usage: csetup enable-staging <source>")
+func handleEnableStaging(ctx context.Context) error {
+	workspacePath := getWorkspacePath(ctx)
+	sourceVal, _ := cli.GetString(ctx, PSource)
+	source := ""
+	if sourceVal != nil {
+		source = *sourceVal
 	}
-
-	source := args[0]
 
 	ws := &ccommon.WorkspaceContext{}
 	err := ws.Load(ctx, workspacePath)
@@ -42,12 +47,13 @@ func handleEnableStaging(ctx context.Context, workspacePath string, args []strin
 	return ws.SetStaging(ctx, source, true)
 }
 
-func handleDisableStaging(ctx context.Context, workspacePath string, args []string) error {
-	if len(args) != 1 {
-		return fmt.Errorf("usage: csetup disable-staging <source>")
+func handleDisableStaging(ctx context.Context) error {
+	workspacePath := getWorkspacePath(ctx)
+	sourceVal, _ := cli.GetString(ctx, PSource)
+	source := ""
+	if sourceVal != nil {
+		source = *sourceVal
 	}
-
-	source := args[0]
 
 	ws := &ccommon.WorkspaceContext{}
 	err := ws.Load(ctx, workspacePath)
@@ -58,12 +64,13 @@ func handleDisableStaging(ctx context.Context, workspacePath string, args []stri
 	return ws.SetStaging(ctx, source, false)
 }
 
-func handleAddConfig(ctx context.Context, workspacePath string, args []string) error {
-	if len(args) != 1 {
-		return fmt.Errorf("usage: csetup add-config <configname>")
+func handleAddConfig(ctx context.Context) error {
+	workspacePath := getWorkspacePath(ctx)
+	configNameVal, _ := cli.GetStringList(ctx, ccommon.PConfig)
+	configName := ""
+	if configNameVal != nil && len(*configNameVal) > 0 {
+		configName = (*configNameVal)[0]
 	}
-
-	configName := args[0]
 
 	ws := &ccommon.WorkspaceContext{}
 	err := ws.Load(ctx, workspacePath)
@@ -74,12 +81,13 @@ func handleAddConfig(ctx context.Context, workspacePath string, args []string) e
 	return ws.AddConfiguration(ctx, configName)
 }
 
-func handleRemoveConfig(ctx context.Context, workspacePath string, args []string) error {
-	if len(args) != 1 {
-		return fmt.Errorf("usage: csetup remove-config <configname>")
+func handleRemoveConfig(ctx context.Context) error {
+	workspacePath := getWorkspacePath(ctx)
+	configNameVal, _ := cli.GetStringList(ctx, ccommon.PConfig)
+	configName := ""
+	if configNameVal != nil && len(*configNameVal) > 0 {
+		configName = (*configNameVal)[0]
 	}
-
-	configName := args[0]
 
 	ws := &ccommon.WorkspaceContext{}
 	err := ws.Load(ctx, workspacePath)

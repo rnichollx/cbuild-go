@@ -10,7 +10,11 @@ import (
 )
 
 func getWorkspacePath(ctx context.Context) string {
-	workspacePath := cli.GetString(ctx, cli.FlagKey(ccommon.FlagWorkspace))
+	workspacePathRaw, _ := cli.GetPath(ctx, ccommon.PWorkspace)
+	workspacePath := ""
+	if workspacePathRaw != nil {
+		workspacePath = *workspacePathRaw
+	}
 	if workspacePath == "" {
 		workspacePath = "."
 	}
@@ -56,189 +60,184 @@ var CSetup = &cli.Runner{
 	Subcommands: make(map[string]*cli.Subcommand),
 }
 
+var (
+	PPath       = cli.NewParameter("path", cli.ParameterTypePath, nil, "path to the workspace or source", false)
+	PUrl        = cli.NewParameter("url", cli.ParameterTypeURI, nil, "URL of the repository", true)
+	PSource     = cli.NewParameter("source", cli.ParameterTypeString, nil, "name of the source", false)
+	PSourceReq  = cli.NewParameter("source", cli.ParameterTypeString, nil, "name of the source", true)
+	PDependency = cli.NewParameter("dependency", cli.ParameterTypeString, nil, "name of the dependency", true)
+	PTarget     = cli.NewParameter("target", cli.ParameterTypeString, nil, "name of the target", false)
+	PTargetReq  = cli.NewParameter("target", cli.ParameterTypeString, nil, "name of the target", true)
+	PVersion    = cli.NewParameter("version", cli.ParameterTypeString, nil, "version string", true)
+)
+
 func init() {
 	CSetup.Subcommands["init"] = &cli.Subcommand{
 		Description: "Initialize a new workspace",
 		Arguments: []cli.Argument{
-			{Name: "path", Required: false},
+			cli.NewStringArgument("path", PPath),
 		},
-		AllowUnrecognizedArgs: true,
-		AcceptsFlags:          []cli.Flag{ccommon.ReinitFlag},
+		AcceptsFlags: []cli.Flag{ccommon.ReinitFlag},
 		Exec: func(ctx context.Context, args []string) error {
-			return handleInit(ctx, getWorkspacePath(ctx), args)
+			return handleInit(ctx)
 		},
 	}
 	CSetup.Subcommands["git-clone"] = &cli.Subcommand{
 		Description: "Clone a git repository into the workspace",
 		Arguments: []cli.Argument{
-			{Name: "url", Required: true},
-			{Name: "path", Required: false},
+			cli.NewStringArgument("url", PUrl),
+			cli.NewStringArgument("path", PPath),
 		},
-		AllowUnrecognizedArgs: true,
-		AcceptsFlags:          []cli.Flag{ccommon.DownloadDepsFlag, ccommon.SubmoduleFlag, ccommon.NoSetupFlag},
+		AcceptsFlags: []cli.Flag{ccommon.DownloadDepsFlag, ccommon.SubmoduleFlag, ccommon.NoSetupFlag},
 		Exec: func(ctx context.Context, args []string) error {
-			return handleGitClone(ctx, getWorkspacePath(ctx), args)
+			return handleGitClone(ctx)
 		},
 	}
 	CSetup.Subcommands["download"] = &cli.Subcommand{
 		Description: "Download missing sources",
 		Arguments: []cli.Argument{
-			{Name: "source", Required: false},
+			cli.NewStringArgument("source", PSource),
 		},
-		AllowUnrecognizedArgs: true,
-		AcceptsFlags:          []cli.Flag{ccommon.DownloadDepsFlag, ccommon.NoSetupFlag, ccommon.SubmoduleFlag},
+		AcceptsFlags: []cli.Flag{ccommon.DownloadDepsFlag, ccommon.NoSetupFlag, ccommon.SubmoduleFlag},
 		Exec: func(ctx context.Context, args []string) error {
-			return handleDownload(ctx, getWorkspacePath(ctx), args)
+			return handleDownload(ctx)
 		},
 	}
 	CSetup.Subcommands["load-defaults"] = &cli.Subcommand{
 		Description: "Load default configuration for a source from its csetup.yml",
 		Arguments: []cli.Argument{
-			{Name: "source", Required: true},
+			cli.NewStringArgument("source", PSourceReq),
 		},
-		AllowUnrecognizedArgs: true,
 		Exec: func(ctx context.Context, args []string) error {
-			return handleLoadDefaults(ctx, getWorkspacePath(ctx), args)
+			return handleLoadDefaults(ctx)
 		},
 	}
 	CSetup.Subcommands["add-dependency"] = &cli.Subcommand{
 		Description: "Add a dependency to a source",
 		Arguments: []cli.Argument{
-			{Name: "source", Required: true},
-			{Name: "dependency", Required: true},
+			cli.NewStringArgument("source", PSourceReq),
+			cli.NewStringArgument("dependency", PDependency),
 		},
-		AllowUnrecognizedArgs: true,
 		Exec: func(ctx context.Context, args []string) error {
-			return handleAddDependency(ctx, getWorkspacePath(ctx), args)
+			return handleAddDependency(ctx)
 		},
 	}
 	CSetup.Subcommands["remove-dependency"] = &cli.Subcommand{
 		Description: "Remove a dependency from a source",
 		Arguments: []cli.Argument{
-			{Name: "source", Required: true},
-			{Name: "dependency", Required: true},
+			cli.NewStringArgument("source", PSourceReq),
+			cli.NewStringArgument("dependency", PDependency),
 		},
-		AllowUnrecognizedArgs: true,
 		Exec: func(ctx context.Context, args []string) error {
-			return handleRemoveDependency(ctx, getWorkspacePath(ctx), args)
+			return handleRemoveDependency(ctx)
 		},
 	}
 	CSetup.Subcommands["remove-source"] = &cli.Subcommand{
 		Description: "Remove a source from the workspace",
 		Arguments: []cli.Argument{
-			{Name: "source", Required: false},
+			cli.NewStringArgument("source", PSource),
+			ccommon.SourceFlag,
 		},
-		AllowUnrecognizedArgs: true,
-		AcceptsFlags:          []cli.Flag{ccommon.SourceFlag, ccommon.DeleteFlag},
+		AcceptsFlags: []cli.Flag{ccommon.DeleteFlag},
 		Exec: func(ctx context.Context, args []string) error {
-			return handleRemoveSource(ctx, getWorkspacePath(ctx), args)
+			return handleRemoveSource(ctx)
 		},
 	}
 	CSetup.Subcommands["remove-target"] = &cli.Subcommand{
 		Description: "Remove a target from the workspace",
 		Arguments: []cli.Argument{
-			{Name: "target", Required: false},
+			cli.NewStringArgument("target", PTarget),
+			ccommon.TargetFlag,
 		},
-		AllowUnrecognizedArgs: true,
-		AcceptsFlags:          []cli.Flag{ccommon.TargetFlag},
 		Exec: func(ctx context.Context, args []string) error {
-			return handleRemoveTarget(ctx, getWorkspacePath(ctx), args)
+			return handleRemoveTarget(ctx)
 		},
 	}
 	CSetup.Subcommands["remove-project"] = &cli.Subcommand{
 		Description: "Remove a source and all its associated targets from the workspace",
 		Arguments: []cli.Argument{
-			{Name: "source", Required: false},
+			cli.NewStringArgument("source", PSource),
+			ccommon.SourceFlag,
 		},
-		AllowUnrecognizedArgs: true,
-		AcceptsFlags:          []cli.Flag{ccommon.SourceFlag, ccommon.DeleteFlag},
+		AcceptsFlags: []cli.Flag{ccommon.DeleteFlag},
 		Exec: func(ctx context.Context, args []string) error {
-			return handleRemoveProject(ctx, getWorkspacePath(ctx), args)
+			return handleRemoveProject(ctx)
 		},
 	}
 	CSetup.Subcommands["set-cxx-version"] = &cli.Subcommand{
 		Description: "Set the C++ version for a source or the whole workspace",
 		Arguments: []cli.Argument{
-			{Name: "source", Required: false},
-			{Name: "version", Required: true},
+			cli.NewStringArgument("source", PSource),
+			cli.NewStringArgument("version", PVersion),
 		},
-		AllowUnrecognizedArgs: true,
 		Exec: func(ctx context.Context, args []string) error {
-			return handleSetCXXVersion(ctx, getWorkspacePath(ctx), args)
+			return handleSetCXXVersion(ctx)
 		},
 	}
 	CSetup.Subcommands["enable-staging"] = &cli.Subcommand{
 		Description: "Enable staging for a source",
 		Arguments: []cli.Argument{
-			{Name: "source", Required: false},
+			cli.NewStringArgument("source", PSource),
+			ccommon.SourceFlag,
 		},
-		AllowUnrecognizedArgs: true,
-		AcceptsFlags:          []cli.Flag{ccommon.SourceFlag},
 		Exec: func(ctx context.Context, args []string) error {
-			return handleEnableStaging(ctx, getWorkspacePath(ctx), args)
+			return handleEnableStaging(ctx)
 		},
 	}
 	CSetup.Subcommands["disable-staging"] = &cli.Subcommand{
 		Description: "Disable staging for a source",
 		Arguments: []cli.Argument{
-			{Name: "source", Required: false},
+			cli.NewStringArgument("source", PSource),
+			ccommon.SourceFlag,
 		},
-		AllowUnrecognizedArgs: true,
-		AcceptsFlags:          []cli.Flag{ccommon.SourceFlag},
 		Exec: func(ctx context.Context, args []string) error {
-			return handleDisableStaging(ctx, getWorkspacePath(ctx), args)
+			return handleDisableStaging(ctx)
 		},
 	}
 	CSetup.Subcommands["list-sources"] = &cli.Subcommand{
-		Description:           "List all sources in the workspace",
-		AllowUnrecognizedArgs: true,
+		Description: "List all sources in the workspace",
 		Exec: func(ctx context.Context, args []string) error {
-			return handleListSources(ctx, getWorkspacePath(ctx), args)
+			return handleListSources(ctx)
 		},
 	}
 	CSetup.Subcommands["drop-files"] = &cli.Subcommand{
 		Description: "Delete local source files without removing them from configuration",
 		Arguments: []cli.Argument{
-			{Name: "source", Required: true},
+			cli.NewStringArgument("source", PSourceReq),
 		},
-		AllowUnrecognizedArgs: true,
 		Exec: func(ctx context.Context, args []string) error {
-			return handleDropFiles(ctx, getWorkspacePath(ctx), args)
+			return handleDropFiles(ctx)
 		},
 	}
 	CSetup.Subcommands["get-args"] = &cli.Subcommand{
 		Description: "Get build arguments for a target",
 		Arguments: []cli.Argument{
-			{Name: "target", Required: true},
+			cli.NewStringArgument("target", PTargetReq),
 		},
-		AllowUnrecognizedArgs: true,
-		AcceptsFlags:          []cli.Flag{ccommon.ConfigFlag, ccommon.ToolchainFlag},
+		AcceptsFlags: []cli.Flag{ccommon.ConfigFlag, ccommon.ToolchainFlag},
 		Exec: func(ctx context.Context, args []string) error {
-			return handleGetArgs(ctx, getWorkspacePath(ctx), args)
+			return handleGetArgs(ctx)
 		},
 	}
 	CSetup.Subcommands["detect-toolchains"] = &cli.Subcommand{
-		Description:           "Detect system toolchains",
-		AllowUnrecognizedArgs: true,
-		AcceptsFlags:          []cli.Flag{ccommon.DebugFlag},
+		Description:  "Detect system toolchains",
+		AcceptsFlags: []cli.Flag{ccommon.DebugFlag},
 		Exec: func(ctx context.Context, args []string) error {
-			return handleDetectToolchains(ctx, getWorkspacePath(ctx), args)
+			return handleDetectToolchains(ctx)
 		},
 	}
 	CSetup.Subcommands["add-config"] = &cli.Subcommand{
-		Description:           "Add a build configuration",
-		AllowUnrecognizedArgs: true,
-		AcceptsFlags:          []cli.Flag{ccommon.ConfigFlag, ccommon.ToolchainFlag},
+		Description:  "Add a build configuration",
+		AcceptsFlags: []cli.Flag{ccommon.ConfigFlag, ccommon.ToolchainFlag},
 		Exec: func(ctx context.Context, args []string) error {
-			return handleAddConfig(ctx, getWorkspacePath(ctx), args)
+			return handleAddConfig(ctx)
 		},
 	}
 	CSetup.Subcommands["remove-config"] = &cli.Subcommand{
-		Description:           "Remove a build configuration",
-		AllowUnrecognizedArgs: true,
-		AcceptsFlags:          []cli.Flag{ccommon.ConfigFlag},
+		Description:  "Remove a build configuration",
+		AcceptsFlags: []cli.Flag{ccommon.ConfigFlag},
 		Exec: func(ctx context.Context, args []string) error {
-			return handleRemoveConfig(ctx, getWorkspacePath(ctx), args)
+			return handleRemoveConfig(ctx)
 		},
 	}
 }

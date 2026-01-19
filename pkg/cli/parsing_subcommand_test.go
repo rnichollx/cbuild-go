@@ -138,7 +138,9 @@ func TestSubcommandRestriction(t *testing.T) {
 			NewStringArgument("arg2", pArg2),
 		},
 		Subcommands: map[string]SubcommandParseOptions{
-			"cmd": {},
+			"cmd": {
+				StopParsing: true,
+			},
 		},
 	}
 

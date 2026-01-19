@@ -39,19 +39,19 @@ func TestParsingLists(t *testing.T) {
 			},
 		}
 
-		ctx, _, err := ParseFlags(context.Background(), ParseOptions{
+		res, err := ParseFlagsAndArgs(ParseOptions{
 			Flags: flags,
-		}, []string{"--list", "val1", "val2", "--other"})
-		// wait, --other is unknown, so it should error
-		if err == nil {
-			t.Errorf("expected error for unknown flag --other")
+		}, ParseInput{Tokens: []string{"--list", "val1", "val2", "--other"}})
+		// wait, --other is unknown, so it should be in Unparsed
+		if len(res.Unparsed) == 0 || res.Unparsed[0] != "--other" {
+			t.Errorf("expected --other in Unparsed")
 		}
 
 		// Try with valid args after greedy
 		pOther := NewParameter("other", ParameterTypeBool, nil, "", false)
 		flags = append(flags, NewBoolFlag("o", "other", pOther))
 
-		ctx, _, err = ParseFlags(context.Background(), ParseOptions{
+		ctx, _, err := ParseFlags(context.Background(), ParseOptions{
 			Flags: flags,
 		}, []string{"--list", "val1", "val2", "--other"})
 		if err != nil {

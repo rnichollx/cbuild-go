@@ -8,19 +8,25 @@ import (
 	"strings"
 )
 
-func handleGetArgs(ctx context.Context, workspacePath string, args []string) error {
-	if len(args) != 1 {
-		return fmt.Errorf("usage: csetup get-args <target> [-T|--toolchain <toolchain>] [-c|--config <type>]")
+func handleGetArgs(ctx context.Context) error {
+	workspacePath := getWorkspacePath(ctx)
+	targetNameVal, _ := cli.GetString(ctx, PTargetReq)
+	targetName := ""
+	if targetNameVal != nil {
+		targetName = *targetNameVal
 	}
-
-	targetName := args[0]
-	toolchain := cli.GetString(ctx, cli.FlagKey(ccommon.FlagToolchain))
+	toolchainVal, _ := cli.GetString(ctx, ccommon.PToolchain)
+	toolchain := ""
+	if toolchainVal != nil {
+		toolchain = *toolchainVal
+	}
 	if toolchain == "" {
 		toolchain = "default"
 	}
-	buildType := cli.GetString(ctx, cli.FlagKey(ccommon.FlagConfig))
-	if buildType == "" {
-		buildType = "Debug"
+	buildTypeVal, _ := cli.GetStringList(ctx, ccommon.PConfig)
+	buildType := "Debug"
+	if buildTypeVal != nil && len(*buildTypeVal) > 0 {
+		buildType = (*buildTypeVal)[0]
 	}
 
 	ws := &ccommon.WorkspaceContext{}

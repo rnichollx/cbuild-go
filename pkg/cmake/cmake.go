@@ -22,6 +22,19 @@ const (
 	CompilerTypeMSVC
 )
 
+func (c CompilerType) String() string {
+	switch c {
+	case CompilerTypeGCC:
+		return "GCC"
+	case CompilerTypeClang:
+		return "Clang"
+	case CompilerTypeMSVC:
+		return "MSVC"
+	default:
+		return "Unknown"
+	}
+}
+
 type LinkerType int
 
 const (

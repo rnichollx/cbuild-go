@@ -108,9 +108,12 @@ func TestParseFlags(t *testing.T) {
 
 	t.Run("Invalid cluster", func(t *testing.T) {
 		args := []string{"-cab", "value"}
-		_, _, err := ParseFlags(context.Background(), ParseOptions{Flags: flags}, args)
-		if err == nil {
-			t.Errorf("expected error for value-taking flag in middle of cluster")
+		res, err := ParseFlagsAndArgs(ParseOptions{Flags: flags}, ParseInput{Tokens: args})
+		if err != nil {
+			t.Fatalf("ParseFlagsAndArgs failed: %v", err)
+		}
+		if len(res.Unparsed) == 0 || res.Unparsed[0] != "-cab" {
+			t.Errorf("expected -cab in Unparsed")
 		}
 	})
 

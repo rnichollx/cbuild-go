@@ -17,7 +17,8 @@ type GitSource struct {
 
 func (ws *WorkspaceContext) GetFromGit(ctx context.Context, name string, source GitSource) error {
 	destDir := filepath.Join(ws.WorkspacePath, "sources", name)
-	useSubmodule := cli.GetBool(ctx, cli.FlagKey(FlagSubmodule))
+	useSubmoduleRaw, _ := cli.GetBool(ctx, PSubmodule)
+	useSubmodule := useSubmoduleRaw != nil && *useSubmoduleRaw
 
 	if useSubmodule {
 		fmt.Printf("Adding submodule '%s' from '%s'...\n", name, source.Repository)

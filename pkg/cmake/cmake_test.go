@@ -51,6 +51,8 @@ func TestGenerateToolchainFile(t *testing.T) {
 		ExtraCompilerFlags: []string{"-O3"},
 		ExtraCFlags:        []string{"-std=c11"},
 		ExtraCXXFlags:      []string{"-std=c++17"},
+		SystemPlatform:     system.PlatformLinux,
+		SystemProcessor:    system.ProcessorX64,
 		WorkspaceDir:       ".",
 		OutputFile:         outputFile,
 	}

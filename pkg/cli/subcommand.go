@@ -10,14 +10,12 @@ import (
 )
 
 type Subcommand struct {
-	Name                  string
-	Description           string
-	HelpText              string
-	AcceptsFlags          []Flag
-	Arguments             []Argument
-	AllowUnrecognizedArgs bool
-	AllowUnknownFlags     bool
-	Exec                  func(ctx context.Context, args []string) error
+	Name         string
+	Description  string
+	HelpText     string
+	AcceptsFlags []Flag
+	Arguments    []Argument
+	Exec         func(ctx context.Context, args []string) error
 }
 
 type Runner struct {
@@ -29,117 +27,111 @@ type Runner struct {
 }
 
 func (r *Runner) Run(ctx context.Context, args []string) error {
-	// 1. Identify subcommand
-	// We need to find the subcommand name in args, considering it might be preceded by flags.
-	subcmdName := ""
-	subcmdIdx := -1
+	// 1. Identify subcommand and parse its options
+	subcmdParseOpts := make(map[string]SubcommandParseOptions)
+	for name, subcmd := range r.Subcommands {
+		mergedFlags := make([]Flag, 0, len(r.GlobalFlags)+len(subcmd.AcceptsFlags))
+		mergedFlagsMap := make(map[ParameterKey]Flag)
+		for _, f := range r.GlobalFlags {
+			mergedFlagsMap[f.GetParameter().Key()] = f
+		}
+		for _, f := range subcmd.AcceptsFlags {
+			mergedFlagsMap[f.GetParameter().Key()] = f
+		}
+		for _, f := range mergedFlagsMap {
+			mergedFlags = append(mergedFlags, f)
+		}
 
-	// Preliminary parse of global flags to find where the subcommand might be
-	preliminaryResult, _ := ParseFlagsAndArgs(ParseOptions{
-		Flags: r.GlobalFlags,
+		subcmdParseOpts[name] = SubcommandParseOptions{
+			ParseOptions: &ParseOptions{
+				Flags:     mergedFlags,
+				Arguments: subcmd.Arguments,
+			},
+		}
+	}
+
+	result, err := ParseFlagsAndArgs(ParseOptions{
+		Flags:       r.GlobalFlags,
+		Subcommands: subcmdParseOpts,
 	}, ParseInput{Ctx: ctx, Tokens: args})
-	preliminaryArgs := preliminaryResult.Unparsed
 
-	if len(preliminaryArgs) > 0 {
-		potentialSubcmd := preliminaryArgs[0]
-		if _, ok := r.Subcommands[potentialSubcmd]; ok {
-			subcmdName = potentialSubcmd
-			// Find the index of this subcommand in the original args
-			for i, arg := range args {
-				if arg == subcmdName {
-					subcmdIdx = i
-					break
-				}
-			}
-		}
-	}
-
-	if subcmdName == "" && r.DefaultSubcmd != "" {
-		subcmdName = r.DefaultSubcmd
-	}
-
-	// 2. Help detection
-	// We check for help flag in the whole arguments list.
-	// If help is requested, we print usage and exit.
-	helpFlags := []Flag{}
-	for _, f := range r.GlobalFlags {
-		if f.GetParameter().Key() == "help" {
-			helpFlags = append(helpFlags, f)
-		}
-	}
-	// Also check subcommand flags for help if a subcommand is identified
-	if subcmdName != "" {
-		for _, f := range r.Subcommands[subcmdName].AcceptsFlags {
-			if f.GetParameter().Key() == "help" {
-				helpFlags = append(helpFlags, f)
-			}
-		}
-	}
-
-	helpResult, _ := ParseFlagsAndArgs(ParseOptions{
-		Flags: helpFlags,
-	}, ParseInput{Ctx: ctx, Tokens: args})
-	helpCtx := helpResult.Ctx
-
-	helpVal, _ := GetBool(helpCtx, NewParameter("help", ParameterTypeBool, nil, "", false))
-	if helpVal != nil && *helpVal {
-		// If help is requested and no subcommand was explicitly found,
-		// show general help even if there is a default subcommand.
-		if subcmdIdx == -1 {
-			r.PrintUsage("")
-		} else {
-			r.PrintUsage(subcmdName)
-		}
-		return nil
-	}
-
-	if subcmdName == "" {
-		r.PrintUsage("")
-		if len(preliminaryArgs) > 0 {
-			return fmt.Errorf("unknown subcommand: %s", preliminaryArgs[0])
-		}
-		return nil
-	}
-
-	subcmd := r.Subcommands[subcmdName]
-
-	// 3. Merge flags
-	// Subcommand flags override global flags with the same Key
-	mergedFlagsMap := make(map[ParameterKey]Flag)
-	for _, f := range r.GlobalFlags {
-		mergedFlagsMap[f.GetParameter().Key()] = f
-	}
-	for _, f := range subcmd.AcceptsFlags {
-		mergedFlagsMap[f.GetParameter().Key()] = f
-	}
-
-	var mergedFlags []Flag
-	for _, f := range mergedFlagsMap {
-		mergedFlags = append(mergedFlags, f)
-	}
-
-	// 4. Parse all flags together
-	// We need to remove the subcommand name from args if it was explicitly provided
-	var finalArgs []string
-	if subcmdIdx != -1 {
-		finalArgs = append(args[:subcmdIdx], args[subcmdIdx+1:]...)
-	} else {
-		finalArgs = args
-	}
-
-	ctx, remainingArgs, err := ParseFlags(ctx, ParseOptions{
-		Flags: mergedFlags,
-	}, finalArgs)
 	if err != nil {
+		// If we failed to parse, maybe we should try with the default subcommand if no subcommand was explicitly matched
+		if r.DefaultSubcmd != "" {
+			subcmd := r.Subcommands[r.DefaultSubcmd]
+			mergedFlags := make([]Flag, 0, len(r.GlobalFlags)+len(subcmd.AcceptsFlags))
+			mergedFlagsMap := make(map[ParameterKey]Flag)
+			for _, f := range r.GlobalFlags {
+				mergedFlagsMap[f.GetParameter().Key()] = f
+			}
+			for _, f := range subcmd.AcceptsFlags {
+				mergedFlagsMap[f.GetParameter().Key()] = f
+			}
+			for _, f := range mergedFlagsMap {
+				mergedFlags = append(mergedFlags, f)
+			}
+
+			resultDefault, errDefault := ParseFlagsAndArgs(ParseOptions{
+				Flags:     mergedFlags,
+				Arguments: subcmd.Arguments,
+			}, ParseInput{Ctx: ctx, Tokens: args})
+			if errDefault == nil {
+				return subcmd.Exec(resultDefault.Ctx, resultDefault.Unparsed)
+			}
+		}
 		return err
 	}
 
-	if !subcmd.AllowUnrecognizedArgs && len(remainingArgs) > len(subcmd.Arguments) {
-		// If we have more arguments than explicitly defined, and unrecognized ones aren't allowed
-		return fmt.Errorf("subcommand %s does not accept unrecognized arguments", subcmdName)
+	// 2. Help detection
+	helpVal, _ := GetBool(result.Ctx, NewParameter("help", ParameterTypeBool, PBool(false), "", false))
+	if helpVal != nil && *helpVal {
+		if len(result.Subcommands) == 0 {
+			r.PrintUsage("")
+		} else {
+			r.PrintUsage(result.Subcommands[0])
+		}
+		return nil
 	}
 
-	return subcmd.Exec(ctx, remainingArgs)
+	if len(result.Subcommands) == 0 {
+		if r.DefaultSubcmd != "" {
+			subcmd := r.Subcommands[r.DefaultSubcmd]
+			// We already parsed it if it was successfully identified as NOT a subcommand
+			// and NOT erroring. But since we use subcmdParseOpts, if it's not in result.Subcommands,
+			// it means it didn't match any subcommand name in the tokens.
+
+			// Try re-parsing with default subcommand options if it wasn't already successfully parsed
+			// actually, if result was successful and no subcommand found, we can just use default.
+			mergedFlags := make([]Flag, 0, len(r.GlobalFlags)+len(subcmd.AcceptsFlags))
+			mergedFlagsMap := make(map[ParameterKey]Flag)
+			for _, f := range r.GlobalFlags {
+				mergedFlagsMap[f.GetParameter().Key()] = f
+			}
+			for _, f := range subcmd.AcceptsFlags {
+				mergedFlagsMap[f.GetParameter().Key()] = f
+			}
+			for _, f := range mergedFlagsMap {
+				mergedFlags = append(mergedFlags, f)
+			}
+
+			result, err = ParseFlagsAndArgs(ParseOptions{
+				Flags:     mergedFlags,
+				Arguments: subcmd.Arguments,
+			}, ParseInput{Ctx: ctx, Tokens: args})
+			if err != nil {
+				return err
+			}
+			return subcmd.Exec(result.Ctx, result.Unparsed)
+		}
+
+		r.PrintUsage("")
+		return nil
+	}
+
+	subcmdName := result.Subcommands[0]
+	subcmd := r.Subcommands[subcmdName]
+
+	return subcmd.Exec(result.Ctx, result.Unparsed)
 }
 
 func (r *Runner) PrintUsage(subcmdName string) {

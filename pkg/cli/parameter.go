@@ -42,6 +42,13 @@ type Parameter interface {
 
 func GetBool(ctx context.Context, parm Parameter) (*bool, error) {
 	if parm.Type() == ParameterTypeBool {
+		if ctx == nil {
+			d := parm.Default()
+			if d == nil {
+				return nil, nil
+			}
+			return d.(*bool), nil
+		}
 		val := ctx.Value(parm.Key())
 		if val == nil {
 			d := parm.Default()
@@ -75,6 +82,13 @@ func UnsetBool(ctx context.Context, parm Parameter) (context.Context, error) {
 
 func GetInt(ctx context.Context, parm Parameter) (*int64, error) {
 	if parm.Type() == ParameterTypeInt {
+		if ctx == nil {
+			d := parm.Default()
+			if d == nil {
+				return nil, nil
+			}
+			return d.(*int64), nil
+		}
 		val := ctx.Value(parm.Key())
 		if val == nil {
 			d := parm.Default()
@@ -108,6 +122,13 @@ func UnsetInt(ctx context.Context, parm Parameter) (context.Context, error) {
 
 func GetString(ctx context.Context, parm Parameter) (*string, error) {
 	if parm.Type() == ParameterTypeString {
+		if ctx == nil {
+			d := parm.Default()
+			if d == nil {
+				return nil, nil
+			}
+			return d.(*string), nil
+		}
 		val := ctx.Value(parm.Key())
 		if val == nil {
 			d := parm.Default()
@@ -141,6 +162,13 @@ func UnsetString(ctx context.Context, parm Parameter) (context.Context, error) {
 
 func GetPath(ctx context.Context, parm Parameter) (*string, error) {
 	if parm.Type() == ParameterTypePath {
+		if ctx == nil {
+			d := parm.Default()
+			if d == nil {
+				return nil, nil
+			}
+			return d.(*string), nil
+		}
 		val := ctx.Value(parm.Key())
 		if val == nil {
 			d := parm.Default()
@@ -174,6 +202,13 @@ func UnsetPath(ctx context.Context, parm Parameter) (context.Context, error) {
 
 func GetDatetime(ctx context.Context, parm Parameter) (*time.Time, error) {
 	if parm.Type() == ParameterTypeDatetime {
+		if ctx == nil {
+			d := parm.Default()
+			if d == nil {
+				return nil, nil
+			}
+			return d.(*time.Time), nil
+		}
 		val := ctx.Value(parm.Key())
 		if val == nil {
 			d := parm.Default()
@@ -207,6 +242,13 @@ func UnsetDatetime(ctx context.Context, parm Parameter) (context.Context, error)
 
 func GetDuration(ctx context.Context, parm Parameter) (*time.Duration, error) {
 	if parm.Type() == ParameterTypeDuration {
+		if ctx == nil {
+			d := parm.Default()
+			if d == nil {
+				return nil, nil
+			}
+			return d.(*time.Duration), nil
+		}
 		val := ctx.Value(parm.Key())
 		if val == nil {
 			d := parm.Default()
@@ -240,6 +282,13 @@ func UnsetDuration(ctx context.Context, parm Parameter) (context.Context, error)
 
 func GetURI(ctx context.Context, parm Parameter) (*url.URL, error) {
 	if parm.Type() == ParameterTypeURI {
+		if ctx == nil {
+			d := parm.Default()
+			if d == nil {
+				return nil, nil
+			}
+			return d.(*url.URL), nil
+		}
 		val := ctx.Value(parm.Key())
 		if val == nil {
 			d := parm.Default()

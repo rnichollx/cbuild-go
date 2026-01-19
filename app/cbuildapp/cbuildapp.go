@@ -26,7 +26,8 @@ var CBuild = &cli.Runner{
 func init() {
 	CBuild.Subcommands["build"] = &cli.Subcommand{
 		Description:  "Build the project",
-		AcceptsFlags: []cli.Flag{ccommon.ConfigFlag, ccommon.ToolchainFlag, ccommon.TargetFlag},
+		AcceptsFlags: []cli.Flag{ccommon.ConfigFlag, ccommon.ToolchainFlag},
+		Arguments:    []cli.Argument{ccommon.TargetFlag},
 		Exec: func(ctx context.Context, args []string) error {
 			return runBuild(ctx, "build", args)
 		},
@@ -35,20 +36,22 @@ func init() {
 	CBuild.Subcommands["clean"] = &cli.Subcommand{
 		Description:  "Clean build artifacts",
 		AcceptsFlags: []cli.Flag{ccommon.ConfigFlag, ccommon.ToolchainFlag},
+		Arguments:    []cli.Argument{ccommon.TargetFlag},
 		Exec: func(ctx context.Context, args []string) error {
 			return runClean(ctx, args)
 		},
 	}
 
 	CBuild.Subcommands["build-deps"] = &cli.Subcommand{
-		Description: "Build dependencies for a source",
+		Description: "Build dependencies for a target",
 		Arguments: []cli.Argument{
-			{Name: "sourcename", Required: true},
+			ccommon.TargetFlag,
 		},
-		AcceptsFlags: []cli.Flag{ccommon.ConfigFlag, ccommon.ToolchainFlag, ccommon.TargetFlag},
+		AcceptsFlags: []cli.Flag{ccommon.ConfigFlag, ccommon.ToolchainFlag},
 		Exec: func(ctx context.Context, args []string) error {
-			if len(args) != 1 {
-				return fmt.Errorf("usage: cbuild build-deps <sourcename>")
+			targetNameVal, _ := cli.GetString(ctx, ccommon.PTarget)
+			if targetNameVal == nil || *targetNameVal == "" {
+				return fmt.Errorf("usage: cbuild build-deps <targetname>")
 			}
 			return runBuild(ctx, "build-deps", args)
 		},
@@ -56,14 +59,19 @@ func init() {
 }
 
 func runClean(ctx context.Context, args []string) error {
-	buildConfig := cli.GetString(ctx, cli.FlagKey(ccommon.FlagConfig))
-	workspacePath := cli.GetString(ctx, cli.FlagKey(ccommon.FlagWorkspace))
-	targetFlag := cli.GetString(ctx, cli.FlagKey(ccommon.FlagTarget))
+	buildConfigRaw, _ := cli.GetStringList(ctx, ccommon.PConfig)
+	workspacePathRaw, _ := cli.GetPath(ctx, ccommon.PWorkspace)
+	targetFlagRaw, _ := cli.GetString(ctx, ccommon.PTarget)
+	workspacePath := ""
+	if workspacePathRaw != nil {
+		workspacePath = *workspacePathRaw
+	}
 	if workspacePath == "" {
 		workspacePath = "."
 	}
 
-	dryRun := cli.GetBool(ctx, cli.FlagKey(ccommon.FlagDryRun))
+	dryRunRaw, _ := cli.GetBool(ctx, ccommon.PDryRun)
+	dryRun := dryRunRaw != nil && *dryRunRaw
 
 	ws := &ccommon.WorkspaceContext{}
 	err := ws.Load(ctx, workspacePath)
@@ -71,7 +79,11 @@ func runClean(ctx context.Context, args []string) error {
 		return fmt.Errorf("error loading configuration: %w", err)
 	}
 
-	toolchainFlag := cli.GetString(ctx, cli.FlagKey(ccommon.FlagToolchain))
+	toolchainFlagRaw, _ := cli.GetString(ctx, ccommon.PToolchain)
+	toolchainFlag := ""
+	if toolchainFlagRaw != nil {
+		toolchainFlag = *toolchainFlagRaw
+	}
 
 	var toolchainNames []string
 	if len(toolchainFlag) == 0 {
@@ -84,17 +96,17 @@ func runClean(ctx context.Context, args []string) error {
 	}
 
 	configs := []string{}
-	if buildConfig == "" {
+	if buildConfigRaw == nil || len(*buildConfigRaw) == 0 {
 		configs = ws.Config.Configurations
 	} else {
-		configs = strings.Split(buildConfig, ",")
+		configs = *buildConfigRaw
 	}
 
 	var targets []string
-	if len(targetFlag) == 0 {
+	if targetFlagRaw == nil || len(*targetFlagRaw) == 0 {
 		targets = ws.ListTargets(ctx)
 	} else {
-		targets = strings.Split(targetFlag, ",")
+		targets = strings.Split(*targetFlagRaw, ",")
 	}
 
 	//fmt.Printf("Cleaning %d targets: %s\n", len(targets), targets)
@@ -121,21 +133,30 @@ func runClean(ctx context.Context, args []string) error {
 }
 
 func runBuild(ctx context.Context, command string, args []string) error {
-	buildConfig := cli.GetString(ctx, cli.FlagKey(ccommon.FlagConfig))
-	workspacePath := cli.GetString(ctx, cli.FlagKey(ccommon.FlagWorkspace))
+	buildConfigRaw, _ := cli.GetStringList(ctx, ccommon.PConfig)
+	workspacePathRaw, _ := cli.GetPath(ctx, ccommon.PWorkspace)
+	workspacePath := ""
+	if workspacePathRaw != nil {
+		workspacePath = *workspacePathRaw
+	}
 	if workspacePath == "" {
 		workspacePath = "."
 	}
-	targetName := cli.GetString(ctx, cli.FlagKey(ccommon.FlagTarget))
-	toolchain := cli.GetString(ctx, cli.FlagKey(ccommon.FlagToolchain))
+	targetNameRaw, _ := cli.GetString(ctx, ccommon.PTarget)
+	targetName := ""
+	if targetNameRaw != nil {
+		targetName = *targetNameRaw
+	}
+	toolchainRaw, _ := cli.GetString(ctx, ccommon.PToolchain)
+	toolchain := ""
+	if toolchainRaw != nil {
+		toolchain = *toolchainRaw
+	}
 	if toolchain == "" {
 		toolchain = "all"
 	}
-	dryRun := cli.GetBool(ctx, cli.FlagKey(ccommon.FlagDryRun))
-
-	if command == "build-deps" {
-		targetName = args[0]
-	}
+	dryRunRaw, _ := cli.GetBool(ctx, ccommon.PDryRun)
+	dryRun := dryRunRaw != nil && *dryRunRaw
 
 	ws := &ccommon.WorkspaceContext{}
 	err := ws.Load(ctx, workspacePath)
@@ -164,10 +185,10 @@ func runBuild(ctx context.Context, command string, args []string) error {
 	}
 
 	configs := []string{}
-	if buildConfig == "" {
+	if buildConfigRaw == nil || len(*buildConfigRaw) == 0 {
 		configs = ws.Config.Configurations
 	} else {
-		configs = strings.Split(buildConfig, ",")
+		configs = *buildConfigRaw
 	}
 
 	for _, tc := range toolchains {

@@ -4,15 +4,21 @@ import (
 	"context"
 	"fmt"
 	"gitlab.com/rpnx/cbuild-go/pkg/ccommon"
+	"gitlab.com/rpnx/cbuild-go/pkg/cli"
 )
 
-func handleAddDependency(ctx context.Context, workspacePath string, args []string) error {
-	if len(args) != 2 {
-		return fmt.Errorf("usage: csetup add-dependency <source> <depname>")
+func handleAddDependency(ctx context.Context) error {
+	workspacePath := getWorkspacePath(ctx)
+	sourceVal, _ := cli.GetString(ctx, PSourceReq)
+	source := ""
+	if sourceVal != nil {
+		source = *sourceVal
 	}
-
-	source := args[0]
-	depname := args[1]
+	depnameVal, _ := cli.GetString(ctx, PDependency)
+	depname := ""
+	if depnameVal != nil {
+		depname = *depnameVal
+	}
 
 	ws := &ccommon.WorkspaceContext{}
 	err := ws.Load(ctx, workspacePath)
@@ -29,13 +35,18 @@ func handleAddDependency(ctx context.Context, workspacePath string, args []strin
 	return nil
 }
 
-func handleRemoveDependency(ctx context.Context, workspacePath string, args []string) error {
-	if len(args) != 2 {
-		return fmt.Errorf("usage: csetup remove-dependency <source> <depname>")
+func handleRemoveDependency(ctx context.Context) error {
+	workspacePath := getWorkspacePath(ctx)
+	sourceVal, _ := cli.GetString(ctx, PSourceReq)
+	source := ""
+	if sourceVal != nil {
+		source = *sourceVal
 	}
-
-	source := args[0]
-	depname := args[1]
+	depnameVal, _ := cli.GetString(ctx, PDependency)
+	depname := ""
+	if depnameVal != nil {
+		depname = *depnameVal
+	}
 
 	ws := &ccommon.WorkspaceContext{}
 	err := ws.Load(ctx, workspacePath)

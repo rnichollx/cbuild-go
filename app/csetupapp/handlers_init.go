@@ -5,20 +5,18 @@ import (
 	"fmt"
 	"gitlab.com/rpnx/cbuild-go/pkg/ccommon"
 	"gitlab.com/rpnx/cbuild-go/pkg/cli"
-	"strings"
 )
 
-func handleInit(ctx context.Context, workspacePath string, args []string) error {
-	reinit := cli.GetBool(ctx, cli.FlagKey(ccommon.FlagReinit))
+func handleInit(ctx context.Context) error {
+	reinitRaw, _ := cli.GetBool(ctx, ccommon.PReinit)
+	reinit := reinitRaw != nil && *reinitRaw
+	workspaceNameVal, _ := cli.GetPath(ctx, PPath)
 	workspaceName := ""
-
-	for _, arg := range args {
-		if !strings.HasPrefix(arg, "-") && workspaceName == "" {
-			workspaceName = arg
-		}
+	if workspaceNameVal != nil {
+		workspaceName = *workspaceNameVal
 	}
 
-	if workspaceName == "" || len(args) > 1 {
+	if workspaceName == "" {
 		return fmt.Errorf("usage: csetup init <workspace name> [--reinit]")
 	}
 

@@ -51,13 +51,7 @@ type ParseResult struct {
 	// Any subcommands that were parsed have their name stored in Subcommands
 	Subcommands []string
 
-	// UnknownFlags contains any flags that were encountered during parsing but not understood.
-	UnknownFlags []string
-	// UnknownArgs contains any arguments that was encountered during parsing but not understood.
-	UnknownArgs []string
-
-	// If a subcommand was encountered, and it has StopParsing set, then the remainder of the input
-	// is stored in Unparsed
+	// Unparsed contains any tokens that were encountered if a subcommand has StopParsing set.
 	Unparsed []string
 }
 
@@ -76,14 +70,14 @@ func ParseFlags(ctx context.Context, opts ParseOptions, args []string) (context.
 	if err != nil {
 		return ctx, nil, err
 	}
-	remaining := result.Unparsed
-	return result.Ctx, remaining, nil
+	return result.Ctx, result.Unparsed, nil
 }
 
 func ParseFlagsAndArgs(opts ParseOptions, input ParseInput) (ParseResult, error) {
 
 	var result ParseResult
 	ctx := input.Ctx
+
 	shortFlagMap := make(map[string]Flag)
 	longFlagMap := make(map[string]Flag)
 
@@ -527,6 +521,7 @@ func ParseFlagsAndArgs(opts ParseOptions, input ParseInput) (ParseResult, error)
 						seenParameters = make(map[ParameterKey]bool)
 						continue
 					}
+					return result, fmt.Errorf("subcommand %s has no parse options and StopParsing is not set", arg)
 				}
 			}
 

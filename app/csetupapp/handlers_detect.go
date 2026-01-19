@@ -6,10 +6,8 @@ import (
 	"gitlab.com/rpnx/cbuild-go/pkg/ccommon"
 )
 
-func handleDetectToolchains(ctx context.Context, workspacePath string, args []string) error {
-	if len(args) != 0 {
-		return fmt.Errorf("usage: csetup detect-toolchains")
-	}
+func handleDetectToolchains(ctx context.Context) error {
+	workspacePath := getWorkspacePath(ctx)
 	ws := &ccommon.WorkspaceContext{}
 	err := ws.Load(ctx, workspacePath)
 	if err != nil {

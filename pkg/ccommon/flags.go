@@ -25,33 +25,47 @@ const (
 type FlagKey string
 
 var (
-	WorkspaceFlag = cli.NewStringFlag("w", "workspace", cli.FlagKey(FlagWorkspace), "path to the workspace directory")
+	PWorkspace    = cli.NewParameter(cli.ParameterKey(FlagWorkspace), cli.ParameterTypePath, nil, "path to the workspace directory", false)
+	WorkspaceFlag = cli.NewStringFlag("w", "workspace", PWorkspace)
 
-	ConfigFlag = cli.NewStringFlag("c", "config", cli.FlagKey(FlagConfig), "build configuration to use (e.g., Debug, Release), comma separated")
+	PConfig    = cli.NewParameter(cli.ParameterKey(FlagConfig), cli.ParameterTypeStringList, nil, "build configuration to use (e.g., Debug, Release), comma separated", false)
+	ConfigFlag = cli.NewStringFlag("c", "config", PConfig)
 
-	TargetFlag = cli.NewStringFlagFromArgument("t", "target", cli.FlagKey(FlagTarget), "specific target to build")
+	PTarget    = cli.NewParameter(cli.ParameterKey(FlagTarget), cli.ParameterTypeString, nil, "specific target to build", false)
+	TargetFlag = cli.NewStringArgument("target", PTarget)
 
-	SourceFlag = cli.NewStringFlagFromArgument("s", "source", cli.FlagKey(FlagSource), "specific source to operate on")
+	PSource    = cli.NewParameter(cli.ParameterKey(FlagSource), cli.ParameterTypeString, nil, "specific source to operate on", false)
+	SourceFlag = cli.NewStringArgument("source", PSource)
 
-	ToolchainFlag = cli.NewStringFlag("T", "toolchain", cli.FlagKey(FlagToolchain), "toolchain to use")
+	PToolchain    = cli.NewParameter(cli.ParameterKey(FlagToolchain), cli.ParameterTypeString, nil, "toolchain to use", false)
+	ToolchainFlag = cli.NewStringFlag("T", "toolchain", PToolchain)
 
-	DryRunFlag = cli.NewBoolFlag("d", "dry-run", cli.FlagKey(FlagDryRun), "show commands without executing them")
+	PDryRun    = cli.NewParameter(cli.ParameterKey(FlagDryRun), cli.ParameterTypeBool, cli.PBool(false), "show commands without executing them", false)
+	DryRunFlag = cli.NewBoolFlag("d", "dry-run", PDryRun)
 
-	ReinitFlag = cli.NewBoolFlag("", "reinit", cli.FlagKey(FlagReinit), "reinitialize the workspace")
+	PReinit    = cli.NewParameter(cli.ParameterKey(FlagReinit), cli.ParameterTypeBool, cli.PBool(false), "reinitialize the workspace", false)
+	ReinitFlag = cli.NewBoolFlag("", "reinit", PReinit)
 
-	DownloadDepsFlag = cli.NewBoolFlag("", "download-deps", cli.FlagKey(FlagDownload), "download dependencies during clone")
+	PDownloadDeps    = cli.NewParameter(cli.ParameterKey(FlagDownload), cli.ParameterTypeBool, cli.PBool(false), "download dependencies during clone", false)
+	DownloadDepsFlag = cli.NewBoolFlag("", "download-deps", PDownloadDeps)
 
-	SubmoduleFlag = cli.NewBoolFlag("", "submodule", cli.FlagKey(FlagSubmodule), "add as a git submodule instead of cloning")
+	PSubmodule    = cli.NewParameter(cli.ParameterKey(FlagSubmodule), cli.ParameterTypeBool, cli.PBool(false), "add as a git submodule instead of cloning", false)
+	SubmoduleFlag = cli.NewBoolFlag("", "submodule", PSubmodule)
 
-	DeleteFlag = cli.NewBoolFlag("X", "delete", cli.FlagKey(FlagDelete), "delete files when removing source")
+	PDelete    = cli.NewParameter(cli.ParameterKey(FlagDelete), cli.ParameterTypeBool, cli.PBool(false), "delete files when removing source", false)
+	DeleteFlag = cli.NewBoolFlag("X", "delete", PDelete)
 
-	NoSetupFlag = cli.NewBoolFlag("", "no-setup", cli.FlagKey(FlagNoSetup), "don't run setup after downloading or cloning")
+	PNoSetup    = cli.NewParameter(cli.ParameterKey(FlagNoSetup), cli.ParameterTypeBool, cli.PBool(false), "don't run setup after downloading or cloning", false)
+	NoSetupFlag = cli.NewBoolFlag("", "no-setup", PNoSetup)
 
-	HelpFlag = cli.NewBoolFlag("h", "help", cli.FlagKey(FlagHelp), "show this help message")
+	PHelp    = cli.NewParameter(cli.ParameterKey(FlagHelp), cli.ParameterTypeBool, cli.PBool(false), "show this help message", false)
+	HelpFlag = cli.NewBoolFlag("h", "help", PHelp)
 
-	DebugFlag = cli.NewBoolFlag("", "debug", cli.FlagKey(FlagDebug), "show debug information")
+	PDebug    = cli.NewParameter(cli.ParameterKey(FlagDebug), cli.ParameterTypeBool, cli.PBool(false), "show debug information", false)
+	DebugFlag = cli.NewBoolFlag("", "debug", PDebug)
 )
 
 func IsDebug(ctx context.Context) bool {
-	return cli.GetBool(ctx, cli.FlagKey(FlagDebug))
+	val, _ := cli.GetBool(ctx, PDebug)
+	return val != nil && *val
 }
