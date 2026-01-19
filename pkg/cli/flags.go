@@ -9,83 +9,105 @@ import (
 type Flag interface {
 	Short() string
 	Long() string
-	FromArgument() bool
-	Key() FlagKey
-	Description() string
-	Valid(value string) error
-	NeedsValue() bool
-	Required() bool
+
+	GetParameter() Parameter
+
+	Overwrite() OverwritePolicy
 }
 
-type StringFlag struct {
-	short string
-	long  string
-	key   FlagKey
-
-	description  string
-	fromArgument bool
-	required     bool
+type Argument interface {
+	Name() string
+	GetParameter() Parameter
+	Overwrite() OverwritePolicy
 }
 
-func NewStringFlag(short, long string, key FlagKey, description string) *StringFlag {
-	return &StringFlag{short: short, long: long, key: key, description: description}
-}
+type OverwritePolicy int
 
-func NewRequiredStringFlag(short, long string, key FlagKey, description string) *StringFlag {
-	return &StringFlag{short: short, long: long, key: key, description: description, required: true}
-}
+const (
+	OverwritePolicyDisallowed OverwritePolicy = iota
+	OverwritePolicyAllowed
+	OverwritePolicyAppend
+)
 
-func NewStringFlagFromArgument(short, long string, key FlagKey, description string) *StringFlag {
-	return &StringFlag{short: short, long: long, key: key, description: description, fromArgument: true}
-}
+// MixingPolicy defines the parsing policy for Parameters which are specified both as Flags and Arguments.
+// This only applies when the same Parameter is available both as a flag and also as an argument, it has no influence
+// for two different parameters are available as flags and arguments.
+type MixingPolicy int
 
-func (s *StringFlag) Short() string            { return s.short }
-func (s *StringFlag) Long() string             { return s.long }
-func (s *StringFlag) FromArgument() bool       { return s.fromArgument }
-func (s *StringFlag) Key() FlagKey             { return s.key }
-func (s *StringFlag) Description() string      { return s.description }
-func (s *StringFlag) Valid(value string) error { return nil }
-func (s *StringFlag) NeedsValue() bool         { return true }
-func (s *StringFlag) Required() bool           { return s.required }
+const (
+	MixingPolicyNoDuplicates MixingPolicy = iota
+	// MixingPolicySequencedArgs treats arguments strictly in their argument order.
+	// Regardless of the order which flags appear, arguments will always be parsed in the order they are specified.
+	// Given the Arguments A and B, with associated flags --a and --b then:
+	// `abc --a def` this is treated as two attempts to set A.
 
-type BoolFlag struct {
-	short        string
-	long         string
-	key          FlagKey
-	description  string
-	fromArgument bool
-	required     bool
-}
+	MixingPolicySequencedArgs
 
-func NewBoolFlag(short, long string, key FlagKey, description string) *BoolFlag {
-	return &BoolFlag{short: short, long: long, key: key, description: description}
-}
+	// MixingPolicySequencedStrictArgs is the same MixingPolicySequencedArgs, except that any cross definitions
+	// automatically trigger a parsing error, regardless of the mixing policy
+	MixingPolicySequencedStrictArgs
 
-func NewRequiredBoolFlag(short, long string, key FlagKey, description string) *BoolFlag {
-	return &BoolFlag{short: short, long: long, key: key, description: description, required: true}
-}
+	// MixingPolicyNoMixing requires all dual-method parameters be set using args or flags.
+	// If at least one dual-method parameter is set using an argument, it is an error
+	// to set any of them using a flag.
+	MixingPolicyNoMixing
 
-func NewBoolFlagFromArgument(short, long string, key FlagKey, description string) *BoolFlag {
-	return &BoolFlag{short: short, long: long, key: key, description: description, fromArgument: true}
-}
-
-func (b *BoolFlag) Short() string            { return b.short }
-func (b *BoolFlag) Long() string             { return b.long }
-func (b *BoolFlag) FromArgument() bool       { return b.fromArgument }
-func (b *BoolFlag) Key() FlagKey             { return b.key }
-func (b *BoolFlag) Description() string      { return b.description }
-func (b *BoolFlag) Valid(value string) error { return nil }
-func (b *BoolFlag) NeedsValue() bool         { return false }
-func (b *BoolFlag) Required() bool           { return b.required }
-
-type FlagKey string
+	// MixingPolicyFirstUnset parses flags, then arguments will fill argument parameters in order which are unset.
+	// For example, given A, B then `abc --a def` sets A=def, B=abc.
+	MixingPolicyFirstUnset
+)
 
 type ParseOptions struct {
+	// AllowUnknownFlags causes the parser to not return an error if a flag is encountered which is not understood.
 	AllowUnknownFlags bool
-	Flags             []Flag
+
+	// AllowUnknownArgs causes the parser to not return an error if an unknown argument is encountered.
+	AllowUnknownArgs bool
+
+	/// StrictOrderingFlags, if true, requires that flags for any subcommand appear after the subcommand,
+	/// unless a parent command also accepts them.
+	/// For example, if `foo` has the `bar` subcommand which accepts `-c`, then `foo bar -c` is always valid
+	/// but `foo -c bar` is only valid when StrictOrderingFlags is false.
+	StrictOrderingFlags bool
+
+	/// StrictOrderingArgs, if true, requires that any arguments appear strictly after all flags have been defined
+	/// For example, given a command `foo` that accepts arguments, `foo bar.txt -f` is only valid if
+	/// StrictOrderingArgs is false
+	StrictOrderingArgs bool
+
+	Subcommands []SubcommandParseOptions
+	Flags       []Flag
+	Arguments   []Argument
 }
 
-func ParseFlags(ctx context.Context, opts ParseOptions, args []string) (context.Context, []string, error) {
+type SubcommandParseOptions struct {
+	/// The name of the subcommand, to be expected
+	Name string
+	/// If StopParsing is true, ParseFlagsAndArguments should immediately stop updating the context
+	/// and leave any remaining values as UnparsedFlags or UnparsedArgs
+	StopParsing bool
+	/// If this option is set, the remaining flags are validated against the subcommand.
+	/// Note that if StopParsing is set AND ParseOptions is non-null, then the arguments
+	/// are to be validated and returned unparsed, and the context is not updated.
+	ParseOptions *ParseOptions
+}
+
+type ParseResult struct {
+	Ctx           context.Context
+	UnparsedFlags []string
+	UnparsedArgs  []string
+}
+
+// ParseInput contains the input to the parser. To handle special cases like `--` in subcommands,
+// we need to have an UnparsedArgs field for things that must always be arguments.
+type ParseInput struct {
+	Ctx           context.Context
+	Unparsed      []string
+	UnparsedArgs  []string
+	UnparsedFlags []string
+}
+
+func ParseFlagsAndArgs(input ParseInput) (ParseResult, error) {
 
 	shortFlagMap := make(map[string]Flag)
 	longFlagMap := make(map[string]Flag)
@@ -222,20 +244,4 @@ func ParseFlags(ctx context.Context, opts ParseOptions, args []string) (context.
 	}
 
 	return ctx, nonFlagArgs, nil
-}
-
-func GetString(ctx context.Context, key FlagKey) string {
-	val := ctx.Value(key)
-	if val == nil {
-		return ""
-	}
-	return val.(string)
-}
-
-func GetBool(ctx context.Context, key FlagKey) bool {
-	val := ctx.Value(key)
-	if val == nil {
-		return false
-	}
-	return val.(string) == "true"
 }

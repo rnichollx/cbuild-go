@@ -9,12 +9,6 @@ import (
 	"time"
 )
 
-type Argument struct {
-	Name        string
-	Description string
-	Required    bool
-}
-
 type Subcommand struct {
 	Name                  string
 	Description           string
