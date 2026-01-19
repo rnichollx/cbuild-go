@@ -4,10 +4,14 @@ import (
 	"context"
 	"errors"
 	"net/url"
+	"strconv"
+	"strings"
 	"time"
 )
 
 type ParameterType int
+
+type ParameterKey string
 
 const (
 	ParameterTypeString ParameterType = iota
@@ -29,7 +33,7 @@ const (
 var InvalidParameterTypeError = errors.New("invalid parameter type")
 
 type Parameter interface {
-	Key() any
+	Key() ParameterKey
 	Default() any
 	Type() ParameterType
 	Description() string
@@ -493,6 +497,231 @@ func SetURIList(ctx context.Context, parm Parameter, val []url.URL) (context.Con
 func UnsetURIList(ctx context.Context, parm Parameter) (context.Context, error) {
 	if parm.Type() == ParameterTypeURIList {
 		return context.WithValue(ctx, parm.Key(), nil), nil
+	}
+
+	return ctx, InvalidParameterTypeError
+}
+
+func parseBool(str string) (bool, error) {
+	str = strings.ToLower(str)
+	switch str {
+	case "true", "enabled", "y", "yes", "on":
+		return true, nil
+	case "false", "disabled", "n", "no", "off":
+		return false, nil
+	}
+	return false, InvalidParameterTypeError
+}
+
+func SetParameter(ctx context.Context, parm Parameter, input string) (context.Context, error) {
+	switch parm.Type() {
+	case ParameterTypeString:
+		return SetString(ctx, parm, input)
+	case ParameterTypeInt:
+		val, err := strconv.ParseInt(input, 10, 64)
+		if err != nil {
+			return ctx, err
+		}
+		return SetInt(ctx, parm, val)
+	case ParameterTypeBool:
+		val, err := parseBool(input)
+		if err != nil {
+			return ctx, err
+		}
+		return SetBool(ctx, parm, val)
+	case ParameterTypePath:
+		return SetPath(ctx, parm, input)
+	case ParameterTypeDatetime:
+		val, err := time.Parse(time.RFC3339, input)
+		if err != nil {
+			return ctx, err
+		}
+		return SetDatetime(ctx, parm, val)
+	case ParameterTypeDuration:
+		val, err := time.ParseDuration(input)
+		if err != nil {
+			return ctx, err
+		}
+		return SetDuration(ctx, parm, val)
+	case ParameterTypeURI:
+		val, err := url.Parse(input)
+		if err != nil {
+			return ctx, err
+		}
+		return SetURI(ctx, parm, *val)
+	}
+
+	return ctx, InvalidParameterTypeError
+}
+
+func SetParameterList(ctx context.Context, parm Parameter, inputs []string) (context.Context, error) {
+	switch parm.Type() {
+	case ParameterTypeStringList:
+		return SetStringList(ctx, parm, inputs)
+	case ParameterTypeIntList:
+		var list []int64
+		for _, input := range inputs {
+			val, err := strconv.ParseInt(input, 10, 64)
+			if err != nil {
+				return ctx, err
+			}
+			list = append(list, val)
+		}
+		return SetIntList(ctx, parm, list)
+	case ParameterTypeBoolList:
+		var list []bool
+		for _, input := range inputs {
+			val, err := parseBool(input)
+			if err != nil {
+				return ctx, err
+			}
+			list = append(list, val)
+		}
+		return SetBoolList(ctx, parm, list)
+	case ParameterTypePathList:
+		return SetPathList(ctx, parm, inputs)
+	case ParameterTypeDatetimeList:
+		var list []time.Time
+		for _, input := range inputs {
+			val, err := time.Parse(time.RFC3339, input)
+			if err != nil {
+				return ctx, err
+			}
+			list = append(list, val)
+		}
+		return SetDatetimeList(ctx, parm, list)
+	case ParameterTypeDurationList:
+		var list []time.Duration
+		for _, input := range inputs {
+			val, err := time.ParseDuration(input)
+			if err != nil {
+				return ctx, err
+			}
+			list = append(list, val)
+		}
+		return SetDurationList(ctx, parm, list)
+	case ParameterTypeURIList:
+		var list []url.URL
+		for _, input := range inputs {
+			val, err := url.Parse(input)
+			if err != nil {
+				return ctx, err
+			}
+			list = append(list, *val)
+		}
+		return SetURIList(ctx, parm, list)
+	}
+
+	return ctx, InvalidParameterTypeError
+}
+
+func AppendParameter(ctx context.Context, parm Parameter, inputs []string) (context.Context, error) {
+	switch parm.Type() {
+	case ParameterTypeStringList:
+		existing, err := GetStringList(ctx, parm)
+		if err != nil {
+			return ctx, err
+		}
+		var list []string
+		if existing != nil {
+			list = *existing
+		}
+		return SetStringList(ctx, parm, append(list, inputs...))
+	case ParameterTypeIntList:
+		existing, err := GetIntList(ctx, parm)
+		if err != nil {
+			return ctx, err
+		}
+		var list []int64
+		if existing != nil {
+			list = *existing
+		}
+		for _, input := range inputs {
+			val, err := strconv.ParseInt(input, 10, 64)
+			if err != nil {
+				return ctx, err
+			}
+			list = append(list, val)
+		}
+		return SetIntList(ctx, parm, list)
+	case ParameterTypeBoolList:
+		existing, err := GetBoolList(ctx, parm)
+		if err != nil {
+			return ctx, err
+		}
+		var list []bool
+		if existing != nil {
+			list = *existing
+		}
+		for _, input := range inputs {
+			val, err := parseBool(input)
+			if err != nil {
+				return ctx, err
+			}
+			list = append(list, val)
+		}
+		return SetBoolList(ctx, parm, list)
+	case ParameterTypePathList:
+		existing, err := GetPathList(ctx, parm)
+		if err != nil {
+			return ctx, err
+		}
+		var list []string
+		if existing != nil {
+			list = *existing
+		}
+		return SetPathList(ctx, parm, append(list, inputs...))
+	case ParameterTypeDatetimeList:
+		existing, err := GetDatetimeList(ctx, parm)
+		if err != nil {
+			return ctx, err
+		}
+		var list []time.Time
+		if existing != nil {
+			list = *existing
+		}
+		for _, input := range inputs {
+			val, err := time.Parse(time.RFC3339, input)
+			if err != nil {
+				return ctx, err
+			}
+			list = append(list, val)
+		}
+		return SetDatetimeList(ctx, parm, list)
+	case ParameterTypeDurationList:
+		existing, err := GetDurationList(ctx, parm)
+		if err != nil {
+			return ctx, err
+		}
+		var list []time.Duration
+		if existing != nil {
+			list = *existing
+		}
+		for _, input := range inputs {
+			val, err := time.ParseDuration(input)
+			if err != nil {
+				return ctx, err
+			}
+			list = append(list, val)
+		}
+		return SetDurationList(ctx, parm, list)
+	case ParameterTypeURIList:
+		existing, err := GetURIList(ctx, parm)
+		if err != nil {
+			return ctx, err
+		}
+		var list []url.URL
+		if existing != nil {
+			list = *existing
+		}
+		for _, input := range inputs {
+			val, err := url.Parse(input)
+			if err != nil {
+				return ctx, err
+			}
+			list = append(list, *val)
+		}
+		return SetURIList(ctx, parm, list)
 	}
 
 	return ctx, InvalidParameterTypeError
