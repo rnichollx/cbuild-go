@@ -130,7 +130,7 @@ func ParseFlagsAndArgs(opts ParseOptions, input ParseInput) (ParseResult, error)
 			return arg[:1] == "/"
 		} else if arg[:2] == "--" && arg != argTerminator {
 			return true
-		} else if arg[:1] == "-" && opts.Style == ParsingStyleShortWindows || opts.Style == ParsingStyleShort {
+		} else if arg[:1] == "-" && (opts.Style == ParsingStyleShortWindows || opts.Style == ParsingStyleShort) {
 			return true
 		}
 		return false
@@ -264,6 +264,23 @@ func ParseFlagsAndArgs(opts ParseOptions, input ParseInput) (ParseResult, error)
 			name = longFlagName(arg)
 			value = longFlagValue(arg)
 			flag, ok := longFlagMap[name]
+			if !ok && opts.Style == ParsingStyleWindows {
+				// Try matching short flag if long flag fails in Windows style
+				// to support things like /Dfoo or /D:foo
+				if len(name) > 0 {
+					shortName := name[:1]
+					if f, sok := shortFlagMap[shortName]; sok {
+						flag = f
+						ok = true
+						if value == nil && len(name) > 1 {
+							// /Dfoo case
+							valStr := name[1:]
+							value = &valStr
+						}
+					}
+				}
+			}
+
 			if !ok {
 				return result, fmt.Errorf("unknown flag: %s", arg)
 			}
@@ -312,6 +329,7 @@ func ParseFlagsAndArgs(opts ParseOptions, input ParseInput) (ParseResult, error)
 						i++
 					}
 				} else if isList && flag.Greedy() {
+					values = append(values, *value)
 					// If greedy, accept as many normal args as appear in the input
 					for {
 						if i+1 >= len(unparsedTokens) {
@@ -328,7 +346,14 @@ func ParseFlagsAndArgs(opts ParseOptions, input ParseInput) (ParseResult, error)
 						}
 					}
 				} else if isShortFlag(*value) || isLongFlag(*value) {
-					return result, fmt.Errorf("expected value for --%s, found %s", name, *value)
+					prefix := "--"
+					if opts.Style == ParsingStyleShort || opts.Style == ParsingStyleShortWindows || opts.Style == ParsingStyleWindows {
+						prefix = "-"
+					}
+					if opts.Style == ParsingStyleWindows {
+						prefix = "/"
+					}
+					return result, fmt.Errorf("expected value for %s%s, found %s", prefix, name, *value)
 				} else if isList {
 					values = append(values, *value)
 				}
