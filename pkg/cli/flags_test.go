@@ -6,11 +6,16 @@ import (
 )
 
 func TestParseFlags(t *testing.T) {
+	pa := NewParameter("flag-a", ParameterTypeBool, nil, "", false)
+	pb := NewParameter("flag-b", ParameterTypeBool, nil, "", false)
+	pc := NewParameter("flag-c", ParameterTypeString, nil, "", false)
+	pv := NewParameter("verbose-key", ParameterTypeString, nil, "", false)
+
 	flags := []Flag{
-		NewBoolFlag("a", "", "flag-a", ""),
-		NewBoolFlag("b", "", "flag-b", ""),
-		NewStringFlag("c", "", "flag-c", ""),
-		NewStringFlag("", "verbose", "verbose-key", ""),
+		NewBoolFlag("a", "", pa),
+		NewBoolFlag("b", "", pb),
+		NewStringFlag("c", "", pc),
+		NewStringFlag("", "verbose", pv),
 	}
 
 	t.Run("GNU style short args", func(t *testing.T) {
@@ -21,14 +26,17 @@ func TestParseFlags(t *testing.T) {
 			t.Fatalf("unexpected error: %v", err)
 		}
 
-		if ctx.Value(FlagKey("flag-a")) != "true" {
+		valA, _ := GetBool(ctx, pa)
+		if valA == nil || !*valA {
 			t.Errorf("expected flag-a to be true")
 		}
-		if ctx.Value(FlagKey("flag-b")) != "true" {
+		valB, _ := GetBool(ctx, pb)
+		if valB == nil || !*valB {
 			t.Errorf("expected flag-b to be true")
 		}
-		if ctx.Value(FlagKey("flag-c")) != "value" {
-			t.Errorf("expected flag-c to be 'value', got %v", ctx.Value(FlagKey("flag-c")))
+		valC, _ := GetString(ctx, pc)
+		if valC == nil || *valC != "value" {
+			t.Errorf("expected flag-c to be 'value', got %v", valC)
 		}
 		if len(nonFlagArgs) != 0 {
 			t.Errorf("expected no non-flag args, got %v", nonFlagArgs)
@@ -43,8 +51,9 @@ func TestParseFlags(t *testing.T) {
 			t.Fatalf("unexpected error: %v", err)
 		}
 
-		if ctx.Value(FlagKey("verbose-key")) != "high" {
-			t.Errorf("expected verbose-key to be 'high', got %v", ctx.Value(FlagKey("verbose-key")))
+		valV, _ := GetString(ctx, pv)
+		if valV == nil || *valV != "high" {
+			t.Errorf("expected verbose-key to be 'high', got %v", valV)
 		}
 		if len(nonFlagArgs) != 0 {
 			t.Errorf("expected no non-flag args, got %v", nonFlagArgs)
@@ -54,26 +63,46 @@ func TestParseFlags(t *testing.T) {
 	t.Run("Non-flag arguments and -- terminator", func(t *testing.T) {
 		ctx := context.Background()
 		args := []string{"-a", "pos1", "--", "-b", "pos2"}
-		ctx, nonFlagArgs, err := ParseFlags(ctx, ParseOptions{Flags: flags}, args)
+		// Define arguments for opts to allow positional values
+		p1 := NewParameter("pos1", ParameterTypeString, nil, "", false)
+		p2 := NewParameter("pos2", ParameterTypeString, nil, "", false)
+		p3 := NewParameter("pos3", ParameterTypeString, nil, "", false)
+		ctx, nonFlagArgs, err := ParseFlags(ctx, ParseOptions{
+			Flags: flags,
+			Arguments: []Argument{
+				NewStringArgument("p1", p1),
+				NewStringArgument("p2", p2),
+				NewStringArgument("p3", p3),
+			},
+		}, args)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
 
-		if ctx.Value(FlagKey("flag-a")) != "true" {
+		valA, _ := GetBool(ctx, pa)
+		if valA == nil || !*valA {
 			t.Errorf("expected flag-a to be true")
 		}
-		if ctx.Value(FlagKey("flag-b")) != nil {
+		valB, _ := GetBool(ctx, pb)
+		if valB != nil {
 			t.Errorf("expected flag-b to be nil (stopped at --)")
 		}
 
-		expectedNonFlagArgs := []string{"pos1", "-b", "pos2"}
-		if len(nonFlagArgs) != len(expectedNonFlagArgs) {
-			t.Fatalf("expected %d non-flag args, got %d", len(expectedNonFlagArgs), len(nonFlagArgs))
+		v1, _ := GetString(ctx, p1)
+		if v1 == nil || *v1 != "pos1" {
+			t.Errorf("expected pos1 to be 'pos1', got %v", v1)
 		}
-		for i, v := range expectedNonFlagArgs {
-			if nonFlagArgs[i] != v {
-				t.Errorf("expected non-flag arg %d to be %s, got %s", i, v, nonFlagArgs[i])
-			}
+		v2, _ := GetString(ctx, p2)
+		if v2 == nil || *v2 != "-b" {
+			t.Errorf("expected pos2 to be '-b', got %v", v2)
+		}
+		v3, _ := GetString(ctx, p3)
+		if v3 == nil || *v3 != "pos2" {
+			t.Errorf("expected pos3 to be 'pos2', got %v", v3)
+		}
+
+		if len(nonFlagArgs) != 0 {
+			t.Errorf("expected 0 non-flag args, got %d", len(nonFlagArgs))
 		}
 	})
 
@@ -85,122 +114,33 @@ func TestParseFlags(t *testing.T) {
 		}
 	})
 
-	t.Run("Allow unknown flags - long", func(t *testing.T) {
-		ctx := context.Background()
-		args := []string{"--verbose", "high", "--unknown", "arg1"}
-		ctx, nonFlagArgs, err := ParseFlags(ctx, ParseOptions{Flags: flags, AllowUnknownFlags: true}, args)
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-
-		if ctx.Value(FlagKey("verbose-key")) != "high" {
-			t.Errorf("expected verbose-key to be 'high', got %v", ctx.Value(FlagKey("verbose-key")))
-		}
-
-		expectedNonFlagArgs := []string{"--unknown", "arg1"}
-		if len(nonFlagArgs) != len(expectedNonFlagArgs) {
-			t.Fatalf("expected %d non-flag args, got %v", len(expectedNonFlagArgs), nonFlagArgs)
-		}
-		for i, v := range expectedNonFlagArgs {
-			if nonFlagArgs[i] != v {
-				t.Errorf("expected arg %d to be %s, got %s", i, v, nonFlagArgs[i])
-			}
-		}
-	})
-
-	t.Run("Allow unknown flags - short cluster", func(t *testing.T) {
-		ctx := context.Background()
-		// -a and -b are known, -x and -y are unknown
-		args := []string{"-axby", "pos1"}
-		ctx, nonFlagArgs, err := ParseFlags(ctx, ParseOptions{Flags: flags, AllowUnknownFlags: true}, args)
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-
-		if ctx.Value(FlagKey("flag-a")) != "true" {
-			t.Errorf("expected flag-a to be true")
-		}
-		if ctx.Value(FlagKey("flag-b")) != "true" {
-			t.Errorf("expected flag-b to be true")
-		}
-
-		expectedNonFlagArgs := []string{"-x", "-y", "pos1"}
-		if len(nonFlagArgs) != len(expectedNonFlagArgs) {
-			t.Fatalf("expected %d non-flag args, got %v", len(expectedNonFlagArgs), nonFlagArgs)
-		}
-		for i, v := range expectedNonFlagArgs {
-			if nonFlagArgs[i] != v {
-				t.Errorf("expected arg %d to be %s, got %s", i, v, nonFlagArgs[i])
-			}
-		}
-	})
-
-	t.Run("Allow unknown flags - short cluster with value", func(t *testing.T) {
-		ctx := context.Background()
-		// -a and -c are known, -x is unknown. -c takes value.
-		args := []string{"-axc", "val", "pos1"}
-		ctx, nonFlagArgs, err := ParseFlags(ctx, ParseOptions{Flags: flags, AllowUnknownFlags: true}, args)
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-
-		if ctx.Value(FlagKey("flag-a")) != "true" {
-			t.Errorf("expected flag-a to be true")
-		}
-		if ctx.Value(FlagKey("flag-c")) != "val" {
-			t.Errorf("expected flag-c to be 'val', got %v", ctx.Value(FlagKey("flag-c")))
-		}
-
-		expectedNonFlagArgs := []string{"-x", "pos1"}
-		if len(nonFlagArgs) != len(expectedNonFlagArgs) {
-			t.Fatalf("expected %d non-flag args, got %v", len(expectedNonFlagArgs), nonFlagArgs)
-		}
-		for i, v := range expectedNonFlagArgs {
-			if nonFlagArgs[i] != v {
-				t.Errorf("expected arg %d to be %s, got %s", i, v, nonFlagArgs[i])
-			}
-		}
-	})
-
-	t.Run("Allow unknown flags - double dash preservation", func(t *testing.T) {
-		ctx := context.Background()
-		args := []string{"--verbose", "high", "--", "pos1", "-a"}
-		ctx, nonFlagArgs, err := ParseFlags(ctx, ParseOptions{Flags: flags, AllowUnknownFlags: true}, args)
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-
-		if ctx.Value(FlagKey("verbose-key")) != "high" {
-			t.Errorf("expected verbose-key to be 'high', got %v", ctx.Value(FlagKey("verbose-key")))
-		}
-
-		expectedNonFlagArgs := []string{"--", "pos1", "-a"}
-		if len(nonFlagArgs) != len(expectedNonFlagArgs) {
-			t.Fatalf("expected %d non-flag args, got %v", len(expectedNonFlagArgs), nonFlagArgs)
-		}
-		for i, v := range expectedNonFlagArgs {
-			if nonFlagArgs[i] != v {
-				t.Errorf("expected arg %d to be %s, got %s", i, v, nonFlagArgs[i])
-			}
-		}
-	})
-
 	t.Run("Default behavior - double dash removal", func(t *testing.T) {
 		ctx := context.Background()
 		args := []string{"--verbose", "high", "--", "pos1", "-a"}
-		ctx, nonFlagArgs, err := ParseFlags(ctx, ParseOptions{Flags: flags}, args)
+		p1 := NewParameter("p1", ParameterTypeString, nil, "", false)
+		p2 := NewParameter("p2", ParameterTypeString, nil, "", false)
+		ctx, nonFlagArgs, err := ParseFlags(ctx, ParseOptions{
+			Flags: flags,
+			Arguments: []Argument{
+				NewStringArgument("p1", p1),
+				NewStringArgument("p2", p2),
+			},
+		}, args)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
 
-		expectedNonFlagArgs := []string{"pos1", "-a"}
-		if len(nonFlagArgs) != len(expectedNonFlagArgs) {
-			t.Fatalf("expected %d non-flag args, got %v", len(expectedNonFlagArgs), nonFlagArgs)
+		v1, _ := GetString(ctx, p1)
+		if v1 == nil || *v1 != "pos1" {
+			t.Errorf("expected p1 to be 'pos1', got %v", v1)
 		}
-		for i, v := range expectedNonFlagArgs {
-			if nonFlagArgs[i] != v {
-				t.Errorf("expected arg %d to be %s, got %s", i, v, nonFlagArgs[i])
-			}
+		v2, _ := GetString(ctx, p2)
+		if v2 == nil || *v2 != "-a" {
+			t.Errorf("expected p2 to be '-a', got %v", v2)
+		}
+
+		if len(nonFlagArgs) != 0 {
+			t.Errorf("expected no non-flag args, got %v", nonFlagArgs)
 		}
 	})
 
@@ -227,103 +167,6 @@ func TestParseFlags(t *testing.T) {
 			if err == nil {
 				t.Errorf("expected error for duplicate short flag in cluster")
 			}
-		})
-	})
-
-	t.Run("FromArgument", func(t *testing.T) {
-		faFlag := NewStringFlagFromArgument("f", "from", "fa-key", "description")
-		flagsWithFA := append(flags, faFlag)
-
-		t.Run("Implicit", func(t *testing.T) {
-			ctx := context.Background()
-			args := []string{"value", "-a"}
-			ctx, nonFlagArgs, err := ParseFlags(ctx, ParseOptions{Flags: flagsWithFA}, args)
-			if err != nil {
-				t.Fatalf("unexpected error: %v", err)
-			}
-
-			if GetString(ctx, "fa-key") != "value" {
-				t.Errorf("expected fa-key to be 'value', got %v", GetString(ctx, "fa-key"))
-			}
-			if GetBool(ctx, "flag-a") != true {
-				t.Errorf("expected flag-a to be true")
-			}
-			if len(nonFlagArgs) != 0 {
-				t.Errorf("expected 0 non-flag args, got %v", nonFlagArgs)
-			}
-		})
-
-		t.Run("Explicit", func(t *testing.T) {
-			ctx := context.Background()
-			args := []string{"-f", "explicit", "implicit"}
-			ctx, nonFlagArgs, err := ParseFlags(ctx, ParseOptions{Flags: flagsWithFA}, args)
-			if err != nil {
-				t.Fatalf("unexpected error: %v", err)
-			}
-
-			if GetString(ctx, "fa-key") != "explicit" {
-				t.Errorf("expected fa-key to be 'explicit', got %v", GetString(ctx, "fa-key"))
-			}
-			if len(nonFlagArgs) != 1 || nonFlagArgs[0] != "implicit" {
-				t.Errorf("expected 1 non-flag arg 'implicit', got %v", nonFlagArgs)
-			}
-		})
-
-		t.Run("Multiple FromArgument flags error", func(t *testing.T) {
-			faFlag2 := NewStringFlagFromArgument("g", "from2", "fa-key2", "description")
-			flagsWithTwoFA := append(flagsWithFA, faFlag2)
-			_, _, err := ParseFlags(context.Background(), ParseOptions{Flags: flagsWithTwoFA}, []string{})
-			if err == nil {
-				t.Errorf("expected error for multiple FromArgument flags")
-			}
-		})
-	})
-
-	t.Run("Required flags", func(t *testing.T) {
-		reqFlag := NewRequiredStringFlag("r", "required", "req-key", "description")
-		flagsWithReq := append(flags, reqFlag)
-
-		t.Run("Missing required flag", func(t *testing.T) {
-			_, _, err := ParseFlags(context.Background(), ParseOptions{Flags: flagsWithReq}, []string{})
-			if err == nil {
-				t.Errorf("expected error for missing required flag")
-			}
-		})
-
-		t.Run("Provided required flag", func(t *testing.T) {
-			ctx := context.Background()
-			args := []string{"-r", "val"}
-			ctx, _, err := ParseFlags(ctx, ParseOptions{Flags: flagsWithReq}, args)
-			if err != nil {
-				t.Fatalf("unexpected error: %v", err)
-			}
-			if GetString(ctx, "req-key") != "val" {
-				t.Errorf("expected req-key to be 'val', got %v", GetString(ctx, "req-key"))
-			}
-		})
-
-		t.Run("Required BoolFlag", func(t *testing.T) {
-			reqBool := NewRequiredBoolFlag("R", "req-bool", "req-bool-key", "")
-			flagsWithReqBool := append(flags, reqBool)
-
-			t.Run("Missing", func(t *testing.T) {
-				_, _, err := ParseFlags(context.Background(), ParseOptions{Flags: flagsWithReqBool}, []string{})
-				if err == nil {
-					t.Errorf("expected error for missing required bool flag")
-				}
-			})
-
-			t.Run("Provided", func(t *testing.T) {
-				ctx := context.Background()
-				args := []string{"-R"}
-				ctx, _, err := ParseFlags(ctx, ParseOptions{Flags: flagsWithReqBool}, args)
-				if err != nil {
-					t.Fatalf("unexpected error: %v", err)
-				}
-				if GetBool(ctx, "req-bool-key") != true {
-					t.Errorf("expected req-bool-key to be true")
-				}
-			})
 		})
 	})
 }

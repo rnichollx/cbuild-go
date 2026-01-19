@@ -64,8 +64,20 @@ type ParseResult struct {
 // ParseInput contains the input to the parser. To handle special cases like `--` in subcommands,
 // we need to have an UnparsedArgs field for things that must always be arguments.
 type ParseInput struct {
-	Ctx      context.Context
-	Unparsed []string
+	Ctx    context.Context
+	Tokens []string
+}
+
+func ParseFlags(ctx context.Context, opts ParseOptions, args []string) (context.Context, []string, error) {
+	result, err := ParseFlagsAndArgs(opts, ParseInput{
+		Ctx:    ctx,
+		Tokens: args,
+	})
+	if err != nil {
+		return ctx, nil, err
+	}
+	remaining := result.Unparsed
+	return result.Ctx, remaining, nil
 }
 
 func ParseFlagsAndArgs(opts ParseOptions, input ParseInput) (ParseResult, error) {
@@ -95,7 +107,7 @@ func ParseFlagsAndArgs(opts ParseOptions, input ParseInput) (ParseResult, error)
 
 	seenParameters := make(map[ParameterKey]bool)
 
-	unparsedTokens := input.Unparsed
+	unparsedTokens := input.Tokens
 
 	var onlyArgs bool
 	var argIndex int
@@ -143,11 +155,20 @@ func ParseFlagsAndArgs(opts ParseOptions, input ParseInput) (ParseResult, error)
 	}
 
 	longFlagName := func(arg string) string {
+		name := arg
+		if strings.Contains(arg, setValueChar) {
+			name = strings.SplitN(arg, setValueChar, 2)[0]
+		}
 		switch opts.Style {
-		case ParsingStyleWindows, ParsingStyleShortWindows, ParsingStyleShort:
-			return arg[:1]
+		case ParsingStyleWindows:
+			return name[1:]
+		case ParsingStyleShortWindows, ParsingStyleShort:
+			return name[1:]
 		case ParsingStyleRPNX, ParsingStyleGNU, ParsingStylePOSIX:
-			return arg[:2]
+			if len(name) >= 2 && name[:2] == "--" {
+				return name[2:]
+			}
+			return name[1:]
 		default:
 			panic(fmt.Sprintf("invalid style option: %v", opts.Style))
 		}
@@ -166,11 +187,77 @@ func ParseFlagsAndArgs(opts ParseOptions, input ParseInput) (ParseResult, error)
 		arg := unparsedTokens[i]
 		if arg == argTerminator {
 			onlyArgs = true
-			continue
+			if i+1 < len(unparsedTokens) {
+				unparsed := unparsedTokens[i+1:]
+				for _, u := range unparsed {
+					var argument Argument
+					if argIndex >= len(arguments) {
+						if len(arguments) != 0 && arguments[len(arguments)-1].Variadic() {
+							argument = arguments[len(arguments)-1]
+						} else {
+							return result, fmt.Errorf("unexpected argument: %s", u)
+						}
+					} else {
+						argument = arguments[argIndex]
+					}
+
+					var isList bool
+					switch argument.GetParameter().Type() {
+					case ParameterTypeStringList, ParameterTypeBoolList, ParameterTypeIntList, ParameterTypeDatetimeList, ParameterTypeDurationList, ParameterTypePathList, ParameterTypeURIList:
+						isList = true
+					default:
+						isList = false
+					}
+
+					if isList {
+						var values []string
+						if argument.Separator() != nil {
+							values = strings.Split(u, *argument.Separator())
+						} else {
+							values = []string{u}
+						}
+
+						policy := argument.Overwrite()
+						if policy == OverwritePolicyDefault {
+							policy = OverwritePolicyAppend
+						}
+
+						if seenParameters[argument.GetParameter().Key()] && policy == OverwritePolicyDisallowed {
+							return result, fmt.Errorf("duplicate argument %s: parameter has already been set", argument.Name())
+						}
+
+						var err error
+						if policy == OverwritePolicyAppend {
+							ctx, err = AppendParameter(ctx, argument.GetParameter(), values)
+						} else {
+							ctx, err = SetParameterList(ctx, argument.GetParameter(), values)
+						}
+						if err != nil {
+							return result, fmt.Errorf("argument %s with args %v: %w", argument.Name(), values, err)
+						}
+					} else {
+						if seenParameters[argument.GetParameter().Key()] {
+							policy := argument.Overwrite()
+							if policy == OverwritePolicyDefault || policy == OverwritePolicyDisallowed {
+								return result, fmt.Errorf("duplicate argument %s: parameter has already been set", argument.Name())
+							}
+						}
+						var err error
+						ctx, err = SetParameter(ctx, argument.GetParameter(), u)
+						if err != nil {
+							return result, fmt.Errorf("argument %s with args %s: %w", argument.Name(), u, err)
+						}
+					}
+					seenParameters[argument.GetParameter().Key()] = true
+					if !argument.Variadic() {
+						argIndex++
+					}
+				}
+			}
+			break
 		}
 
 		if isLongFlag(arg) {
-
 			var name string
 			var value *string
 			var values []string
@@ -227,27 +314,21 @@ func ParseFlagsAndArgs(opts ParseOptions, input ParseInput) (ParseResult, error)
 				} else if isList && flag.Greedy() {
 					// If greedy, accept as many normal args as appear in the input
 					for {
-						if i >= len(unparsedTokens) {
+						if i+1 >= len(unparsedTokens) {
 							break
 						}
-						arg2 := unparsedTokens[i]
+						arg2 := unparsedTokens[i+1]
 						if isLongFlag(arg2) || isShortFlag(arg2) {
-							// Stop and backoff this argument
-							i--
 							break
 						} else if arg2 == argTerminator {
-							onlyArgs = true
-							i-- // back off so the outer loop handles terminator
 							break
 						} else {
-							values = append(values, arg2)
 							i++
-							continue
+							values = append(values, arg2)
 						}
-
 					}
 				} else if isShortFlag(*value) || isLongFlag(*value) {
-					return result, fmt.Errorf("expected value for --%s, found %s", name, unparsedTokens[i])
+					return result, fmt.Errorf("expected value for --%s, found %s", name, *value)
 				} else if isList {
 					values = append(values, *value)
 				}
@@ -389,6 +470,41 @@ func ParseFlagsAndArgs(opts ParseOptions, input ParseInput) (ParseResult, error)
 				seenParameters[flag.GetParameter().Key()] = true
 			}
 		} else {
+			if argIndex == 0 && !onlyArgs {
+				if subcmd, ok := opts.Subcommands[arg]; ok {
+					result.Subcommands = append(result.Subcommands, arg)
+					if subcmd.StopParsing {
+						result.Unparsed = unparsedTokens[i+1:]
+						result.Ctx = ctx
+						return result, nil
+					}
+
+					if subcmd.ParseOptions != nil {
+						// Update current options for the next level
+						opts.Flags = subcmd.ParseOptions.Flags
+						longFlagMap = make(map[string]Flag)
+						shortFlagMap = make(map[string]Flag)
+						for _, flag := range opts.Flags {
+							if flag.Short() != "" {
+								shortFlagMap[flag.Short()] = flag
+							}
+							if flag.Long() != "" {
+								longFlagMap[flag.Long()] = flag
+							}
+						}
+
+						opts.Arguments = subcmd.ParseOptions.Arguments
+						arguments = opts.Arguments
+						argIndex = 0
+						opts.Subcommands = subcmd.ParseOptions.Subcommands
+						opts.Style = subcmd.ParseOptions.Style
+						opts.StrictOrderingArgs = subcmd.ParseOptions.StrictOrderingArgs
+						seenParameters = make(map[ParameterKey]bool)
+						continue
+					}
+				}
+			}
+
 			var argument Argument
 			if argIndex >= len(arguments) {
 				if len(arguments) != 0 && arguments[len(arguments)-1].Variadic() {
