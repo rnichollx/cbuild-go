@@ -39,12 +39,12 @@ func TestParsingLists(t *testing.T) {
 			},
 		}
 
-		res, err := ParseFlagsAndArgs(ParseOptions{
+		_, err := ParseFlagsAndArgs(ParseOptions{
 			Flags: flags,
 		}, ParseInput{Tokens: []string{"--list", "val1", "val2", "--other"}})
-		// wait, --other is unknown, so it should be in Unparsed
-		if len(res.Unparsed) == 0 || res.Unparsed[0] != "--other" {
-			t.Errorf("expected --other in Unparsed")
+		// wait, --other is unknown, so it should error
+		if err == nil {
+			t.Errorf("expected error for unknown flag --other")
 		}
 
 		// Try with valid args after greedy

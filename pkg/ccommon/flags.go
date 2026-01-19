@@ -32,10 +32,12 @@ var (
 	ConfigFlag = cli.NewStringFlag("c", "config", PConfig)
 
 	PTarget    = cli.NewParameter(cli.ParameterKey(FlagTarget), cli.ParameterTypeString, nil, "specific target to build", false)
-	TargetFlag = cli.NewStringArgument("target", PTarget)
+	TargetArg  = cli.NewStringArgument("target", PTarget)
+	TargetFlag = cli.NewStringFlag("t", "target", PTarget)
 
 	PSource    = cli.NewParameter(cli.ParameterKey(FlagSource), cli.ParameterTypeString, nil, "specific source to operate on", false)
-	SourceFlag = cli.NewStringArgument("source", PSource)
+	SourceArg  = cli.NewStringArgument("source", PSource)
+	SourceFlag = cli.NewStringFlag("s", "source", PSource)
 
 	PToolchain    = cli.NewParameter(cli.ParameterKey(FlagToolchain), cli.ParameterTypeString, nil, "toolchain to use", false)
 	ToolchainFlag = cli.NewStringFlag("T", "toolchain", PToolchain)
@@ -63,6 +65,9 @@ var (
 
 	PDebug    = cli.NewParameter(cli.ParameterKey(FlagDebug), cli.ParameterTypeBool, cli.PBool(false), "show debug information", false)
 	DebugFlag = cli.NewBoolFlag("", "debug", PDebug)
+
+	PCxxVersion   = cli.NewParameter("version", cli.ParameterTypeString, nil, "C++ version number.", true)
+	CxxVersionArg = cli.NewStringArgument("version", PCxxVersion)
 )
 
 func IsDebug(ctx context.Context) bool {

@@ -10,24 +10,24 @@ import (
 
 func handleSetCXXVersion(ctx context.Context) error {
 	workspacePath := getWorkspacePath(ctx)
-	versionVal, _ := cli.GetString(ctx, PVersion)
-	version := ""
-	if versionVal != nil {
-		version = *versionVal
+	version, err := cli.GetString(ctx, ccommon.PCxxVersion)
+	if err != nil {
+		return err
 	}
-	sourceVal, _ := cli.GetString(ctx, PSource)
-	source := ""
-	if sourceVal != nil {
-		source = *sourceVal
+	if version == nil {
+		return fmt.Errorf("no CXX version provided")
 	}
-
+	target, err := cli.GetString(ctx, PTargetReq)
+	if err != nil {
+		return fmt.Errorf("getString: %w", err)
+	}
 	ws := &ccommon.WorkspaceContext{}
-	err := ws.Load(ctx, workspacePath)
+	err = ws.Load(ctx, workspacePath)
 	if err != nil {
 		return fmt.Errorf("error loading workspace: %w", err)
 	}
 
-	return ws.SetCXXVersion(ctx, version, source)
+	return ws.SetCXXVersion(ctx, *version, target)
 }
 
 func handleEnableStaging(ctx context.Context) error {

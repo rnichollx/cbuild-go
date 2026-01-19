@@ -26,8 +26,8 @@ var CBuild = &cli.Runner{
 func init() {
 	CBuild.Subcommands["build"] = &cli.Subcommand{
 		Description:  "Build the project",
-		AcceptsFlags: []cli.Flag{ccommon.ConfigFlag, ccommon.ToolchainFlag},
-		Arguments:    []cli.Argument{ccommon.TargetFlag},
+		AcceptsFlags: []cli.Flag{ccommon.ConfigFlag, ccommon.ToolchainFlag, ccommon.TargetFlag},
+		Arguments:    []cli.Argument{ccommon.TargetArg},
 		Exec: func(ctx context.Context, args []string) error {
 			return runBuild(ctx, "build", args)
 		},
@@ -35,8 +35,8 @@ func init() {
 
 	CBuild.Subcommands["clean"] = &cli.Subcommand{
 		Description:  "Clean build artifacts",
-		AcceptsFlags: []cli.Flag{ccommon.ConfigFlag, ccommon.ToolchainFlag},
-		Arguments:    []cli.Argument{ccommon.TargetFlag},
+		AcceptsFlags: []cli.Flag{ccommon.ConfigFlag, ccommon.ToolchainFlag, ccommon.TargetFlag},
+		Arguments:    []cli.Argument{ccommon.TargetArg},
 		Exec: func(ctx context.Context, args []string) error {
 			return runClean(ctx, args)
 		},
@@ -45,9 +45,9 @@ func init() {
 	CBuild.Subcommands["build-deps"] = &cli.Subcommand{
 		Description: "Build dependencies for a target",
 		Arguments: []cli.Argument{
-			ccommon.TargetFlag,
+			ccommon.TargetArg,
 		},
-		AcceptsFlags: []cli.Flag{ccommon.ConfigFlag, ccommon.ToolchainFlag},
+		AcceptsFlags: []cli.Flag{ccommon.ConfigFlag, ccommon.ToolchainFlag, ccommon.TargetFlag},
 		Exec: func(ctx context.Context, args []string) error {
 			targetNameVal, _ := cli.GetString(ctx, ccommon.PTarget)
 			if targetNameVal == nil || *targetNameVal == "" {

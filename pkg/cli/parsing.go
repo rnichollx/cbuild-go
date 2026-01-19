@@ -68,7 +68,7 @@ func ParseFlags(ctx context.Context, opts ParseOptions, args []string) (context.
 		Tokens: args,
 	})
 	if err != nil {
-		return ctx, nil, err
+		return result.Ctx, nil, err
 	}
 	return result.Ctx, result.Unparsed, nil
 }
@@ -76,7 +76,8 @@ func ParseFlags(ctx context.Context, opts ParseOptions, args []string) (context.
 func ParseFlagsAndArgs(opts ParseOptions, input ParseInput) (ParseResult, error) {
 
 	var result ParseResult
-	ctx := input.Ctx
+
+	result.Ctx = input.Ctx
 
 	shortFlagMap := make(map[string]Flag)
 	longFlagMap := make(map[string]Flag)
@@ -122,9 +123,9 @@ func ParseFlagsAndArgs(opts ParseOptions, input ParseInput) (ParseResult, error)
 		}
 		if opts.Style == ParsingStyleWindows {
 			return arg[:1] == "/"
-		} else if arg[:2] == "--" && arg != argTerminator {
+		} else if len(arg) >= 2 && arg[:2] == "--" && arg != argTerminator {
 			return true
-		} else if arg[:1] == "-" && (opts.Style == ParsingStyleShortWindows || opts.Style == ParsingStyleShort) {
+		} else if len(arg) >= 1 && arg[:1] == "-" && (opts.Style == ParsingStyleShortWindows || opts.Style == ParsingStyleShort) {
 			return true
 		}
 		return false
@@ -222,9 +223,9 @@ func ParseFlagsAndArgs(opts ParseOptions, input ParseInput) (ParseResult, error)
 
 						var err error
 						if policy == OverwritePolicyAppend {
-							ctx, err = AppendParameter(ctx, argument.GetParameter(), values)
+							result.Ctx, err = AppendParameter(result.Ctx, argument.GetParameter(), values)
 						} else {
-							ctx, err = SetParameterList(ctx, argument.GetParameter(), values)
+							result.Ctx, err = SetParameterList(result.Ctx, argument.GetParameter(), values)
 						}
 						if err != nil {
 							return result, fmt.Errorf("argument %s with args %v: %w", argument.Name(), values, err)
@@ -237,7 +238,7 @@ func ParseFlagsAndArgs(opts ParseOptions, input ParseInput) (ParseResult, error)
 							}
 						}
 						var err error
-						ctx, err = SetParameter(ctx, argument.GetParameter(), u)
+						result.Ctx, err = SetParameter(result.Ctx, argument.GetParameter(), u)
 						if err != nil {
 							return result, fmt.Errorf("argument %s with args %s: %w", argument.Name(), u, err)
 						}
@@ -375,13 +376,13 @@ func ParseFlagsAndArgs(opts ParseOptions, input ParseInput) (ParseResult, error)
 			if isList {
 				if policy == OverwritePolicyAppend {
 					var err error
-					ctx, err = AppendParameter(ctx, flag.GetParameter(), values)
+					result.Ctx, err = AppendParameter(result.Ctx, flag.GetParameter(), values)
 					if err != nil {
 						return result, fmt.Errorf("flag --%s with args %v: %w", flag.Long(), values, err)
 					}
 				} else {
 					var err error
-					ctx, err = SetParameterList(ctx, flag.GetParameter(), values)
+					result.Ctx, err = SetParameterList(result.Ctx, flag.GetParameter(), values)
 					if err != nil {
 						return result, fmt.Errorf("flag --%s with args %v: %w", flag.Long(), values, err)
 					}
@@ -389,9 +390,9 @@ func ParseFlagsAndArgs(opts ParseOptions, input ParseInput) (ParseResult, error)
 			} else {
 				var err error
 				if value != nil {
-					ctx, err = SetParameter(ctx, flag.GetParameter(), *value)
+					result.Ctx, err = SetParameter(result.Ctx, flag.GetParameter(), *value)
 				} else {
-					ctx, err = SetParameter(ctx, flag.GetParameter(), "enabled")
+					result.Ctx, err = SetParameter(result.Ctx, flag.GetParameter(), "enabled")
 				}
 				if err != nil {
 					return result, fmt.Errorf("flag --%s with args %v: %w", flag.Long(), value, err)
@@ -464,13 +465,13 @@ func ParseFlagsAndArgs(opts ParseOptions, input ParseInput) (ParseResult, error)
 				if isList {
 					if policy == OverwritePolicyAppend {
 						var err error
-						ctx, err = AppendParameter(ctx, flag.GetParameter(), values)
+						result.Ctx, err = AppendParameter(result.Ctx, flag.GetParameter(), values)
 						if err != nil {
 							return result, fmt.Errorf("flag -%s with args %v: %w", name, values, err)
 						}
 					} else {
 						var err error
-						ctx, err = SetParameterList(ctx, flag.GetParameter(), values)
+						result.Ctx, err = SetParameterList(result.Ctx, flag.GetParameter(), values)
 						if err != nil {
 							return result, fmt.Errorf("flag -%s with args %v: %w", name, values, err)
 						}
@@ -478,9 +479,9 @@ func ParseFlagsAndArgs(opts ParseOptions, input ParseInput) (ParseResult, error)
 				} else {
 					var err error
 					if value != nil {
-						ctx, err = SetParameter(ctx, flag.GetParameter(), *value)
+						result.Ctx, err = SetParameter(result.Ctx, flag.GetParameter(), *value)
 					} else {
-						ctx, err = SetParameter(ctx, flag.GetParameter(), "enabled")
+						result.Ctx, err = SetParameter(result.Ctx, flag.GetParameter(), "enabled")
 					}
 					if err != nil {
 						return result, fmt.Errorf("flag -%s with args %v: %w", name, value, err)
@@ -494,7 +495,7 @@ func ParseFlagsAndArgs(opts ParseOptions, input ParseInput) (ParseResult, error)
 					result.Subcommands = append(result.Subcommands, arg)
 					if subcmd.StopParsing {
 						result.Unparsed = unparsedTokens[i+1:]
-						result.Ctx = ctx
+
 						return result, nil
 					}
 
@@ -563,9 +564,9 @@ func ParseFlagsAndArgs(opts ParseOptions, input ParseInput) (ParseResult, error)
 
 				var err error
 				if policy == OverwritePolicyAppend {
-					ctx, err = AppendParameter(ctx, argument.GetParameter(), values)
+					result.Ctx, err = AppendParameter(result.Ctx, argument.GetParameter(), values)
 				} else {
-					ctx, err = SetParameterList(ctx, argument.GetParameter(), values)
+					result.Ctx, err = SetParameterList(result.Ctx, argument.GetParameter(), values)
 				}
 				if err != nil {
 					return result, fmt.Errorf("argument %s with args %v: %w", argument.Name(), values, err)
@@ -578,7 +579,7 @@ func ParseFlagsAndArgs(opts ParseOptions, input ParseInput) (ParseResult, error)
 					}
 				}
 				var err error
-				ctx, err = SetParameter(ctx, argument.GetParameter(), unparsedTokens[i])
+				result.Ctx, err = SetParameter(result.Ctx, argument.GetParameter(), unparsedTokens[i])
 				if err != nil {
 					return result, fmt.Errorf("argument %s with args %s: %w", argument.Name(), unparsedTokens[i], err)
 				}
@@ -591,6 +592,5 @@ func ParseFlagsAndArgs(opts ParseOptions, input ParseInput) (ParseResult, error)
 
 	}
 
-	result.Ctx = ctx
 	return result, nil
 }

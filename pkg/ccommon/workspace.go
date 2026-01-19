@@ -695,14 +695,14 @@ func (w *WorkspaceContext) RemoveProject(ctx context.Context, sourceName string,
 	return nil
 }
 
-func (w *WorkspaceContext) SetCXXVersion(ctx context.Context, version string, source string) error {
-	if source != "" {
-		target, ok := w.Config.Targets[source]
+func (w *WorkspaceContext) SetCXXVersion(ctx context.Context, version string, target *string) error {
+	if target != nil {
+		target, ok := w.Config.Targets[*target]
 		if !ok {
-			return fmt.Errorf("source %s not found in workspace", source)
+			return fmt.Errorf("target %s not found in workspace", *target)
 		}
 		target.CxxStandard = &version
-		fmt.Printf("Set CXX version for %s to %s\n", source, version)
+		fmt.Printf("Set CXX version for %s to %s\n", *target, version)
 	} else {
 		w.Config.CXXVersion = version
 		fmt.Printf("Set global CXX version to %s\n", version)

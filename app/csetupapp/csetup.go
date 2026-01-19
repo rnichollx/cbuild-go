@@ -3,10 +3,11 @@ package csetupapp
 import (
 	"context"
 	"fmt"
-	"gitlab.com/rpnx/cbuild-go/pkg/ccommon"
-	"gitlab.com/rpnx/cbuild-go/pkg/cli"
 	"os"
 	"path/filepath"
+
+	"gitlab.com/rpnx/cbuild-go/pkg/ccommon"
+	"gitlab.com/rpnx/cbuild-go/pkg/cli"
 )
 
 func getWorkspacePath(ctx context.Context) string {
@@ -66,9 +67,8 @@ var (
 	PSource     = cli.NewParameter("source", cli.ParameterTypeString, nil, "name of the source", false)
 	PSourceReq  = cli.NewParameter("source", cli.ParameterTypeString, nil, "name of the source", true)
 	PDependency = cli.NewParameter("dependency", cli.ParameterTypeString, nil, "name of the dependency", true)
-	PTarget     = cli.NewParameter("target", cli.ParameterTypeString, nil, "name of the target", false)
+	PTarget     = cli.NewParameter("target", cli.ParameterTypeString, nil, "Name of the build target.", false)
 	PTargetReq  = cli.NewParameter("target", cli.ParameterTypeString, nil, "name of the target", true)
-	PVersion    = cli.NewParameter("version", cli.ParameterTypeString, nil, "version string", true)
 )
 
 func init() {
@@ -135,10 +135,9 @@ func init() {
 	CSetup.Subcommands["remove-source"] = &cli.Subcommand{
 		Description: "Remove a source from the workspace",
 		Arguments: []cli.Argument{
-			cli.NewStringArgument("source", PSource),
-			ccommon.SourceFlag,
+			ccommon.SourceArg,
 		},
-		AcceptsFlags: []cli.Flag{ccommon.DeleteFlag},
+		AcceptsFlags: []cli.Flag{ccommon.DeleteFlag, ccommon.SourceFlag},
 		Exec: func(ctx context.Context, args []string) error {
 			return handleRemoveSource(ctx)
 		},
@@ -146,9 +145,9 @@ func init() {
 	CSetup.Subcommands["remove-target"] = &cli.Subcommand{
 		Description: "Remove a target from the workspace",
 		Arguments: []cli.Argument{
-			cli.NewStringArgument("target", PTarget),
-			ccommon.TargetFlag,
+			ccommon.TargetArg,
 		},
+		AcceptsFlags: []cli.Flag{ccommon.TargetFlag},
 		Exec: func(ctx context.Context, args []string) error {
 			return handleRemoveTarget(ctx)
 		},
@@ -156,10 +155,9 @@ func init() {
 	CSetup.Subcommands["remove-project"] = &cli.Subcommand{
 		Description: "Remove a source and all its associated targets from the workspace",
 		Arguments: []cli.Argument{
-			cli.NewStringArgument("source", PSource),
-			ccommon.SourceFlag,
+			ccommon.SourceArg,
 		},
-		AcceptsFlags: []cli.Flag{ccommon.DeleteFlag},
+		AcceptsFlags: []cli.Flag{ccommon.DeleteFlag, ccommon.SourceFlag},
 		Exec: func(ctx context.Context, args []string) error {
 			return handleRemoveProject(ctx)
 		},
@@ -167,9 +165,10 @@ func init() {
 	CSetup.Subcommands["set-cxx-version"] = &cli.Subcommand{
 		Description: "Set the C++ version for a source or the whole workspace",
 		Arguments: []cli.Argument{
-			cli.NewStringArgument("source", PSource),
-			cli.NewStringArgument("version", PVersion),
+			ccommon.CxxVersionArg,
+			ccommon.TargetArg,
 		},
+		AcceptsFlags: []cli.Flag{ccommon.TargetFlag},
 		Exec: func(ctx context.Context, args []string) error {
 			return handleSetCXXVersion(ctx)
 		},
@@ -178,8 +177,9 @@ func init() {
 		Description: "Enable staging for a source",
 		Arguments: []cli.Argument{
 			cli.NewStringArgument("source", PSource),
-			ccommon.SourceFlag,
+			ccommon.SourceArg,
 		},
+		AcceptsFlags: []cli.Flag{ccommon.SourceFlag},
 		Exec: func(ctx context.Context, args []string) error {
 			return handleEnableStaging(ctx)
 		},
@@ -188,8 +188,9 @@ func init() {
 		Description: "Disable staging for a source",
 		Arguments: []cli.Argument{
 			cli.NewStringArgument("source", PSource),
-			ccommon.SourceFlag,
+			ccommon.SourceArg,
 		},
+		AcceptsFlags: []cli.Flag{ccommon.SourceFlag},
 		Exec: func(ctx context.Context, args []string) error {
 			return handleDisableStaging(ctx)
 		},
@@ -213,8 +214,9 @@ func init() {
 		Description: "Get build arguments for a target",
 		Arguments: []cli.Argument{
 			cli.NewStringArgument("target", PTargetReq),
+			ccommon.TargetArg,
 		},
-		AcceptsFlags: []cli.Flag{ccommon.ConfigFlag, ccommon.ToolchainFlag},
+		AcceptsFlags: []cli.Flag{ccommon.ConfigFlag, ccommon.ToolchainFlag, ccommon.TargetFlag},
 		Exec: func(ctx context.Context, args []string) error {
 			return handleGetArgs(ctx)
 		},
