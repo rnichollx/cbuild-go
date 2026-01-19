@@ -536,8 +536,7 @@ func (w *WorkspaceContext) Init(ctx context.Context, reinit bool) error {
 	}
 
 	w.Config = WorkspaceConfig{
-		Targets:    make(map[string]*TargetConfiguration),
-		CXXVersion: "20",
+		Targets: make(map[string]*TargetConfiguration),
 	}
 
 	return w.Save(ctx)
@@ -695,14 +694,14 @@ func (w *WorkspaceContext) RemoveProject(ctx context.Context, sourceName string,
 	return nil
 }
 
-func (w *WorkspaceContext) SetCXXVersion(ctx context.Context, version string, target *string) error {
-	if target != nil {
-		target, ok := w.Config.Targets[*target]
+func (w *WorkspaceContext) SetCXXVersion(ctx context.Context, version string, targetString *string) error {
+	if targetString != nil {
+		target, ok := w.Config.Targets[*targetString]
 		if !ok {
-			return fmt.Errorf("target %s not found in workspace", *target)
+			return fmt.Errorf("target %s not found in workspace", *targetString)
 		}
 		target.CxxStandard = &version
-		fmt.Printf("Set CXX version for %s to %s\n", *target, version)
+		fmt.Printf("Set CXX version for %s to %s\n", *targetString, version)
 	} else {
 		w.Config.CXXVersion = version
 		fmt.Printf("Set global CXX version to %s\n", version)

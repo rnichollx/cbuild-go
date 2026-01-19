@@ -84,6 +84,8 @@ func ParseFlagsAndArgs(opts ParseOptions, input ParseInput) (ParseResult, error)
 
 	arguments := opts.Arguments
 
+	allParameters := make(map[ParameterKey]Parameter)
+
 	for _, flag := range opts.Flags {
 		if flag.Short() != "" {
 			if _, exists := shortFlagMap[flag.Short()]; exists {
@@ -98,6 +100,21 @@ func ParseFlagsAndArgs(opts ParseOptions, input ParseInput) (ParseResult, error)
 			}
 			longFlagMap[flag.Long()] = flag
 		}
+
+		param := flag.GetParameter()
+		if param == nil {
+			return result, fmt.Errorf("missing parameter for flag: %s", flag.Short())
+		}
+
+		allParameters[param.Key()] = param
+	}
+
+	for _, arg := range opts.Arguments {
+		param := arg.GetParameter()
+		if param == nil {
+			return result, fmt.Errorf("missing parameter for argument: %s", arg.Name())
+		}
+		allParameters[param.Key()] = param
 	}
 
 	seenParameters := make(map[ParameterKey]bool)
@@ -511,9 +528,15 @@ func ParseFlagsAndArgs(opts ParseOptions, input ParseInput) (ParseResult, error)
 							if flag.Long() != "" {
 								longFlagMap[flag.Long()] = flag
 							}
+							parm := flag.GetParameter()
+							allParameters[parm.Key()] = parm
 						}
 
 						opts.Arguments = subcmd.ParseOptions.Arguments
+						for _, arg := range opts.Arguments {
+							parm := arg.GetParameter()
+							allParameters[parm.Key()] = parm
+						}
 						arguments = opts.Arguments
 						argIndex = 0
 						opts.Subcommands = subcmd.ParseOptions.Subcommands
@@ -590,6 +613,14 @@ func ParseFlagsAndArgs(opts ParseOptions, input ParseInput) (ParseResult, error)
 			}
 		}
 
+	}
+
+	for key, parm := range allParameters {
+		_, have := seenParameters[key]
+		//fmt.Printf("Checking param %v", parm)
+		if parm.Required() && !have {
+			return result, fmt.Errorf("missing value for required parameter %q", key)
+		}
 	}
 
 	return result, nil

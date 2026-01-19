@@ -90,7 +90,7 @@ func PlatformToCMakeName(platform system.Platform) (string, error) {
 
 func ProcessorToCMakeName(platform system.Platform, cpu system.Processor) (string, error) {
 	switch platform {
-	case system.PlatformLinux, system.PlatformFreeBSD:
+	case system.PlatformLinux, system.PlatformFreeBSD, system.PlatformOpenBSD:
 		switch cpu {
 		case system.ProcessorX86:
 			if platform == system.PlatformFreeBSD {
@@ -129,7 +129,10 @@ func ProcessorToCMakeName(platform system.Platform, cpu system.Processor) (strin
 		case system.ProcessorArm64:
 			return "ARM64", nil
 		}
+	default:
+		return "", fmt.Errorf("unsupported platform/processor combination: %s/%v", platform, cpu)
 	}
+
 	return "", fmt.Errorf("unsupported platform/processor combination: %s/%v", platform, cpu)
 }
 
