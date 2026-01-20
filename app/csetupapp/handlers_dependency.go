@@ -9,10 +9,10 @@ import (
 
 func handleAddDependency(ctx context.Context) error {
 	workspacePath := getWorkspacePath(ctx)
-	sourceVal, _ := cli.GetString(ctx, PSourceReq)
-	source := ""
-	if sourceVal != nil {
-		source = *sourceVal
+	targetVal, _ := cli.GetString(ctx, PTargetReq)
+	target := ""
+	if targetVal != nil {
+		target = *targetVal
 	}
 	depnameVal, _ := cli.GetString(ctx, PDependency)
 	depname := ""
@@ -26,21 +26,21 @@ func handleAddDependency(ctx context.Context) error {
 		return fmt.Errorf("error loading workspace: %w", err)
 	}
 
-	err = ws.AddDependency(ctx, source, depname)
+	err = ws.AddDependency(ctx, target, depname)
 	if err != nil {
 		return err
 	}
 
-	fmt.Printf("Added dependency %s to %s\n", depname, source)
+	fmt.Printf("Added dependency %s to %s\n", depname, target)
 	return nil
 }
 
 func handleRemoveDependency(ctx context.Context) error {
 	workspacePath := getWorkspacePath(ctx)
-	sourceVal, _ := cli.GetString(ctx, PSourceReq)
-	source := ""
-	if sourceVal != nil {
-		source = *sourceVal
+	targetVal, _ := cli.GetString(ctx, PTargetReq)
+	target := ""
+	if targetVal != nil {
+		target = *targetVal
 	}
 	depnameVal, _ := cli.GetString(ctx, PDependency)
 	depname := ""
@@ -54,11 +54,11 @@ func handleRemoveDependency(ctx context.Context) error {
 		return fmt.Errorf("error loading workspace: %w", err)
 	}
 
-	err = ws.RemoveDependency(ctx, source, depname)
+	err = ws.RemoveDependency(ctx, target, depname)
 	if err != nil {
 		return err
 	}
 
-	fmt.Printf("Removed dependency %s from %s\n", depname, source)
+	fmt.Printf("Removed dependency %s from %s\n", depname, target)
 	return nil
 }

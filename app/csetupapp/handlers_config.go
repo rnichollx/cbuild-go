@@ -32,10 +32,10 @@ func handleSetCXXVersion(ctx context.Context) error {
 
 func handleEnableStaging(ctx context.Context) error {
 	workspacePath := getWorkspacePath(ctx)
-	sourceVal, _ := cli.GetString(ctx, PSource)
-	source := ""
-	if sourceVal != nil {
-		source = *sourceVal
+	targetVal, _ := cli.GetString(ctx, PTarget)
+	target := ""
+	if targetVal != nil {
+		target = *targetVal
 	}
 
 	ws := &ccommon.WorkspaceContext{}
@@ -44,15 +44,15 @@ func handleEnableStaging(ctx context.Context) error {
 		return fmt.Errorf("error loading workspace: %w", err)
 	}
 
-	return ws.SetStaging(ctx, source, true)
+	return ws.SetStaging(ctx, target, true)
 }
 
 func handleDisableStaging(ctx context.Context) error {
 	workspacePath := getWorkspacePath(ctx)
-	sourceVal, _ := cli.GetString(ctx, PSource)
-	source := ""
-	if sourceVal != nil {
-		source = *sourceVal
+	targetVal, _ := cli.GetString(ctx, PTarget)
+	target := ""
+	if targetVal != nil {
+		target = *targetVal
 	}
 
 	ws := &ccommon.WorkspaceContext{}
@@ -61,7 +61,7 @@ func handleDisableStaging(ctx context.Context) error {
 		return fmt.Errorf("error loading workspace: %w", err)
 	}
 
-	return ws.SetStaging(ctx, source, false)
+	return ws.SetStaging(ctx, target, false)
 }
 
 func handleAddConfig(ctx context.Context) error {

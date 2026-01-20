@@ -123,16 +123,16 @@ func handleRemoveTarget(ctx context.Context) error {
 
 func handleRemoveProject(ctx context.Context) error {
 	workspacePath := getWorkspacePath(ctx)
-	targetVal, _ := cli.GetString(ctx, ccommon.PTarget)
-	targetName := ""
-	if targetVal != nil {
-		targetName = *targetVal
+	sourceVal, _ := cli.GetString(ctx, ccommon.PSource)
+	sourceName := ""
+	if sourceVal != nil {
+		sourceName = *sourceVal
 	}
 	removeFolderRaw, _ := cli.GetBool(ctx, ccommon.PDelete)
 	removeFolder := removeFolderRaw != nil && *removeFolderRaw
 
-	if targetName == "" {
-		return fmt.Errorf("usage: csetup remove-project <target> [-X|--delete]")
+	if sourceName == "" {
+		return fmt.Errorf("usage: csetup remove-project <source> [-X|--delete]")
 	}
 
 	ws := &ccommon.WorkspaceContext{}
@@ -141,7 +141,7 @@ func handleRemoveProject(ctx context.Context) error {
 		return fmt.Errorf("error loading workspace: %w", err)
 	}
 
-	return ws.RemoveProject(ctx, targetName, removeFolder)
+	return ws.RemoveProject(ctx, sourceName, removeFolder)
 }
 
 func handleDropFiles(ctx context.Context) error {

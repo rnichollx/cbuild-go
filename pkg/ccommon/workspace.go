@@ -710,10 +710,10 @@ func (w *WorkspaceContext) SetCXXVersion(ctx context.Context, version string, ta
 	return w.Save(ctx)
 }
 
-func (w *WorkspaceContext) SetStaging(ctx context.Context, source string, enabled bool) error {
-	target, ok := w.Config.Targets[source]
+func (w *WorkspaceContext) SetStaging(ctx context.Context, targetName string, enabled bool) error {
+	target, ok := w.Config.Targets[targetName]
 	if !ok {
-		return fmt.Errorf("source %s not found in workspace", source)
+		return fmt.Errorf("target %s not found in workspace", targetName)
 	}
 
 	target.Staged = &enabled
@@ -724,9 +724,9 @@ func (w *WorkspaceContext) SetStaging(ctx context.Context, source string, enable
 	}
 
 	if enabled {
-		fmt.Printf("Enabled staging for %s\n", source)
+		fmt.Printf("Enabled staging for %s\n", targetName)
 	} else {
-		fmt.Printf("Disabled staging for %s\n", source)
+		fmt.Printf("Disabled staging for %s\n", targetName)
 	}
 	return nil
 }

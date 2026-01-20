@@ -134,9 +134,9 @@ func init() {
 		},
 	}
 	CSetup.Subcommands["add-dependency"] = &cli.Subcommand{
-		Description: "Add a dependency to a source",
+		Description: "Add a dependency to a target",
 		Arguments: []cli.Argument{
-			cli.NewStringArgument("source", PSourceReq),
+			cli.NewStringArgument("target", PTargetReq),
 			cli.NewStringArgument("dependency", PDependency),
 		},
 		Exec: func(ctx context.Context, args []string) error {
@@ -144,9 +144,9 @@ func init() {
 		},
 	}
 	CSetup.Subcommands["remove-dependency"] = &cli.Subcommand{
-		Description: "Remove a dependency from a source",
+		Description: "Remove a dependency from a target",
 		Arguments: []cli.Argument{
-			cli.NewStringArgument("source", PSourceReq),
+			cli.NewStringArgument("target", PTargetReq),
 			cli.NewStringArgument("dependency", PDependency),
 		},
 		Exec: func(ctx context.Context, args []string) error {
@@ -176,9 +176,9 @@ func init() {
 	CSetup.Subcommands["remove-project"] = &cli.Subcommand{
 		Description: "Remove a source and all its associated targets from the workspace",
 		Arguments: []cli.Argument{
-			ccommon.TargetArg,
+			ccommon.SourceArg,
 		},
-		AcceptsFlags: []cli.Flag{ccommon.DeleteFlag, ccommon.TargetFlag},
+		AcceptsFlags: []cli.Flag{ccommon.DeleteFlag, ccommon.SourceFlag},
 		Exec: func(ctx context.Context, args []string) error {
 			return handleRemoveProject(ctx)
 		},
@@ -201,7 +201,7 @@ func init() {
 		},
 	}
 	CSetup.Subcommands["set-cxx-version"] = &cli.Subcommand{
-		Description: "Set the C++ version for a source or the whole workspace",
+		Description: "Set the C++ version for a target or the whole workspace",
 		Arguments: []cli.Argument{
 			ccommon.CxxVersionArg,
 			ccommon.TargetArg,
@@ -212,23 +212,23 @@ func init() {
 		},
 	}
 	CSetup.Subcommands["enable-staging"] = &cli.Subcommand{
-		Description: "Enable staging for a source",
+		Description: "Enable staging for a target",
 		Arguments: []cli.Argument{
-			cli.NewStringArgument("source", PSource),
-			ccommon.SourceArg,
+			cli.NewStringArgument("target", PTarget),
+			ccommon.TargetArg,
 		},
-		AcceptsFlags: []cli.Flag{ccommon.SourceFlag},
+		AcceptsFlags: []cli.Flag{ccommon.TargetFlag},
 		Exec: func(ctx context.Context, args []string) error {
 			return handleEnableStaging(ctx)
 		},
 	}
 	CSetup.Subcommands["disable-staging"] = &cli.Subcommand{
-		Description: "Disable staging for a source",
+		Description: "Disable staging for a target",
 		Arguments: []cli.Argument{
-			cli.NewStringArgument("source", PSource),
-			ccommon.SourceArg,
+			cli.NewStringArgument("target", PTarget),
+			ccommon.TargetArg,
 		},
-		AcceptsFlags: []cli.Flag{ccommon.SourceFlag},
+		AcceptsFlags: []cli.Flag{ccommon.TargetFlag},
 		Exec: func(ctx context.Context, args []string) error {
 			return handleDisableStaging(ctx)
 		},

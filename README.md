@@ -55,15 +55,15 @@ workspace/
 - **`declare-local-source <local_path> <dest_name>`**: Add local source information to the workspace.
 - **`download [source] [--download-deps] [--submodule] [--no-setup]`**: Download missing sources.
 - **`load-defaults <source>`**: Load default configuration for a source from its `csetup.yml`.
-- **`add-dependency <source> <dependency>`**: Add a dependency to a source.
-- **`remove-dependency <source> <dependency>`**: Remove a dependency from a source.
+- **`add-dependency <target> <dependency>`**: Add a dependency to a target.
+- **`remove-dependency <target> <dependency>`**: Remove a dependency from a target.
 - **`remove-source <source> [-X, --delete]`**: Remove a source from the workspace.
 - **`remove-target <target>`**: Remove a target from the workspace.
-- **`remove-project <target> [-X, --delete]`**: Remove a source and all its associated targets from the workspace.
+- **`remove-project <source> [-X, --delete]`**: Remove a source and all its associated targets from the workspace.
 - **`new-target <target> <source> [--project-type <type>] [--cmake-package-name <name>] [--overwrite]`**: Add a new target to the workspace.
 - **`set-cxx-version <version> [target]`**: Set the C++ version for a target or the whole workspace.
-- **`enable-staging <source>`**: Enable staging for a source. Staged targets are built against the installed outputs, instead of a build tree.
-- **`disable-staging <source>`**: Disable staging for a source.
+- **`enable-staging <target>`**: Enable staging for a target. Staged targets are built against the installed outputs, instead of a build tree.
+- **`disable-staging <target>`**: Disable staging for a target.
 - **`list-sources`**: List all sources in the workspace.
 - **`drop-files <source>`**: Delete local source files without removing them from configuration.
 - **`get-args <target> [-c <config>] [-T <toolchain>]`**: Get the build arguments that would be passed to the build system (e.g., CMake).
