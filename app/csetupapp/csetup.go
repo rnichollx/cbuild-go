@@ -64,6 +64,7 @@ var CSetup = &cli.Runner{
 var (
 	PPath       = cli.NewParameter("path", cli.ParameterTypePath, nil, "path to the workspace or source", false)
 	PUrl        = cli.NewParameter("url", cli.ParameterTypeURI, nil, "URL of the repository", true)
+	PLocalPath  = cli.NewParameter("local_path", cli.ParameterTypePath, nil, "path to the local source", true)
 	PSource     = cli.NewParameter("source", cli.ParameterTypeString, nil, "name of the source", false)
 	PSourceReq  = cli.NewParameter("source", cli.ParameterTypeString, nil, "name of the source", true)
 	PDependency = cli.NewParameter("dependency", cli.ParameterTypeString, nil, "name of the dependency", true)
@@ -101,6 +102,16 @@ func init() {
 		},
 		Exec: func(ctx context.Context, args []string) error {
 			return handleDeclareGitSource(ctx)
+		},
+	}
+	CSetup.Subcommands["declare-local-source"] = &cli.Subcommand{
+		Description: "Add local source information to the workspace",
+		Arguments: []cli.Argument{
+			cli.NewStringArgument("local_path", PLocalPath),
+			cli.NewStringArgument("path", PPath),
+		},
+		Exec: func(ctx context.Context, args []string) error {
+			return handleDeclareLocalSource(ctx)
 		},
 	}
 	CSetup.Subcommands["download"] = &cli.Subcommand{

@@ -318,6 +318,58 @@ func handleDeclareGitSource(ctx context.Context) error {
 	return nil
 }
 
+func handleDeclareLocalSource(ctx context.Context) error {
+	workspacePath := getWorkspacePath(ctx)
+	localPathVal, _ := cli.GetPath(ctx, PLocalPath)
+	localPath := ""
+	if localPathVal != nil {
+		localPath = *localPathVal
+	}
+	destNameVal, _ := cli.GetPath(ctx, PPath)
+	destName := ""
+	if destNameVal != nil {
+		destName = *destNameVal
+	}
+
+	if localPath == "" {
+		return fmt.Errorf("usage: csetup declare-local-source <local_path> [dest_name]")
+	}
+
+	if destName == "" {
+		// Extract destName from localPath
+		destName = filepath.Base(localPath)
+	}
+
+	// 1. Check if cbuild_workspace.yml exists
+	workspaceConfig := filepath.Join(workspacePath, "cbuild_workspace.yml")
+	if _, err := os.Stat(workspaceConfig); os.IsNotExist(err) {
+		return fmt.Errorf("%s not found. csetup must be run in a cbuild workspace", workspaceConfig)
+	}
+
+	ws := &ccommon.WorkspaceContext{}
+	err := ws.Load(ctx, workspacePath)
+	if err != nil {
+		return fmt.Errorf("error loading workspace: %w", err)
+	}
+
+	// 2. Add to sources
+	if ws.Config.Sources == nil {
+		ws.Config.Sources = make(map[string]*ccommon.CodeSource)
+	}
+	ws.Config.Sources[destName] = &ccommon.CodeSource{
+		Local: localPath,
+	}
+
+	// 3. Save updated workspace
+	err = ws.Save(ctx)
+	if err != nil {
+		return fmt.Errorf("error saving updated workspace: %w", err)
+	}
+
+	fmt.Printf("Declared local source %s with path %s in cbuild_workspace.yml.\n", destName, localPath)
+	return nil
+}
+
 func handleDownload(ctx context.Context) error {
 	workspacePath := getWorkspacePath(ctx)
 	downloadDepsRaw, _ := cli.GetBool(ctx, ccommon.PDownloadDeps)
