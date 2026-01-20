@@ -93,6 +93,16 @@ func init() {
 			return handleGitClone(ctx)
 		},
 	}
+	CSetup.Subcommands["declare-git-source"] = &cli.Subcommand{
+		Description: "Add git source information to the workspace without downloading",
+		Arguments: []cli.Argument{
+			cli.NewStringArgument("url", PUrl),
+			cli.NewStringArgument("path", PPath),
+		},
+		Exec: func(ctx context.Context, args []string) error {
+			return handleDeclareGitSource(ctx)
+		},
+	}
 	CSetup.Subcommands["download"] = &cli.Subcommand{
 		Description: "Download missing sources",
 		Arguments: []cli.Argument{

@@ -263,6 +263,61 @@ func handleGitClone(ctx context.Context) error {
 	return nil
 }
 
+func handleDeclareGitSource(ctx context.Context) error {
+	workspacePath := getWorkspacePath(ctx)
+	repoURLVal, _ := cli.GetURI(ctx, PUrl)
+	repoURL := ""
+	if repoURLVal != nil {
+		repoURL = repoURLVal.String()
+	}
+	destNameVal, _ := cli.GetPath(ctx, PPath)
+	destName := ""
+	if destNameVal != nil {
+		destName = *destNameVal
+	}
+
+	if repoURL == "" {
+		return fmt.Errorf("usage: csetup declare-git-source <repo_url> [dest_name]")
+	}
+
+	if destName == "" {
+		// Extract destName from repoURL
+		base := filepath.Base(repoURL)
+		destName = strings.TrimSuffix(base, ".git")
+	}
+
+	// 1. Check if cbuild_workspace.yml exists
+	workspaceConfig := filepath.Join(workspacePath, "cbuild_workspace.yml")
+	if _, err := os.Stat(workspaceConfig); os.IsNotExist(err) {
+		return fmt.Errorf("%s not found. csetup must be run in a cbuild workspace", workspaceConfig)
+	}
+
+	ws := &ccommon.WorkspaceContext{}
+	err := ws.Load(ctx, workspacePath)
+	if err != nil {
+		return fmt.Errorf("error loading workspace: %w", err)
+	}
+
+	// 2. Add to sources
+	if ws.Config.Sources == nil {
+		ws.Config.Sources = make(map[string]*ccommon.CodeSource)
+	}
+	ws.Config.Sources[destName] = &ccommon.CodeSource{
+		Git: &ccommon.GitSource{
+			Repository: repoURL,
+		},
+	}
+
+	// 3. Save updated workspace
+	err = ws.Save(ctx)
+	if err != nil {
+		return fmt.Errorf("error saving updated workspace: %w", err)
+	}
+
+	fmt.Printf("Declared git source %s with URL %s in cbuild_workspace.yml.\n", destName, repoURL)
+	return nil
+}
+
 func handleDownload(ctx context.Context) error {
 	workspacePath := getWorkspacePath(ctx)
 	downloadDepsRaw, _ := cli.GetBool(ctx, ccommon.PDownloadDeps)
