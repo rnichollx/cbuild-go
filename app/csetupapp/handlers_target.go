@@ -1,0 +1,59 @@
+package csetupapp
+
+import (
+	"context"
+	"fmt"
+
+	"gitlab.com/rpnx/cbuild-go/pkg/ccommon"
+	"gitlab.com/rpnx/cbuild-go/pkg/cli"
+)
+
+func handleNewTarget(ctx context.Context) error {
+	workspacePath := getWorkspacePath(ctx)
+
+	source, err := cli.GetString(ctx, ccommon.PSource)
+	if err != nil {
+		return err
+	}
+	if source == nil {
+		return fmt.Errorf("source is required")
+	}
+
+	target, err := cli.GetString(ctx, ccommon.PTarget)
+	if err != nil {
+		return err
+	}
+
+	targetName := *source
+	if target != nil && *target != "" {
+		targetName = *target
+	}
+
+	overwriteVal, _ := cli.GetBool(ctx, ccommon.POverwrite)
+	overwrite := overwriteVal != nil && *overwriteVal
+
+	projectType, _ := cli.GetString(ctx, ccommon.PProjectType)
+	cmakePackageName, _ := cli.GetString(ctx, ccommon.PCMakePackageName)
+
+	ws := &ccommon.WorkspaceContext{}
+	err = ws.Load(ctx, workspacePath)
+	if err != nil {
+		return fmt.Errorf("error loading workspace: %w", err)
+	}
+
+	opts := ccommon.AddTargetOptions{
+		SourceName:       *source,
+		TargetName:       targetName,
+		Overwrite:        overwrite,
+		ProjectType:      projectType,
+		CMakePackageName: cmakePackageName,
+	}
+
+	err = ws.AddTarget(ctx, opts)
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("Added target %s (source: %s) to workspace\n", targetName, *source)
+	return nil
+}
