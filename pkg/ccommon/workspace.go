@@ -1000,3 +1000,39 @@ func (w *WorkspaceContext) DropSourceFiles(ctx context.Context, sourceName strin
 	}
 	return nil
 }
+
+type AddTargetOptions struct {
+	SourceName       string
+	TargetName       string
+	Overwrite        bool
+	ProjectType      *string
+	CMakePackageName *string
+}
+
+func (w *WorkspaceContext) AddTarget(ctx context.Context, opts AddTargetOptions) error {
+	if w.Config.Targets == nil {
+		w.Config.Targets = make(map[string]*TargetConfiguration)
+	}
+
+	if _, ok := w.Config.Targets[opts.TargetName]; ok && !opts.Overwrite {
+		return fmt.Errorf("target %s already exists, use --overwrite to replace it", opts.TargetName)
+	}
+
+	target := &TargetConfiguration{
+		Source: opts.SourceName,
+	}
+
+	if opts.ProjectType != nil {
+		target.ProjectType = *opts.ProjectType
+	} else {
+		target.ProjectType = "CMake"
+	}
+
+	if opts.CMakePackageName != nil {
+		target.CMakePackageName = *opts.CMakePackageName
+	}
+
+	w.Config.Targets[opts.TargetName] = target
+
+	return w.Save(ctx)
+}

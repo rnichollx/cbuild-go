@@ -183,6 +183,23 @@ func init() {
 			return handleRemoveProject(ctx)
 		},
 	}
+	CSetup.Subcommands["new-target"] = &cli.Subcommand{
+		Description: "Add a new target to the workspace",
+		Arguments: []cli.Argument{
+			ccommon.SourceArg,
+			ccommon.TargetArg,
+		},
+		AcceptsFlags: []cli.Flag{
+			ccommon.SourceFlag,
+			ccommon.TargetFlag,
+			ccommon.OverwriteFlag,
+			ccommon.ProjectTypeFlag,
+			ccommon.CMakePackageNameFlag,
+		},
+		Exec: func(ctx context.Context, args []string) error {
+			return handleNewTarget(ctx)
+		},
+	}
 	CSetup.Subcommands["set-cxx-version"] = &cli.Subcommand{
 		Description: "Set the C++ version for a source or the whole workspace",
 		Arguments: []cli.Argument{
