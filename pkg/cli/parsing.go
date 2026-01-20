@@ -63,6 +63,9 @@ type ParseInput struct {
 }
 
 func ParseFlags(ctx context.Context, opts ParseOptions, args []string) (context.Context, []string, error) {
+	if ctx == nil {
+		panic("ctx must not be nil")
+	}
 	result, err := ParseFlagsAndArgs(opts, ParseInput{
 		Ctx:    ctx,
 		Tokens: args,
@@ -74,10 +77,10 @@ func ParseFlags(ctx context.Context, opts ParseOptions, args []string) (context.
 }
 
 func ParseFlagsAndArgs(opts ParseOptions, input ParseInput) (ParseResult, error) {
-
+	if input.Ctx == nil {
+		panic("ctx must not be nil")
+	}
 	var result ParseResult
-
-	result.Ctx = input.Ctx
 
 	shortFlagMap := make(map[string]Flag)
 	longFlagMap := make(map[string]Flag)
