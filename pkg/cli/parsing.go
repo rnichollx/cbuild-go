@@ -89,6 +89,7 @@ func ParseFlagsAndArgs(opts ParseOptions, input ParseInput) (ParseResult, error)
 
 	allParameters := make(map[ParameterKey]Parameter)
 
+	result.Ctx = input.Ctx
 	for _, flag := range opts.Flags {
 		if flag.Short() != "" {
 			if _, exists := shortFlagMap[flag.Short()]; exists {

@@ -155,9 +155,9 @@ func init() {
 	CSetup.Subcommands["remove-project"] = &cli.Subcommand{
 		Description: "Remove a source and all its associated targets from the workspace",
 		Arguments: []cli.Argument{
-			ccommon.SourceArg,
+			ccommon.TargetArg,
 		},
-		AcceptsFlags: []cli.Flag{ccommon.DeleteFlag, ccommon.SourceFlag},
+		AcceptsFlags: []cli.Flag{ccommon.DeleteFlag, ccommon.TargetFlag},
 		Exec: func(ctx context.Context, args []string) error {
 			return handleRemoveProject(ctx)
 		},
