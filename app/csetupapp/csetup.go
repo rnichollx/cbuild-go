@@ -186,8 +186,8 @@ func init() {
 	CSetup.Subcommands["new-target"] = &cli.Subcommand{
 		Description: "Add a new target to the workspace",
 		Arguments: []cli.Argument{
-			ccommon.SourceArg,
 			ccommon.TargetArg,
+			ccommon.SourceArg,
 		},
 		AcceptsFlags: []cli.Flag{
 			ccommon.SourceFlag,
