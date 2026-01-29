@@ -101,6 +101,20 @@ func handleRemoveSource(ctx context.Context) error {
 	return ws.RemoveSource(ctx, sourceName, removeFolder)
 }
 
+func handleTidy(ctx context.Context) error {
+	workspacePath := getWorkspacePath(ctx)
+	dryRunRaw, _ := cli.GetBool(ctx, ccommon.PDryRun)
+	dryRun := dryRunRaw != nil && *dryRunRaw
+
+	ws := &ccommon.WorkspaceContext{}
+	err := ws.Load(ctx, workspacePath)
+	if err != nil {
+		return fmt.Errorf("error loading workspace: %w", err)
+	}
+
+	return ws.TidySources(ctx, dryRun)
+}
+
 func handleRemoveTarget(ctx context.Context) error {
 	workspacePath := getWorkspacePath(ctx)
 	targetVal, _ := cli.GetString(ctx, PTarget)

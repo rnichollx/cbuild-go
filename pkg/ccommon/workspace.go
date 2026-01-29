@@ -1036,3 +1036,36 @@ func (w *WorkspaceContext) AddTarget(ctx context.Context, opts AddTargetOptions)
 
 	return w.Save(ctx)
 }
+
+func (w *WorkspaceContext) TidySources(ctx context.Context, dryRun bool) error {
+	sourcesDir := filepath.Join(w.WorkspacePath, "sources")
+	entries, err := os.ReadDir(sourcesDir)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return fmt.Errorf("failed to read sources directory: %w", err)
+	}
+
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
+		}
+
+		sourceName := entry.Name()
+		if _, ok := w.Config.Sources[sourceName]; !ok {
+			sourcePath := filepath.Join(sourcesDir, sourceName)
+			if dryRun {
+				fmt.Printf("[dry-run] Would delete source folder: %s\n", sourcePath)
+			} else {
+				fmt.Printf("Deleting source folder: %s\n", sourcePath)
+				err := os.RemoveAll(sourcePath)
+				if err != nil {
+					return fmt.Errorf("failed to delete source folder %s: %w", sourcePath, err)
+				}
+			}
+		}
+	}
+
+	return nil
+}

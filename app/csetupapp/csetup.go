@@ -183,6 +183,13 @@ func init() {
 			return handleRemoveProject(ctx)
 		},
 	}
+	CSetup.Subcommands["tidy"] = &cli.Subcommand{
+		Description:  "Delete source folders that are not in the sources list",
+		AcceptsFlags: []cli.Flag{ccommon.DryRunFlag},
+		Exec: func(ctx context.Context, args []string) error {
+			return handleTidy(ctx)
+		},
+	}
 	CSetup.Subcommands["new-target"] = &cli.Subcommand{
 		Description: "Add a new target to the workspace",
 		Arguments: []cli.Argument{
