@@ -1,0 +1,67 @@
+.TH CBUILD 1 "2026-01-28" "" ""
+.SH NAME
+cbuild \- Build tool for cbuild projects
+.SH SYNOPSIS
+.B cbuild
+<\fIsubcommand\fR>
+.SH DESCRIPTION
+Build tool for cbuild projects
+.SH GLOBAL OPTIONS
+.TP
+.B \-w <value>, \-\-workspace <value>
+Path to the workspace directory.
+.TP
+.B \-d, \-\-dry-run
+Show commands without executing them.
+.TP
+.B \-h, \-\-help
+Show this help message.
+.SH SUBCOMMANDS
+.SS build
+Build the project
+
+.B Synopsis:
+cbuild build [target]
+
+.B Options for build:
+.TP
+.B \-c <value>, \-\-config <value>
+Build configuration to use (e.g., Debug, Release), comma separated
+.TP
+.B \-T <value>, \-\-toolchain <value>
+Select toolchain to use.
+.TP
+.B \-t <value>, \-\-target <value>
+Specific target to build/modify.
+.SS build-deps
+Build dependencies for a target
+
+.B Synopsis:
+cbuild build-deps [target]
+
+.B Options for build-deps:
+.TP
+.B \-c <value>, \-\-config <value>
+Build configuration to use (e.g., Debug, Release), comma separated
+.TP
+.B \-T <value>, \-\-toolchain <value>
+Select toolchain to use.
+.TP
+.B \-t <value>, \-\-target <value>
+Specific target to build/modify.
+.SS clean
+Clean build artifacts
+
+.B Synopsis:
+cbuild clean [target]
+
+.B Options for clean:
+.TP
+.B \-c <value>, \-\-config <value>
+Build configuration to use (e.g., Debug, Release), comma separated
+.TP
+.B \-T <value>, \-\-toolchain <value>
+Select toolchain to use.
+.TP
+.B \-t <value>, \-\-target <value>
+Specific target to build/modify.

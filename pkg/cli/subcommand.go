@@ -430,7 +430,7 @@ func (r *Runner) generateManpage(dir string) error {
 				argsSyn += " [" + arg.Name() + "]"
 			}
 		}
-		fmt.Fprintf(w, ".B %s %s\n%s\n\n", r.Name, name, argsSyn)
+		fmt.Fprintf(w, "%s %s%s\n\n", r.Name, name, argsSyn)
 
 		// Subcommand flags
 		if len(sub.AcceptsFlags) > 0 {

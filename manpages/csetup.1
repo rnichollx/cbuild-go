@@ -1,0 +1,247 @@
+.TH CSETUP 1 "2026-01-28" "" ""
+.SH NAME
+csetup \- Workspace setup tool for cbuild
+.SH SYNOPSIS
+.B csetup
+<\fIsubcommand\fR>
+.SH DESCRIPTION
+Workspace setup tool for cbuild
+.SH GLOBAL OPTIONS
+.TP
+.B \-w <value>, \-\-workspace <value>
+Path to the workspace directory.
+.TP
+.B \-h, \-\-help
+Show this help message.
+.SH SUBCOMMANDS
+.SS add-config
+Add a build configuration
+
+.B Synopsis:
+csetup add-config
+
+.B Options for add-config:
+.TP
+.B \-c <value>, \-\-config <value>
+Build configuration to use (e.g., Debug, Release), comma separated
+.TP
+.B \-T <value>, \-\-toolchain <value>
+Select toolchain to use.
+.SS add-dependency
+Add a dependency to a target
+
+.B Synopsis:
+csetup add-dependency <target> <dependency>
+
+.SS declare-git-source
+Add git source information to the workspace without downloading
+
+.B Synopsis:
+csetup declare-git-source <url> [path]
+
+.SS declare-local-source
+Add local source information to the workspace
+
+.B Synopsis:
+csetup declare-local-source <local_path> [path]
+
+.SS detect-toolchains
+Detect system toolchains
+
+.B Synopsis:
+csetup detect-toolchains
+
+.B Options for detect-toolchains:
+.TP
+.B \-\-debug
+Show debug information.
+.SS disable-staging
+Disable staging for a target
+
+.B Synopsis:
+csetup disable-staging [target] [target]
+
+.B Options for disable-staging:
+.TP
+.B \-t <value>, \-\-target <value>
+Specific target to build/modify.
+.SS download
+Download missing sources
+
+.B Synopsis:
+csetup download [source]
+
+.B Options for download:
+.TP
+.B \-\-download-deps
+Download dependencies during clone.
+.TP
+.B \-\-no-setup
+Don't run setup after downloading or cloning.
+.TP
+.B \-\-submodule
+Add as a git submodule instead of cloning.
+.SS drop-files
+Delete local source files without removing them from configuration
+
+.B Synopsis:
+csetup drop-files <source>
+
+.SS enable-staging
+Enable staging for a target
+
+.B Synopsis:
+csetup enable-staging [target] [target]
+
+.B Options for enable-staging:
+.TP
+.B \-t <value>, \-\-target <value>
+Specific target to build/modify.
+.SS get-args
+Get build arguments for a target
+
+.B Synopsis:
+csetup get-args <target> [target]
+
+.B Options for get-args:
+.TP
+.B \-c <value>, \-\-config <value>
+Build configuration to use (e.g., Debug, Release), comma separated
+.TP
+.B \-T <value>, \-\-toolchain <value>
+Select toolchain to use.
+.TP
+.B \-t <value>, \-\-target <value>
+Specific target to build/modify.
+.SS git-clone
+Clone a git repository into the workspace
+
+.B Synopsis:
+csetup git-clone <url> [path]
+
+.B Options for git-clone:
+.TP
+.B \-\-download-deps
+Download dependencies during clone.
+.TP
+.B \-\-submodule
+Add as a git submodule instead of cloning.
+.TP
+.B \-\-no-setup
+Don't run setup after downloading or cloning.
+.SS init
+Initialize a new workspace
+
+.B Synopsis:
+csetup init [path]
+
+.B Options for init:
+.TP
+.B \-\-reinit
+Reinitialize the workspace.
+.SS list-sources
+List all sources in the workspace
+
+.B Synopsis:
+csetup list-sources
+
+.SS load-defaults
+Load default configuration for a source from its csetup.yml
+
+.B Synopsis:
+csetup load-defaults <source>
+
+.SS new-target
+Add a new target to the workspace
+
+.B Synopsis:
+csetup new-target [target] [source]
+
+.B Options for new-target:
+.TP
+.B \-s <value>, \-\-source <value>
+Specific source to modify.
+.TP
+.B \-t <value>, \-\-target <value>
+Specific target to build/modify.
+.TP
+.B \-\-overwrite
+Overwrite target if it exists.
+.TP
+.B \-p <value>, \-\-project-type <value>
+The project type (e.g., CMake).
+.TP
+.B \-\-cmake-package-name <value>
+The CMake package name.
+.SS remove-config
+Remove a build configuration
+
+.B Synopsis:
+csetup remove-config
+
+.B Options for remove-config:
+.TP
+.B \-c <value>, \-\-config <value>
+Build configuration to use (e.g., Debug, Release), comma separated
+.SS remove-dependency
+Remove a dependency from a target
+
+.B Synopsis:
+csetup remove-dependency <target> <dependency>
+
+.SS remove-project
+Remove a source and all its associated targets from the workspace
+
+.B Synopsis:
+csetup remove-project [source]
+
+.B Options for remove-project:
+.TP
+.B \-X, \-\-delete
+Delete files when removing source.
+.TP
+.B \-s <value>, \-\-source <value>
+Specific source to modify.
+.SS remove-source
+Remove a source from the workspace
+
+.B Synopsis:
+csetup remove-source [source]
+
+.B Options for remove-source:
+.TP
+.B \-X, \-\-delete
+Delete files when removing source.
+.TP
+.B \-s <value>, \-\-source <value>
+Specific source to modify.
+.SS remove-target
+Remove a target from the workspace
+
+.B Synopsis:
+csetup remove-target [target]
+
+.B Options for remove-target:
+.TP
+.B \-t <value>, \-\-target <value>
+Specific target to build/modify.
+.SS set-cxx-version
+Set the C++ version for a target or the whole workspace
+
+.B Synopsis:
+csetup set-cxx-version <version> [target]
+
+.B Options for set-cxx-version:
+.TP
+.B \-t <value>, \-\-target <value>
+Specific target to build/modify.
+.SS tidy
+Delete source folders that are not in the sources list
+
+.B Synopsis:
+csetup tidy
+
+.B Options for tidy:
+.TP
+.B \-d, \-\-dry-run
+Show commands without executing them.
