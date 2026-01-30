@@ -121,4 +121,23 @@ cmake_toolchain:
 The `<host_key>` typically follows the format `host-<os>-<arch>` (e.g., `host-linux-x64`).
 
 
+## Assumptions
+
+CBuild/CSetup make some assumptions about the workspace structure and file locations.
+
+First, if you manually override compiler flags in your CMakeLists.txt, don't expect configurations (like DebugASAN) to
+work correctly, or at all.
+
+Second, CSetup expects testing to be configured using 
+[BUILD_TESTING](https://cmake.org/cmake/help/latest/variable/BUILD_TESTING.html) rather than any custom CMake variables,
+and for CTest to be available from the root directory (for running `cbuild test`).
+
+By default, CSetup will configure targets to build against the build tree, rather than the install tree. 
+If you want to change this, you can use `csetup enable-staging <target>` which will configure the target's dependencies
+to build against the _installed_ outputs instead. For some packages, this can be necessary because they don't properly
+set up their exports in the build tree. In general, avoid this if you can, it leads to more resource consumption.
+
+It's worth noting that we do not set CMAKE_INSTALL_PREFIX for doing installation, but instead rely solely on `--prefix`,
+so packages that rely on CMAKE_INSTALL_PREFIX being set at configuration time are not supported.
+
 

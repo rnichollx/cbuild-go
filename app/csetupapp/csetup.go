@@ -153,6 +153,44 @@ func init() {
 			return handleRemoveDependency(ctx)
 		},
 	}
+	CSetup.Subcommands["add-testing-dependency"] = &cli.Subcommand{
+		Description: "Add a testing dependency to a target",
+		Arguments: []cli.Argument{
+			cli.NewStringArgument("target", PTargetReq),
+			cli.NewStringArgument("dependency", PDependency),
+		},
+		Exec: func(ctx context.Context, args []string) error {
+			return handleAddTestingDependency(ctx)
+		},
+	}
+	CSetup.Subcommands["remove-testing-dependency"] = &cli.Subcommand{
+		Description: "Remove a testing dependency from a target",
+		Arguments: []cli.Argument{
+			cli.NewStringArgument("target", PTargetReq),
+			cli.NewStringArgument("dependency", PDependency),
+		},
+		Exec: func(ctx context.Context, args []string) error {
+			return handleRemoveTestingDependency(ctx)
+		},
+	}
+	CSetup.Subcommands["enable-testing"] = &cli.Subcommand{
+		Description: "Enable testing for a target",
+		Arguments: []cli.Argument{
+			cli.NewStringArgument("target", PTargetReq),
+		},
+		Exec: func(ctx context.Context, args []string) error {
+			return handleEnableTesting(ctx)
+		},
+	}
+	CSetup.Subcommands["disable-testing"] = &cli.Subcommand{
+		Description: "Disable testing for a target",
+		Arguments: []cli.Argument{
+			cli.NewStringArgument("target", PTargetReq),
+		},
+		Exec: func(ctx context.Context, args []string) error {
+			return handleDisableTesting(ctx)
+		},
+	}
 	CSetup.Subcommands["remove-source"] = &cli.Subcommand{
 		Description: "Remove a source from the workspace",
 		Arguments: []cli.Argument{

@@ -57,3 +57,37 @@ func handleNewTarget(ctx context.Context) error {
 	fmt.Printf("Added target %s (source: %s) to workspace\n", targetName, *source)
 	return nil
 }
+
+func handleEnableTesting(ctx context.Context) error {
+	workspacePath := getWorkspacePath(ctx)
+	targetVal, _ := cli.GetString(ctx, PTargetReq)
+	target := ""
+	if targetVal != nil {
+		target = *targetVal
+	}
+
+	ws := &ccommon.WorkspaceContext{}
+	err := ws.Load(ctx, workspacePath)
+	if err != nil {
+		return fmt.Errorf("error loading workspace: %w", err)
+	}
+
+	return ws.SetTestingEnabled(ctx, target, true)
+}
+
+func handleDisableTesting(ctx context.Context) error {
+	workspacePath := getWorkspacePath(ctx)
+	targetVal, _ := cli.GetString(ctx, PTargetReq)
+	target := ""
+	if targetVal != nil {
+		target = *targetVal
+	}
+
+	ws := &ccommon.WorkspaceContext{}
+	err := ws.Load(ctx, workspacePath)
+	if err != nil {
+		return fmt.Errorf("error loading workspace: %w", err)
+	}
+
+	return ws.SetTestingEnabled(ctx, target, false)
+}

@@ -30,4 +30,5 @@ type TargetBuildParameters struct {
 	Toolchain string
 	BuildType string
 	DryRun    bool
+	Testing   bool
 }

@@ -174,6 +174,17 @@ func (w *WorkspaceContext) Build(ctx context.Context, bp TargetBuildParameters) 
 		if err != nil {
 			return err
 		}
+
+		if bp.Testing {
+			testingEnabled := true
+			if mod.Config.TestingEnabled != nil {
+				testingEnabled = *mod.Config.TestingEnabled
+			}
+			if !testingEnabled {
+				continue
+			}
+		}
+
 		err = w.buildModule(ctx, mod, name, builtModules, bp)
 		if err != nil {
 			return fmt.Errorf("failed to build module %s: %w", name, err)
@@ -263,6 +274,21 @@ func (w *WorkspaceContext) Exec(ctx context.Context, command string, args []stri
 	return cmd.Run()
 }
 
+func (w *WorkspaceContext) ExecWithOutput(ctx context.Context, command string, args []string, dryRun bool) ([]byte, error) {
+	fmt.Printf("Executing (with output capture): %s", command)
+	for _, arg := range args {
+		fmt.Printf(" %s", arg)
+	}
+	fmt.Println()
+
+	if dryRun {
+		return nil, nil
+	}
+
+	cmd := exec.CommandContext(ctx, command, args...)
+	return cmd.CombinedOutput()
+}
+
 func (w *WorkspaceContext) buildModule(ctx context.Context, mod *TargetContext, modname string, builtModules map[string]bool, bp TargetBuildParameters) error {
 
 	if builtModules[modname] {
@@ -279,6 +305,28 @@ func (w *WorkspaceContext) buildModule(ctx context.Context, mod *TargetContext, 
 		err = w.buildModule(ctx, depMod, targetName, builtModules, bp)
 		if err != nil {
 			return fmt.Errorf("failed to build dependency %s: %w", targetName, err)
+		}
+	}
+
+	if bp.Testing {
+		testingEnabled := true
+		if mod.Config.TestingEnabled != nil {
+			testingEnabled = *mod.Config.TestingEnabled
+		}
+
+		if testingEnabled {
+			for _, dep := range mod.Config.TestingDepends {
+				parts := strings.SplitN(dep, "/", 2)
+				targetName := parts[0]
+				depMod, err := w.GetTarget(ctx, targetName)
+				if err != nil {
+					return err
+				}
+				err = w.buildModule(ctx, depMod, targetName, builtModules, bp)
+				if err != nil {
+					return fmt.Errorf("failed to build testing dependency %s: %w", targetName, err)
+				}
+			}
 		}
 	}
 
@@ -548,7 +596,6 @@ func (w *WorkspaceContext) AddDependency(ctx context.Context, targetName string,
 		return fmt.Errorf("target %s not found in workspace", targetName)
 	}
 
-	// Check if dependency already exists
 	for _, d := range target.Depends {
 		if d == depName {
 			fmt.Printf("Dependency %s already exists for %s\n", depName, targetName)
@@ -557,6 +604,23 @@ func (w *WorkspaceContext) AddDependency(ctx context.Context, targetName string,
 	}
 
 	target.Depends = append(target.Depends, depName)
+	return w.Save(ctx)
+}
+
+func (w *WorkspaceContext) AddTestingDependency(ctx context.Context, targetName string, depName string) error {
+	target, ok := w.Config.Targets[targetName]
+	if !ok {
+		return fmt.Errorf("target %s not found in workspace", targetName)
+	}
+
+	for _, d := range target.TestingDepends {
+		if d == depName {
+			fmt.Printf("Testing dependency %s already exists for %s\n", depName, targetName)
+			return nil
+		}
+	}
+
+	target.TestingDepends = append(target.TestingDepends, depName)
 	return w.Save(ctx)
 }
 
@@ -582,6 +646,31 @@ func (w *WorkspaceContext) RemoveDependency(ctx context.Context, targetName stri
 	}
 
 	target.Depends = newDepends
+	return w.Save(ctx)
+}
+
+func (w *WorkspaceContext) RemoveTestingDependency(ctx context.Context, targetName string, depName string) error {
+	target, ok := w.Config.Targets[targetName]
+	if !ok {
+		return fmt.Errorf("target %s not found in workspace", targetName)
+	}
+
+	newDepends := []string{}
+	found := false
+	for _, d := range target.TestingDepends {
+		if d == depName {
+			found = true
+			continue
+		}
+		newDepends = append(newDepends, d)
+	}
+
+	if !found {
+		fmt.Printf("Testing dependency %s not found for %s\n", depName, targetName)
+		return nil
+	}
+
+	target.TestingDepends = newDepends
 	return w.Save(ctx)
 }
 
@@ -727,6 +816,27 @@ func (w *WorkspaceContext) SetStaging(ctx context.Context, targetName string, en
 		fmt.Printf("Enabled staging for %s\n", targetName)
 	} else {
 		fmt.Printf("Disabled staging for %s\n", targetName)
+	}
+	return nil
+}
+
+func (w *WorkspaceContext) SetTestingEnabled(ctx context.Context, targetName string, enabled bool) error {
+	target, ok := w.Config.Targets[targetName]
+	if !ok {
+		return fmt.Errorf("target %s not found in workspace", targetName)
+	}
+
+	target.TestingEnabled = &enabled
+
+	err := w.Save(ctx)
+	if err != nil {
+		return err
+	}
+
+	if enabled {
+		fmt.Printf("Enabled testing for %s\n", targetName)
+	} else {
+		fmt.Printf("Disabled testing for %s\n", targetName)
 	}
 	return nil
 }
@@ -1068,4 +1178,62 @@ func (w *WorkspaceContext) TidySources(ctx context.Context, dryRun bool) error {
 	}
 
 	return nil
+}
+
+type TestResult struct {
+	Target    string
+	Toolchain string
+	Config    string
+	Passed    bool
+	Output    []byte
+	Error     error
+}
+
+func (w *WorkspaceContext) RunTests(ctx context.Context, bp TargetBuildParameters, targets []string) ([]TestResult, error) {
+	results := []TestResult{}
+
+	for _, name := range targets {
+		mod, err := w.GetTarget(ctx, name)
+		if err != nil {
+			return nil, err
+		}
+
+		testingEnabled := true
+		if mod.Config.TestingEnabled != nil {
+			testingEnabled = *mod.Config.TestingEnabled
+		}
+
+		if !testingEnabled {
+			continue
+		}
+
+		buildPath, err := mod.CMakeBuildPath(ctx, w, bp)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get build path for %s: %w", name, err)
+		}
+		buildPath, err = filepath.Abs(buildPath)
+		if err != nil {
+			return nil, err
+		}
+
+		ctestBinary := "ctest"
+		// Assuming ctest is in the same directory as cmake if CMakeBinary is set
+		if w.Config.CMakeBinary != nil {
+			ctestBinary = filepath.Join(filepath.Dir(*w.Config.CMakeBinary), "ctest")
+		}
+
+		args := []string{"--test-dir", buildPath, "-C", bp.BuildType, "--output-on-failure"}
+		output, err := w.ExecWithOutput(ctx, ctestBinary, args, bp.DryRun)
+
+		results = append(results, TestResult{
+			Target:    name,
+			Toolchain: bp.Toolchain,
+			Config:    bp.BuildType,
+			Passed:    err == nil,
+			Output:    output,
+			Error:     err,
+		})
+	}
+
+	return results, nil
 }

@@ -28,8 +28,14 @@ type TargetConfiguration struct {
 	/// A list of build targets that this target depends on
 	Depends []string `yaml:"depends"`
 
+	/// A list of build targets that this target depends on for testing
+	TestingDepends []string `yaml:"testing_dependencies,omitempty"`
+
 	/// The project type, such as CMake.
 	ProjectType string `yaml:"project_type"`
+
+	/// If testing is enabled for this target
+	TestingEnabled *bool `yaml:"testing_enabled,omitempty"`
 
 	/// The CMake moniker used for find_package, if it's different from the target name
 	CMakePackageName string `yaml:"cmake_package_name,omitempty"`
@@ -110,6 +116,16 @@ func (t *TargetContext) CMakeConfigureArgs(ctx context.Context, workspace *Works
 
 	if cxxStandard != "" {
 		args = append(args, fmt.Sprintf("-DCMAKE_CXX_STANDARD=%s", cxxStandard))
+	}
+
+	testingEnabled := true
+	if t.Config.TestingEnabled != nil {
+		testingEnabled = *t.Config.TestingEnabled
+	}
+	if testingEnabled {
+		args = append(args, "-DBUILD_TESTING=ON")
+	} else {
+		args = append(args, "-DBUILD_TESTING=OFF")
 	}
 
 	toolchainFile, err := workspace.ToolchainFilePath(ctx, &t.Config, bp)
