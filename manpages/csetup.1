@@ -1,4 +1,4 @@
-.TH CSETUP 1 "2026-01-28" "" ""
+.TH CSETUP 1 "2026-01-29" "" ""
 .SH NAME
 csetup \- Workspace setup tool for cbuild
 .SH SYNOPSIS
@@ -33,6 +33,12 @@ Add a dependency to a target
 .B Synopsis:
 csetup add-dependency <target> <dependency>
 
+.SS add-testing-dependency
+Add a testing dependency to a target
+
+.B Synopsis:
+csetup add-testing-dependency <target> <dependency>
+
 .SS declare-git-source
 Add git source information to the workspace without downloading
 
@@ -65,6 +71,12 @@ csetup disable-staging [target] [target]
 .TP
 .B \-t <value>, \-\-target <value>
 Specific target to build/modify.
+.SS disable-testing
+Disable testing for a target
+
+.B Synopsis:
+csetup disable-testing <target>
+
 .SS download
 Download missing sources
 
@@ -97,6 +109,12 @@ csetup enable-staging [target] [target]
 .TP
 .B \-t <value>, \-\-target <value>
 Specific target to build/modify.
+.SS enable-testing
+Enable testing for a target
+
+.B Synopsis:
+csetup enable-testing <target>
+
 .SS get-args
 Get build arguments for a target
 
@@ -225,6 +243,12 @@ csetup remove-target [target]
 .TP
 .B \-t <value>, \-\-target <value>
 Specific target to build/modify.
+.SS remove-testing-dependency
+Remove a testing dependency from a target
+
+.B Synopsis:
+csetup remove-testing-dependency <target> <dependency>
+
 .SS set-cxx-version
 Set the C++ version for a target or the whole workspace
 

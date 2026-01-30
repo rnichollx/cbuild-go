@@ -1,4 +1,4 @@
-.TH CBUILD 1 "2026-01-28" "" ""
+.TH CBUILD 1 "2026-01-29" "" ""
 .SH NAME
 cbuild \- Build tool for cbuild projects
 .SH SYNOPSIS
@@ -56,6 +56,22 @@ Clean build artifacts
 cbuild clean [target]
 
 .B Options for clean:
+.TP
+.B \-c <value>, \-\-config <value>
+Build configuration to use (e.g., Debug, Release), comma separated
+.TP
+.B \-T <value>, \-\-toolchain <value>
+Select toolchain to use.
+.TP
+.B \-t <value>, \-\-target <value>
+Specific target to build/modify.
+.SS test
+Build and run tests
+
+.B Synopsis:
+cbuild test [target]
+
+.B Options for test:
 .TP
 .B \-c <value>, \-\-config <value>
 Build configuration to use (e.g., Debug, Release), comma separated
