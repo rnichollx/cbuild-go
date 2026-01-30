@@ -1185,6 +1185,7 @@ type TestResult struct {
 	Toolchain string
 	Config    string
 	Passed    bool
+	NoTests   bool
 	Output    []byte
 	Error     error
 }
@@ -1225,6 +1226,16 @@ func (w *WorkspaceContext) RunTests(ctx context.Context, bp TargetBuildParameter
 		args := []string{"--test-dir", buildPath, "-C", bp.BuildType, "--output-on-failure"}
 		output, err := w.ExecWithOutput(ctx, ctestBinary, args, bp.DryRun)
 
+		noTests := false
+		ctestFile := filepath.Join(buildPath, "CTestTestfile.cmake")
+		if _, statErr := os.Stat(ctestFile); os.IsNotExist(statErr) {
+			noTests = true
+			err = nil
+		} else if err != nil && strings.Contains(string(output), "No tests were found!!!") {
+			noTests = true
+			err = nil
+		}
+
 		if len(output) > 0 {
 			fmt.Printf("%s\n", string(output))
 		}
@@ -1234,6 +1245,7 @@ func (w *WorkspaceContext) RunTests(ctx context.Context, bp TargetBuildParameter
 			Toolchain: bp.Toolchain,
 			Config:    bp.BuildType,
 			Passed:    err == nil,
+			NoTests:   noTests,
 			Output:    output,
 			Error:     err,
 		})

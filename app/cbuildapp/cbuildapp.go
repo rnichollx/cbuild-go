@@ -362,7 +362,9 @@ func runTest(ctx context.Context, args []string) error {
 
 		for _, res := range allResults {
 			status := "PASS"
-			if !res.Passed {
+			if res.NoTests {
+				status = "NO_TESTS"
+			} else if !res.Passed {
 				status = "FAIL"
 			}
 			reportName := fmt.Sprintf("report-%s-%s-%s.log", res.Target, res.Toolchain, res.Config)
@@ -375,7 +377,36 @@ func runTest(ctx context.Context, args []string) error {
 			}
 		}
 
-		fmt.Printf("Reports generated in %s\n", reportDir)
+		if len(allResults) > 0 {
+			fmt.Println()
+			fmt.Println("Test Summary:")
+			fmt.Printf("%-20s %-20s %-15s %-10s\n", "Target", "Toolchain", "Config", "Status")
+			fmt.Println(strings.Repeat("-", 68))
+			passedCount := 0
+			noTestsCount := 0
+			for _, res := range allResults {
+				status := "PASS"
+				if res.NoTests {
+					status = "NO_TESTS"
+					noTestsCount++
+					passedCount++
+				} else if !res.Passed {
+					status = "FAIL"
+				} else {
+					passedCount++
+				}
+				fmt.Printf("%-20s %-20s %-15s %-10s\n", res.Target, res.Toolchain, res.Config, status)
+			}
+			fmt.Println(strings.Repeat("-", 68))
+			if noTestsCount > 0 {
+				fmt.Printf("Result: %d/%d passed (%d with no tests)\n", passedCount, len(allResults), noTestsCount)
+			} else {
+				fmt.Printf("Result: %d/%d passed\n", passedCount, len(allResults))
+			}
+			fmt.Println()
+		}
+
+		fmt.Printf("Detailed test reports saved in %s\n", reportDir)
 	}
 
 	return nil
