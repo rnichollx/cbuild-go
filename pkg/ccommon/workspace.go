@@ -1225,6 +1225,10 @@ func (w *WorkspaceContext) RunTests(ctx context.Context, bp TargetBuildParameter
 		args := []string{"--test-dir", buildPath, "-C", bp.BuildType, "--output-on-failure"}
 		output, err := w.ExecWithOutput(ctx, ctestBinary, args, bp.DryRun)
 
+		if len(output) > 0 {
+			fmt.Printf("%s\n", string(output))
+		}
+
 		results = append(results, TestResult{
 			Target:    name,
 			Toolchain: bp.Toolchain,
