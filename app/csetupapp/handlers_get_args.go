@@ -10,7 +10,7 @@ import (
 
 func handleGetArgs(ctx context.Context) error {
 	workspacePath := getWorkspacePath(ctx)
-	targetNameVal, _ := cli.GetString(ctx, PTargetReq)
+	targetNameVal, _ := cli.GetString(ctx, PTarget)
 	targetName := ""
 	if targetNameVal != nil {
 		targetName = *targetNameVal

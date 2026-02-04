@@ -9,7 +9,7 @@ import (
 
 func handleAddDependency(ctx context.Context) error {
 	workspacePath := getWorkspacePath(ctx)
-	targetVal, _ := cli.GetString(ctx, PTargetReq)
+	targetVal, _ := cli.GetString(ctx, PTarget)
 	target := ""
 	if targetVal != nil {
 		target = *targetVal
@@ -37,7 +37,7 @@ func handleAddDependency(ctx context.Context) error {
 
 func handleAddTestingDependency(ctx context.Context) error {
 	workspacePath := getWorkspacePath(ctx)
-	targetVal, _ := cli.GetString(ctx, PTargetReq)
+	targetVal, _ := cli.GetString(ctx, PTarget)
 	target := ""
 	if targetVal != nil {
 		target = *targetVal
@@ -65,7 +65,7 @@ func handleAddTestingDependency(ctx context.Context) error {
 
 func handleRemoveDependency(ctx context.Context) error {
 	workspacePath := getWorkspacePath(ctx)
-	targetVal, _ := cli.GetString(ctx, PTargetReq)
+	targetVal, _ := cli.GetString(ctx, PTarget)
 	target := ""
 	if targetVal != nil {
 		target = *targetVal
@@ -93,7 +93,7 @@ func handleRemoveDependency(ctx context.Context) error {
 
 func handleRemoveTestingDependency(ctx context.Context) error {
 	workspacePath := getWorkspacePath(ctx)
-	targetVal, _ := cli.GetString(ctx, PTargetReq)
+	targetVal, _ := cli.GetString(ctx, PTarget)
 	target := ""
 	if targetVal != nil {
 		target = *targetVal

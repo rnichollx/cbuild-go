@@ -12,8 +12,8 @@ func TestParsingStyles(t *testing.T) {
 		// Wait, the comment says: ParsingStylePOSIX treats single dash as arg+value,
 		// e.g. -abc is equivalent to `-a=bc` rather than `-a -b -c`
 
-		pa := NewParameter("a", ParameterTypeBool, nil, "", false)
-		pb := NewParameter("b", ParameterTypeString, nil, "", false)
+		pa := NewParameter("a", ParameterTypeBool, nil, "")
+		pb := NewParameter("b", ParameterTypeString, nil, "")
 
 		flags := []Flag{
 			NewBoolFlag("a", "", pa),
@@ -78,7 +78,7 @@ func TestParsingStyles(t *testing.T) {
 
 	t.Run("ParsingStyleShort", func(t *testing.T) {
 		// ParsingStyleShort: long flags are passed like -foo instead of --foo
-		pFoo := NewParameter("foo", ParameterTypeString, nil, "", false)
+		pFoo := NewParameter("foo", ParameterTypeString, nil, "")
 		flags := []Flag{
 			NewStringFlag("", "foo", pFoo),
 		}
@@ -99,7 +99,7 @@ func TestParsingStyles(t *testing.T) {
 
 	t.Run("ParsingStyleWindows", func(t *testing.T) {
 		// ParsingStyleWindows: /option:value
-		pFoo := NewParameter("foo", ParameterTypeString, nil, "", false)
+		pFoo := NewParameter("foo", ParameterTypeString, nil, "")
 		flags := []Flag{
 			NewStringFlag("", "foo", pFoo),
 		}
@@ -120,8 +120,8 @@ func TestParsingStyles(t *testing.T) {
 
 	t.Run("ParsingStyleShortWindows", func(t *testing.T) {
 		// ParsingStyleShortWindows: -foo and --% terminator
-		pFoo := NewParameter("foo", ParameterTypeString, nil, "", false)
-		pArg := NewParameter("arg", ParameterTypeString, nil, "", false)
+		pFoo := NewParameter("foo", ParameterTypeString, nil, "")
+		pArg := NewParameter("arg", ParameterTypeString, nil, "")
 		flags := []Flag{
 			NewStringFlag("", "foo", pFoo),
 		}

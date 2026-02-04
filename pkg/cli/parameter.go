@@ -37,7 +37,6 @@ type Parameter interface {
 	Default() any
 	Type() ParameterType
 	Description() string
-	Required() bool
 }
 
 func GetBool(ctx context.Context, parm Parameter) (*bool, error) {

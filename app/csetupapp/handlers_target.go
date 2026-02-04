@@ -60,7 +60,7 @@ func handleNewTarget(ctx context.Context) error {
 
 func handleEnableTesting(ctx context.Context) error {
 	workspacePath := getWorkspacePath(ctx)
-	targetVal, _ := cli.GetString(ctx, PTargetReq)
+	targetVal, _ := cli.GetString(ctx, PTarget)
 	target := ""
 	if targetVal != nil {
 		target = *targetVal
@@ -77,7 +77,7 @@ func handleEnableTesting(ctx context.Context) error {
 
 func handleDisableTesting(ctx context.Context) error {
 	workspacePath := getWorkspacePath(ctx)
-	targetVal, _ := cli.GetString(ctx, PTargetReq)
+	targetVal, _ := cli.GetString(ctx, PTarget)
 	target := ""
 	if targetVal != nil {
 		target = *targetVal

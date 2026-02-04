@@ -8,7 +8,7 @@ import (
 
 func TestParsingLists(t *testing.T) {
 	t.Run("RPNX style list specifier", func(t *testing.T) {
-		pList := NewParameter("list", ParameterTypeStringList, nil, "", false)
+		pList := NewParameter("list", ParameterTypeStringList, nil, "")
 		flags := []Flag{
 			NewStringFlag("l", "list", pList),
 		}
@@ -29,7 +29,7 @@ func TestParsingLists(t *testing.T) {
 	})
 
 	t.Run("Greedy list flag", func(t *testing.T) {
-		pList := NewParameter("list", ParameterTypeStringList, nil, "", false)
+		pList := NewParameter("list", ParameterTypeStringList, nil, "")
 		flags := []Flag{
 			&baseFlag{
 				short:     "l",
@@ -49,7 +49,7 @@ func TestParsingLists(t *testing.T) {
 		}
 
 		// Try with valid args after greedy
-		pOther := NewParameter("other", ParameterTypeBool, nil, "", false)
+		pOther := NewParameter("other", ParameterTypeBool, nil, "")
 		flags = append(flags, NewBoolFlag("o", "other", pOther))
 
 		ctx, _, err = ParseFlags(ctx, ParseOptions{
@@ -72,7 +72,7 @@ func TestParsingLists(t *testing.T) {
 	})
 
 	t.Run("Argument list with separator", func(t *testing.T) {
-		pList := NewParameter("list", ParameterTypeStringList, nil, "", false)
+		pList := NewParameter("list", ParameterTypeStringList, nil, "")
 		sep := ","
 		args := []Argument{
 			&baseArgument{

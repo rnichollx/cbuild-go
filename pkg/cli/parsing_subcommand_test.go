@@ -7,8 +7,8 @@ import (
 )
 
 func TestSubcommands(t *testing.T) {
-	pSub := NewParameter("sub", ParameterTypeBool, nil, "sub flag", false)
-	pArg := NewParameter("arg", ParameterTypeString, nil, "arg 1", false)
+	pSub := NewParameter("sub", ParameterTypeBool, nil, "sub flag")
+	pArg := NewParameter("arg", ParameterTypeString, nil, "arg 1")
 
 	opts := ParseOptions{
 		Subcommands: map[string]SubcommandParseOptions{
@@ -51,8 +51,8 @@ func TestSubcommands(t *testing.T) {
 }
 
 func TestNestedSubcommands(t *testing.T) {
-	p1 := NewParameter("p1", ParameterTypeBool, nil, "", false)
-	p2 := NewParameter("p2", ParameterTypeBool, nil, "", false)
+	p1 := NewParameter("p1", ParameterTypeBool, nil, "")
+	p2 := NewParameter("p2", ParameterTypeBool, nil, "")
 
 	opts := ParseOptions{
 		Subcommands: map[string]SubcommandParseOptions{
@@ -130,8 +130,8 @@ func TestStopParsing(t *testing.T) {
 }
 
 func TestSubcommandRestriction(t *testing.T) {
-	pArg1 := NewParameter("arg1", ParameterTypeString, nil, "", false)
-	pArg2 := NewParameter("arg2", ParameterTypeString, nil, "", false)
+	pArg1 := NewParameter("arg1", ParameterTypeString, nil, "")
+	pArg2 := NewParameter("arg2", ParameterTypeString, nil, "")
 	opts := ParseOptions{
 		Arguments: []Argument{
 			NewStringArgument("arg1", pArg1),

@@ -6,10 +6,10 @@ import (
 )
 
 func TestParseFlags(t *testing.T) {
-	pa := NewParameter("flag-a", ParameterTypeBool, nil, "", false)
-	pb := NewParameter("flag-b", ParameterTypeBool, nil, "", false)
-	pc := NewParameter("flag-c", ParameterTypeString, nil, "", false)
-	pv := NewParameter("verbose-key", ParameterTypeString, nil, "", false)
+	pa := NewParameter("flag-a", ParameterTypeBool, nil, "")
+	pb := NewParameter("flag-b", ParameterTypeBool, nil, "")
+	pc := NewParameter("flag-c", ParameterTypeString, nil, "")
+	pv := NewParameter("verbose-key", ParameterTypeString, nil, "")
 
 	flags := []Flag{
 		NewBoolFlag("a", "", pa),
@@ -64,9 +64,9 @@ func TestParseFlags(t *testing.T) {
 		ctx := context.Background()
 		args := []string{"-a", "pos1", "--", "-b", "pos2"}
 		// Define arguments for opts to allow positional values
-		p1 := NewParameter("pos1", ParameterTypeString, nil, "", false)
-		p2 := NewParameter("pos2", ParameterTypeString, nil, "", false)
-		p3 := NewParameter("pos3", ParameterTypeString, nil, "", false)
+		p1 := NewParameter("pos1", ParameterTypeString, nil, "")
+		p2 := NewParameter("pos2", ParameterTypeString, nil, "")
+		p3 := NewParameter("pos3", ParameterTypeString, nil, "")
 		ctx, nonFlagArgs, err := ParseFlags(ctx, ParseOptions{
 			Flags: flags,
 			Arguments: []Argument{
@@ -117,8 +117,8 @@ func TestParseFlags(t *testing.T) {
 	t.Run("Default behavior - double dash removal", func(t *testing.T) {
 		ctx := context.Background()
 		args := []string{"--verbose", "high", "--", "pos1", "-a"}
-		p1 := NewParameter("p1", ParameterTypeString, nil, "", false)
-		p2 := NewParameter("p2", ParameterTypeString, nil, "", false)
+		p1 := NewParameter("p1", ParameterTypeString, nil, "")
+		p2 := NewParameter("p2", ParameterTypeString, nil, "")
 		ctx, nonFlagArgs, err := ParseFlags(ctx, ParseOptions{
 			Flags: flags,
 			Arguments: []Argument{

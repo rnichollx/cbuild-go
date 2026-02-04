@@ -6,7 +6,7 @@ import (
 )
 
 func TestShortFlagValues(t *testing.T) {
-	pd := NewParameter("D", ParameterTypeString, nil, "", false)
+	pd := NewParameter("D", ParameterTypeString, nil, "")
 	flags := []Flag{
 		NewStringFlag("D", "", pd),
 	}

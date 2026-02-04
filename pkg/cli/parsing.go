@@ -31,10 +31,11 @@ type ParseOptions struct {
 	/// StrictOrderingArgs is false
 	StrictOrderingArgs bool
 
-	Style       ParsingStyle
-	Subcommands map[string]SubcommandParseOptions
-	Flags       []Flag
-	Arguments   []Argument
+	Style          ParsingStyle
+	Subcommands    map[string]SubcommandParseOptions
+	Flags          []Flag
+	Arguments      []Argument
+	RequiredParams []Parameter
 }
 
 type SubcommandParseOptions struct {
@@ -546,6 +547,7 @@ func ParseFlagsAndArgs(opts ParseOptions, input ParseInput) (ParseResult, error)
 						opts.Subcommands = subcmd.ParseOptions.Subcommands
 						opts.Style = subcmd.ParseOptions.Style
 						opts.StrictOrderingArgs = subcmd.ParseOptions.StrictOrderingArgs
+						opts.RequiredParams = subcmd.ParseOptions.RequiredParams
 						seenParameters = make(map[ParameterKey]bool)
 						continue
 					}
@@ -619,10 +621,15 @@ func ParseFlagsAndArgs(opts ParseOptions, input ParseInput) (ParseResult, error)
 
 	}
 
-	for key, parm := range allParameters {
-		_, have := seenParameters[key]
-		//fmt.Printf("Checking param %v", parm)
-		if parm.Required() && !have {
+	for _, param := range opts.RequiredParams {
+		if param == nil {
+			return result, fmt.Errorf("required parameter cannot be nil")
+		}
+		key := param.Key()
+		if _, ok := allParameters[key]; !ok {
+			return result, fmt.Errorf("required parameter %q is not defined in flags or arguments", key)
+		}
+		if _, have := seenParameters[key]; !have {
 			return result, fmt.Errorf("missing value for required parameter %q", key)
 		}
 	}

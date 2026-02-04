@@ -17,7 +17,7 @@ func handleSetCXXVersion(ctx context.Context) error {
 	if version == nil {
 		return fmt.Errorf("no CXX version provided")
 	}
-	target, err := cli.GetString(ctx, PTargetReq)
+	target, err := cli.GetString(ctx, PTarget)
 	if err != nil {
 		return fmt.Errorf("getString: %w", err)
 	}
@@ -66,13 +66,10 @@ func handleDisableStaging(ctx context.Context) error {
 
 func handleAddConfig(ctx context.Context) error {
 	workspacePath := getWorkspacePath(ctx)
-	configNameVal, _ := cli.GetStringList(ctx, ccommon.PConfigRequired)
+	configNameVal, _ := cli.GetStringList(ctx, ccommon.PConfig)
 	configName := ""
 	if configNameVal != nil && len(*configNameVal) > 0 {
 		configName = (*configNameVal)[0]
-	}
-	if configName == "" {
-		return fmt.Errorf("config name is required (use -c or --config)")
 	}
 
 	ws := &ccommon.WorkspaceContext{}

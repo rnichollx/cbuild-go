@@ -48,7 +48,8 @@ func init() {
 		Arguments: []cli.Argument{
 			ccommon.TargetArg,
 		},
-		Flags: []cli.Flag{ccommon.ConfigFlag, ccommon.ToolchainFlag, ccommon.TargetFlag},
+		RequiredParams: []cli.Parameter{ccommon.PTarget},
+		Flags:          []cli.Flag{ccommon.ConfigFlag, ccommon.ToolchainFlag, ccommon.TargetFlag},
 		Exec: func(ctx context.Context, args []string) error {
 			targetNameVal, _ := cli.GetString(ctx, ccommon.PTarget)
 			if targetNameVal == nil || *targetNameVal == "" {

@@ -62,14 +62,12 @@ var CSetup = &cli.Runner{
 }
 
 var (
-	PPath       = cli.NewParameter("path", cli.ParameterTypePath, nil, "path to the workspace or source", false)
-	PUrl        = cli.NewParameter("url", cli.ParameterTypeURI, nil, "URL of the repository", true)
-	PLocalPath  = cli.NewParameter("local_path", cli.ParameterTypePath, nil, "path to the local source", true)
-	PSource     = cli.NewParameter("source", cli.ParameterTypeString, nil, "name of the source", false)
-	PSourceReq  = cli.NewParameter("source", cli.ParameterTypeString, nil, "name of the source", true)
-	PDependency = cli.NewParameter("dependency", cli.ParameterTypeString, nil, "name of the dependency", true)
-	PTarget     = cli.NewParameter("target", cli.ParameterTypeString, nil, "Name of the build target.", false)
-	PTargetReq  = cli.NewParameter("target", cli.ParameterTypeString, nil, "name of the target", true)
+	PPath       = cli.NewParameter("path", cli.ParameterTypePath, nil, "path to the workspace or source")
+	PUrl        = cli.NewParameter("url", cli.ParameterTypeURI, nil, "URL of the repository")
+	PLocalPath  = cli.NewParameter("local_path", cli.ParameterTypePath, nil, "path to the local source")
+	PSource     = cli.NewParameter("source", cli.ParameterTypeString, nil, "name of the source")
+	PDependency = cli.NewParameter("dependency", cli.ParameterTypeString, nil, "name of the dependency")
+	PTarget     = cli.NewParameter("target", cli.ParameterTypeString, nil, "Name of the build target.")
 )
 
 func init() {
@@ -78,7 +76,8 @@ func init() {
 		Arguments: []cli.Argument{
 			cli.NewStringArgument("path", PPath),
 		},
-		Flags: []cli.Flag{ccommon.ReinitFlag},
+		RequiredParams: []cli.Parameter{PPath},
+		Flags:          []cli.Flag{ccommon.ReinitFlag},
 		Exec: func(ctx context.Context, args []string) error {
 			return handleInit(ctx)
 		},
@@ -99,7 +98,8 @@ func init() {
 			cli.NewStringArgument("url", PUrl),
 			cli.NewStringArgument("path", PPath),
 		},
-		Flags: []cli.Flag{ccommon.DownloadDepsFlag, ccommon.SubmoduleFlag, ccommon.NoSetupFlag},
+		RequiredParams: []cli.Parameter{PUrl},
+		Flags:          []cli.Flag{ccommon.DownloadDepsFlag, ccommon.SubmoduleFlag, ccommon.NoSetupFlag},
 		Exec: func(ctx context.Context, args []string) error {
 			return handleGitClone(ctx)
 		},
@@ -110,6 +110,7 @@ func init() {
 			cli.NewStringArgument("url", PUrl),
 			cli.NewStringArgument("path", PPath),
 		},
+		RequiredParams: []cli.Parameter{PUrl},
 		Exec: func(ctx context.Context, args []string) error {
 			return handleDeclareGitSource(ctx)
 		},
@@ -120,6 +121,7 @@ func init() {
 			cli.NewStringArgument("local_path", PLocalPath),
 			cli.NewStringArgument("path", PPath),
 		},
+		RequiredParams: []cli.Parameter{PLocalPath},
 		Exec: func(ctx context.Context, args []string) error {
 			return handleDeclareLocalSource(ctx)
 		},
@@ -137,8 +139,9 @@ func init() {
 	CSetup.Subcommands["load-defaults"] = &cli.Subcommand{
 		Description: "Load default configuration for a source from its csetup.yml",
 		Arguments: []cli.Argument{
-			cli.NewStringArgument("source", PSourceReq),
+			cli.NewStringArgument("source", PSource),
 		},
+		RequiredParams: []cli.Parameter{PSource},
 		Exec: func(ctx context.Context, args []string) error {
 			return handleLoadDefaults(ctx)
 		},
@@ -146,9 +149,10 @@ func init() {
 	CSetup.Subcommands["add-dependency"] = &cli.Subcommand{
 		Description: "Add a dependency to a target",
 		Arguments: []cli.Argument{
-			cli.NewStringArgument("target", PTargetReq),
+			cli.NewStringArgument("target", PTarget),
 			cli.NewStringArgument("dependency", PDependency),
 		},
+		RequiredParams: []cli.Parameter{PTarget, PDependency},
 		Exec: func(ctx context.Context, args []string) error {
 			return handleAddDependency(ctx)
 		},
@@ -156,9 +160,10 @@ func init() {
 	CSetup.Subcommands["remove-dependency"] = &cli.Subcommand{
 		Description: "Remove a dependency from a target",
 		Arguments: []cli.Argument{
-			cli.NewStringArgument("target", PTargetReq),
+			cli.NewStringArgument("target", PTarget),
 			cli.NewStringArgument("dependency", PDependency),
 		},
+		RequiredParams: []cli.Parameter{PTarget, PDependency},
 		Exec: func(ctx context.Context, args []string) error {
 			return handleRemoveDependency(ctx)
 		},
@@ -166,9 +171,10 @@ func init() {
 	CSetup.Subcommands["add-testing-dependency"] = &cli.Subcommand{
 		Description: "Add a testing dependency to a target",
 		Arguments: []cli.Argument{
-			cli.NewStringArgument("target", PTargetReq),
+			cli.NewStringArgument("target", PTarget),
 			cli.NewStringArgument("dependency", PDependency),
 		},
+		RequiredParams: []cli.Parameter{PTarget, PDependency},
 		Exec: func(ctx context.Context, args []string) error {
 			return handleAddTestingDependency(ctx)
 		},
@@ -176,9 +182,10 @@ func init() {
 	CSetup.Subcommands["remove-testing-dependency"] = &cli.Subcommand{
 		Description: "Remove a testing dependency from a target",
 		Arguments: []cli.Argument{
-			cli.NewStringArgument("target", PTargetReq),
+			cli.NewStringArgument("target", PTarget),
 			cli.NewStringArgument("dependency", PDependency),
 		},
+		RequiredParams: []cli.Parameter{PTarget, PDependency},
 		Exec: func(ctx context.Context, args []string) error {
 			return handleRemoveTestingDependency(ctx)
 		},
@@ -186,8 +193,9 @@ func init() {
 	CSetup.Subcommands["enable-testing"] = &cli.Subcommand{
 		Description: "Enable testing for a target",
 		Arguments: []cli.Argument{
-			cli.NewStringArgument("target", PTargetReq),
+			cli.NewStringArgument("target", PTarget),
 		},
+		RequiredParams: []cli.Parameter{PTarget},
 		Exec: func(ctx context.Context, args []string) error {
 			return handleEnableTesting(ctx)
 		},
@@ -195,8 +203,9 @@ func init() {
 	CSetup.Subcommands["disable-testing"] = &cli.Subcommand{
 		Description: "Disable testing for a target",
 		Arguments: []cli.Argument{
-			cli.NewStringArgument("target", PTargetReq),
+			cli.NewStringArgument("target", PTarget),
 		},
+		RequiredParams: []cli.Parameter{PTarget},
 		Exec: func(ctx context.Context, args []string) error {
 			return handleDisableTesting(ctx)
 		},
@@ -206,7 +215,8 @@ func init() {
 		Arguments: []cli.Argument{
 			ccommon.SourceArg,
 		},
-		Flags: []cli.Flag{ccommon.DeleteFlag, ccommon.SourceFlag},
+		RequiredParams: []cli.Parameter{ccommon.PSource},
+		Flags:          []cli.Flag{ccommon.DeleteFlag, ccommon.SourceFlag},
 		Exec: func(ctx context.Context, args []string) error {
 			return handleRemoveSource(ctx)
 		},
@@ -216,7 +226,8 @@ func init() {
 		Arguments: []cli.Argument{
 			ccommon.TargetArg,
 		},
-		Flags: []cli.Flag{ccommon.TargetFlag},
+		RequiredParams: []cli.Parameter{ccommon.PTarget},
+		Flags:          []cli.Flag{ccommon.TargetFlag},
 		Exec: func(ctx context.Context, args []string) error {
 			return handleRemoveTarget(ctx)
 		},
@@ -226,7 +237,8 @@ func init() {
 		Arguments: []cli.Argument{
 			ccommon.SourceArg,
 		},
-		Flags: []cli.Flag{ccommon.DeleteFlag, ccommon.SourceFlag},
+		RequiredParams: []cli.Parameter{ccommon.PSource},
+		Flags:          []cli.Flag{ccommon.DeleteFlag, ccommon.SourceFlag},
 		Exec: func(ctx context.Context, args []string) error {
 			return handleRemoveProject(ctx)
 		},
@@ -244,6 +256,7 @@ func init() {
 			ccommon.TargetArg,
 			ccommon.SourceArg,
 		},
+		RequiredParams: []cli.Parameter{ccommon.PSource},
 		Flags: []cli.Flag{
 			ccommon.SourceFlag,
 			ccommon.TargetFlag,
@@ -261,7 +274,8 @@ func init() {
 			ccommon.CxxVersionArg,
 			ccommon.TargetArg,
 		},
-		Flags: []cli.Flag{ccommon.TargetFlag},
+		RequiredParams: []cli.Parameter{ccommon.PCxxVersion},
+		Flags:          []cli.Flag{ccommon.TargetFlag},
 		Exec: func(ctx context.Context, args []string) error {
 			return handleSetCXXVersion(ctx)
 		},
@@ -272,7 +286,8 @@ func init() {
 			cli.NewStringArgument("target", PTarget),
 			ccommon.TargetArg,
 		},
-		Flags: []cli.Flag{ccommon.TargetFlag},
+		RequiredParams: []cli.Parameter{ccommon.PTarget},
+		Flags:          []cli.Flag{ccommon.TargetFlag},
 		Exec: func(ctx context.Context, args []string) error {
 			return handleEnableStaging(ctx)
 		},
@@ -283,7 +298,8 @@ func init() {
 			cli.NewStringArgument("target", PTarget),
 			ccommon.TargetArg,
 		},
-		Flags: []cli.Flag{ccommon.TargetFlag},
+		RequiredParams: []cli.Parameter{ccommon.PTarget},
+		Flags:          []cli.Flag{ccommon.TargetFlag},
 		Exec: func(ctx context.Context, args []string) error {
 			return handleDisableStaging(ctx)
 		},
@@ -297,7 +313,7 @@ func init() {
 	CSetup.Subcommands["drop-files"] = &cli.Subcommand{
 		Description: "Delete local source files without removing them from configuration",
 		Arguments: []cli.Argument{
-			cli.NewStringArgument("source", PSourceReq),
+			cli.NewStringArgument("source", PSource),
 		},
 		Exec: func(ctx context.Context, args []string) error {
 			return handleDropFiles(ctx)
@@ -306,10 +322,11 @@ func init() {
 	CSetup.Subcommands["get-args"] = &cli.Subcommand{
 		Description: "Get build arguments for a target",
 		Arguments: []cli.Argument{
-			cli.NewStringArgument("target", PTargetReq),
+			cli.NewStringArgument("target", PTarget),
 			ccommon.TargetArg,
 		},
-		Flags: []cli.Flag{ccommon.ConfigFlag, ccommon.ToolchainFlag, ccommon.TargetFlag},
+		RequiredParams: []cli.Parameter{ccommon.PTarget},
+		Flags:          []cli.Flag{ccommon.ConfigFlag, ccommon.ToolchainFlag, ccommon.TargetFlag},
 		Exec: func(ctx context.Context, args []string) error {
 			return handleGetArgs(ctx)
 		},
@@ -322,15 +339,17 @@ func init() {
 		},
 	}
 	CSetup.Subcommands["add-config"] = &cli.Subcommand{
-		Description: "Add a build configuration",
-		Flags:       []cli.Flag{ccommon.ConfigRequiredFlag, ccommon.ToolchainFlag},
+		Description:    "Add a build configuration",
+		RequiredParams: []cli.Parameter{ccommon.PConfig},
+		Flags:          []cli.Flag{ccommon.ConfigFlag, ccommon.ToolchainFlag},
 		Exec: func(ctx context.Context, args []string) error {
 			return handleAddConfig(ctx)
 		},
 	}
 	CSetup.Subcommands["remove-config"] = &cli.Subcommand{
-		Description: "Remove a build configuration",
-		Flags:       []cli.Flag{ccommon.ConfigFlag},
+		Description:    "Remove a build configuration",
+		RequiredParams: []cli.Parameter{ccommon.PConfig},
+		Flags:          []cli.Flag{ccommon.ConfigFlag},
 		Exec: func(ctx context.Context, args []string) error {
 			return handleRemoveConfig(ctx)
 		},

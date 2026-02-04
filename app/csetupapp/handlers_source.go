@@ -167,7 +167,7 @@ func handleDropFiles(ctx context.Context) error {
 	}
 
 	sourcesToDrop := []string{}
-	sourceVal, _ := cli.GetString(ctx, PSourceReq)
+	sourceVal, _ := cli.GetString(ctx, PSource)
 	if sourceVal != nil && *sourceVal != "" {
 		sourcesToDrop = append(sourcesToDrop, *sourceVal)
 	} else {
@@ -438,7 +438,7 @@ func handleDownload(ctx context.Context) error {
 
 func handleLoadDefaults(ctx context.Context) error {
 	workspacePath := getWorkspacePath(ctx)
-	sourceVal, _ := cli.GetString(ctx, PSourceReq)
+	sourceVal, _ := cli.GetString(ctx, PSource)
 	sourceName := ""
 	if sourceVal != nil {
 		sourceName = *sourceVal

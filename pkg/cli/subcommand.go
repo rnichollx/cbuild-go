@@ -10,12 +10,13 @@ import (
 )
 
 type Subcommand struct {
-	Name        string
-	Description string
-	HelpText    string
-	Flags       []Flag
-	Arguments   []Argument
-	Exec        func(ctx context.Context, args []string) error
+	Name           string
+	Description    string
+	HelpText       string
+	Flags          []Flag
+	Arguments      []Argument
+	RequiredParams []Parameter
+	Exec           func(ctx context.Context, args []string) error
 }
 
 type Runner struct {
@@ -44,8 +45,9 @@ func (r *Runner) Run(ctx context.Context, args []string) error {
 
 		subcmdParseOpts[name] = SubcommandParseOptions{
 			ParseOptions: &ParseOptions{
-				Flags:     mergedFlags,
-				Arguments: subcmd.Arguments,
+				Flags:          mergedFlags,
+				Arguments:      subcmd.Arguments,
+				RequiredParams: subcmd.RequiredParams,
 			},
 		}
 	}
@@ -72,8 +74,9 @@ func (r *Runner) Run(ctx context.Context, args []string) error {
 			}
 
 			resultDefault, errDefault := ParseFlagsAndArgs(ParseOptions{
-				Flags:     mergedFlags,
-				Arguments: subcmd.Arguments,
+				Flags:          mergedFlags,
+				Arguments:      subcmd.Arguments,
+				RequiredParams: subcmd.RequiredParams,
 			}, ParseInput{Ctx: ctx, Tokens: args})
 			if errDefault == nil {
 				return subcmd.Exec(resultDefault.Ctx, resultDefault.Unparsed)
@@ -83,7 +86,7 @@ func (r *Runner) Run(ctx context.Context, args []string) error {
 	}
 
 	// 2. Help detection
-	helpVal, _ := GetBool(result.Ctx, NewParameter("help", ParameterTypeBool, PBool(false), "", false))
+	helpVal, _ := GetBool(result.Ctx, NewParameter("help", ParameterTypeBool, PBool(false), ""))
 	if helpVal != nil && *helpVal {
 		if len(result.Subcommands) == 0 {
 			r.PrintUsage("")
@@ -115,8 +118,9 @@ func (r *Runner) Run(ctx context.Context, args []string) error {
 			}
 
 			result, err = ParseFlagsAndArgs(ParseOptions{
-				Flags:     mergedFlags,
-				Arguments: subcmd.Arguments,
+				Flags:          mergedFlags,
+				Arguments:      subcmd.Arguments,
+				RequiredParams: subcmd.RequiredParams,
 			}, ParseInput{Ctx: ctx, Tokens: args})
 			if err != nil {
 				return err
@@ -140,7 +144,7 @@ func (r *Runner) PrintUsage(subcmdName string) {
 		argsSyn := ""
 
 		for _, arg := range subcmd.Arguments {
-			if arg.GetParameter().Required() {
+			if isRequiredParam(subcmd.RequiredParams, arg.GetParameter().Key()) {
 				argsSyn += " <" + arg.Name() + ">"
 			} else {
 				argsSyn += " [" + arg.Name() + "]"
@@ -207,7 +211,7 @@ func (r *Runner) PrintUsage(subcmdName string) {
 				if gf, ok := findGlobalFlag(r.GlobalFlags, f.GetParameter().Key()); ok {
 					if f.GetParameter().Description() != "" && f.GetParameter().Description() != gf.GetParameter().Description() {
 						desc += fmt.Sprintf(" (overrides global: %s)", gf.GetParameter().Description())
-					} else if f.GetParameter().Required() && !gf.GetParameter().Required() {
+					} else if isRequiredParam(subcmd.RequiredParams, f.GetParameter().Key()) {
 						desc += fmt.Sprintf(" (required for %s)", subcmdName)
 					}
 				}
@@ -358,7 +362,7 @@ func (r *Runner) PrintUsage(subcmdName string) {
 					if gf, ok := findGlobalFlag(r.GlobalFlags, f.GetParameter().Key()); ok {
 						if f.GetParameter().Description() != "" && f.GetParameter().Description() != gf.GetParameter().Description() {
 							desc += fmt.Sprintf(" (overrides global: %s)", gf.GetParameter().Description())
-						} else if f.GetParameter().Required() && !gf.GetParameter().Required() {
+						} else if isRequiredParam(sub.RequiredParams, f.GetParameter().Key()) {
 							desc += fmt.Sprintf(" (required for %s)", name)
 						}
 					}
@@ -424,7 +428,7 @@ func (r *Runner) generateManpage(dir string) error {
 		fmt.Fprintf(w, ".B Synopsis:\n")
 		argsSyn := ""
 		for _, arg := range sub.Arguments {
-			if arg.GetParameter().Required() {
+			if isRequiredParam(sub.RequiredParams, arg.GetParameter().Key()) {
 				argsSyn += " <" + arg.Name() + ">"
 			} else {
 				argsSyn += " [" + arg.Name() + "]"
@@ -451,7 +455,7 @@ func (r *Runner) generateManpage(dir string) error {
 				if gf, ok := findGlobalFlag(r.GlobalFlags, f.GetParameter().Key()); ok {
 					if f.GetParameter().Description() != "" && f.GetParameter().Description() != gf.GetParameter().Description() {
 						desc += fmt.Sprintf(" (overrides global: %s)", gf.GetParameter().Description())
-					} else if f.GetParameter().Required() && !gf.GetParameter().Required() {
+					} else if isRequiredParam(sub.RequiredParams, f.GetParameter().Key()) {
 						desc += fmt.Sprintf(" (required for %s)", name)
 					}
 				}
@@ -470,6 +474,18 @@ func (r *Runner) GenerateManpages(dir string) error {
 func isFlagInGlobalList(flags []Flag, key ParameterKey) bool {
 	for _, f := range flags {
 		if f.GetParameter().Key() == key {
+			return true
+		}
+	}
+	return false
+}
+
+func isRequiredParam(required []Parameter, key ParameterKey) bool {
+	for _, p := range required {
+		if p == nil {
+			continue
+		}
+		if p.Key() == key {
 			return true
 		}
 	}

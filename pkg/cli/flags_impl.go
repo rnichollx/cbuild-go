@@ -57,22 +57,19 @@ type genericParameter struct {
 	defaultValue any
 	paramType    ParameterType
 	description  string
-	required     bool
 }
 
 func (p *genericParameter) Key() ParameterKey   { return p.key }
 func (p *genericParameter) Default() any        { return p.defaultValue }
 func (p *genericParameter) Type() ParameterType { return p.paramType }
 func (p *genericParameter) Description() string { return p.description }
-func (p *genericParameter) Required() bool      { return p.required }
 
-func NewParameter(key ParameterKey, paramType ParameterType, defaultValue any, description string, required bool) Parameter {
+func NewParameter(key ParameterKey, paramType ParameterType, defaultValue any, description string) Parameter {
 	return &genericParameter{
 		key:          key,
 		paramType:    paramType,
 		defaultValue: defaultValue,
 		description:  description,
-		required:     required,
 	}
 }
 
