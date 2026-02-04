@@ -135,7 +135,7 @@ func (w *WorkspaceContext) ToolchainFilePath(ctx context.Context, modConfig *Tar
 		tcfPath = absTcfPath
 		return tcfPath, nil
 	}
-	return "", nil
+	return "", fmt.Errorf("toolchain %q has no entry for host %q", bp.Toolchain, hostPlatform)
 }
 
 func (w *WorkspaceContext) Prebuild(ctx context.Context, bp TargetBuildParameters) (string, error) {
