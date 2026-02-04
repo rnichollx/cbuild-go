@@ -10,12 +10,12 @@ import (
 )
 
 type Subcommand struct {
-	Name         string
-	Description  string
-	HelpText     string
-	AcceptsFlags []Flag
-	Arguments    []Argument
-	Exec         func(ctx context.Context, args []string) error
+	Name        string
+	Description string
+	HelpText    string
+	Flags       []Flag
+	Arguments   []Argument
+	Exec        func(ctx context.Context, args []string) error
 }
 
 type Runner struct {
@@ -30,12 +30,12 @@ func (r *Runner) Run(ctx context.Context, args []string) error {
 	// 1. Identify subcommand and parse its options
 	subcmdParseOpts := make(map[string]SubcommandParseOptions)
 	for name, subcmd := range r.Subcommands {
-		mergedFlags := make([]Flag, 0, len(r.GlobalFlags)+len(subcmd.AcceptsFlags))
+		mergedFlags := make([]Flag, 0, len(r.GlobalFlags)+len(subcmd.Flags))
 		mergedFlagsMap := make(map[ParameterKey]Flag)
 		for _, f := range r.GlobalFlags {
 			mergedFlagsMap[f.GetParameter().Key()] = f
 		}
-		for _, f := range subcmd.AcceptsFlags {
+		for _, f := range subcmd.Flags {
 			mergedFlagsMap[f.GetParameter().Key()] = f
 		}
 		for _, f := range mergedFlagsMap {
@@ -59,12 +59,12 @@ func (r *Runner) Run(ctx context.Context, args []string) error {
 		// If we failed to parse, maybe we should try with the default subcommand if no subcommand was explicitly matched
 		if r.DefaultSubcmd != "" {
 			subcmd := r.Subcommands[r.DefaultSubcmd]
-			mergedFlags := make([]Flag, 0, len(r.GlobalFlags)+len(subcmd.AcceptsFlags))
+			mergedFlags := make([]Flag, 0, len(r.GlobalFlags)+len(subcmd.Flags))
 			mergedFlagsMap := make(map[ParameterKey]Flag)
 			for _, f := range r.GlobalFlags {
 				mergedFlagsMap[f.GetParameter().Key()] = f
 			}
-			for _, f := range subcmd.AcceptsFlags {
+			for _, f := range subcmd.Flags {
 				mergedFlagsMap[f.GetParameter().Key()] = f
 			}
 			for _, f := range mergedFlagsMap {
@@ -102,12 +102,12 @@ func (r *Runner) Run(ctx context.Context, args []string) error {
 
 			// Try re-parsing with default subcommand options if it wasn't already successfully parsed
 			// actually, if result was successful and no subcommand found, we can just use default.
-			mergedFlags := make([]Flag, 0, len(r.GlobalFlags)+len(subcmd.AcceptsFlags))
+			mergedFlags := make([]Flag, 0, len(r.GlobalFlags)+len(subcmd.Flags))
 			mergedFlagsMap := make(map[ParameterKey]Flag)
 			for _, f := range r.GlobalFlags {
 				mergedFlagsMap[f.GetParameter().Key()] = f
 			}
-			for _, f := range subcmd.AcceptsFlags {
+			for _, f := range subcmd.Flags {
 				mergedFlagsMap[f.GetParameter().Key()] = f
 			}
 			for _, f := range mergedFlagsMap {
@@ -160,7 +160,7 @@ func (r *Runner) PrintUsage(subcmdName string) {
 		for _, f := range r.GlobalFlags {
 			mergedFlagsMap[f.GetParameter().Key()] = f
 		}
-		for _, f := range subcmd.AcceptsFlags {
+		for _, f := range subcmd.Flags {
 			mergedFlagsMap[f.GetParameter().Key()] = f
 		}
 
@@ -234,7 +234,7 @@ func (r *Runner) PrintUsage(subcmdName string) {
 
 	for _, name := range sortedSubcommandNames(r.Subcommands) {
 		sub := r.Subcommands[name]
-		for _, f := range sub.AcceptsFlags {
+		for _, f := range sub.Flags {
 			flagCount[f.GetParameter().Key()]++
 			if _, exists := flagMap[f.GetParameter().Key()]; !exists {
 				flagMap[f.GetParameter().Key()] = f
@@ -287,7 +287,7 @@ func (r *Runner) PrintUsage(subcmdName string) {
 			maxFlagLen = l
 		}
 		sub := r.Subcommands[name]
-		for _, f := range sub.AcceptsFlags {
+		for _, f := range sub.Flags {
 			showInSub := true
 			for _, gf := range flagsToShowGlobal {
 				if gf.GetParameter().Key() == f.GetParameter().Key() {
@@ -339,8 +339,8 @@ func (r *Runner) PrintUsage(subcmdName string) {
 	for _, name := range sortedSubcommandNames(r.Subcommands) {
 		sub := r.Subcommands[name]
 		fmt.Printf("  %s%s  %s\n", name, strings.Repeat(" ", maxFlagLen-len(name)), sub.Description)
-		if len(sub.AcceptsFlags) > 0 {
-			for _, f := range sub.AcceptsFlags {
+		if len(sub.Flags) > 0 {
+			for _, f := range sub.Flags {
 				showInSub := false
 				for _, gf := range flagsToShowGlobal {
 					if gf.GetParameter().Key() == f.GetParameter().Key() {
@@ -433,9 +433,9 @@ func (r *Runner) generateManpage(dir string) error {
 		fmt.Fprintf(w, "%s %s%s\n\n", r.Name, name, argsSyn)
 
 		// Subcommand flags
-		if len(sub.AcceptsFlags) > 0 {
+		if len(sub.Flags) > 0 {
 			fmt.Fprintf(w, ".B Options for %s:\n", name)
-			for _, f := range sub.AcceptsFlags {
+			for _, f := range sub.Flags {
 				fmt.Fprintf(w, ".TP\n")
 				val := ""
 				if f.GetParameter().Type() != ParameterTypeBool {

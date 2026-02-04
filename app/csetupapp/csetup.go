@@ -78,7 +78,7 @@ func init() {
 		Arguments: []cli.Argument{
 			cli.NewStringArgument("path", PPath),
 		},
-		AcceptsFlags: []cli.Flag{ccommon.ReinitFlag},
+		Flags: []cli.Flag{ccommon.ReinitFlag},
 		Exec: func(ctx context.Context, args []string) error {
 			return handleInit(ctx)
 		},
@@ -88,7 +88,7 @@ func init() {
 		Arguments: []cli.Argument{
 			cli.NewStringArgument("path", PPath),
 		},
-		AcceptsFlags: []cli.Flag{ccommon.DownloadDepsFlag, ccommon.NoSetupFlag},
+		Flags: []cli.Flag{ccommon.DownloadDepsFlag, ccommon.NoSetupFlag},
 		Exec: func(ctx context.Context, args []string) error {
 			return handleDevInit(ctx)
 		},
@@ -99,7 +99,7 @@ func init() {
 			cli.NewStringArgument("url", PUrl),
 			cli.NewStringArgument("path", PPath),
 		},
-		AcceptsFlags: []cli.Flag{ccommon.DownloadDepsFlag, ccommon.SubmoduleFlag, ccommon.NoSetupFlag},
+		Flags: []cli.Flag{ccommon.DownloadDepsFlag, ccommon.SubmoduleFlag, ccommon.NoSetupFlag},
 		Exec: func(ctx context.Context, args []string) error {
 			return handleGitClone(ctx)
 		},
@@ -129,7 +129,7 @@ func init() {
 		Arguments: []cli.Argument{
 			cli.NewStringArgument("source", PSource),
 		},
-		AcceptsFlags: []cli.Flag{ccommon.DownloadDepsFlag, ccommon.NoSetupFlag, ccommon.SubmoduleFlag},
+		Flags: []cli.Flag{ccommon.DownloadDepsFlag, ccommon.NoSetupFlag, ccommon.SubmoduleFlag},
 		Exec: func(ctx context.Context, args []string) error {
 			return handleDownload(ctx)
 		},
@@ -206,7 +206,7 @@ func init() {
 		Arguments: []cli.Argument{
 			ccommon.SourceArg,
 		},
-		AcceptsFlags: []cli.Flag{ccommon.DeleteFlag, ccommon.SourceFlag},
+		Flags: []cli.Flag{ccommon.DeleteFlag, ccommon.SourceFlag},
 		Exec: func(ctx context.Context, args []string) error {
 			return handleRemoveSource(ctx)
 		},
@@ -216,7 +216,7 @@ func init() {
 		Arguments: []cli.Argument{
 			ccommon.TargetArg,
 		},
-		AcceptsFlags: []cli.Flag{ccommon.TargetFlag},
+		Flags: []cli.Flag{ccommon.TargetFlag},
 		Exec: func(ctx context.Context, args []string) error {
 			return handleRemoveTarget(ctx)
 		},
@@ -226,14 +226,14 @@ func init() {
 		Arguments: []cli.Argument{
 			ccommon.SourceArg,
 		},
-		AcceptsFlags: []cli.Flag{ccommon.DeleteFlag, ccommon.SourceFlag},
+		Flags: []cli.Flag{ccommon.DeleteFlag, ccommon.SourceFlag},
 		Exec: func(ctx context.Context, args []string) error {
 			return handleRemoveProject(ctx)
 		},
 	}
 	CSetup.Subcommands["tidy"] = &cli.Subcommand{
-		Description:  "Delete source folders that are not in the sources list",
-		AcceptsFlags: []cli.Flag{ccommon.DryRunFlag},
+		Description: "Delete source folders that are not in the sources list",
+		Flags:       []cli.Flag{ccommon.DryRunFlag},
 		Exec: func(ctx context.Context, args []string) error {
 			return handleTidy(ctx)
 		},
@@ -244,7 +244,7 @@ func init() {
 			ccommon.TargetArg,
 			ccommon.SourceArg,
 		},
-		AcceptsFlags: []cli.Flag{
+		Flags: []cli.Flag{
 			ccommon.SourceFlag,
 			ccommon.TargetFlag,
 			ccommon.OverwriteFlag,
@@ -261,7 +261,7 @@ func init() {
 			ccommon.CxxVersionArg,
 			ccommon.TargetArg,
 		},
-		AcceptsFlags: []cli.Flag{ccommon.TargetFlag},
+		Flags: []cli.Flag{ccommon.TargetFlag},
 		Exec: func(ctx context.Context, args []string) error {
 			return handleSetCXXVersion(ctx)
 		},
@@ -272,7 +272,7 @@ func init() {
 			cli.NewStringArgument("target", PTarget),
 			ccommon.TargetArg,
 		},
-		AcceptsFlags: []cli.Flag{ccommon.TargetFlag},
+		Flags: []cli.Flag{ccommon.TargetFlag},
 		Exec: func(ctx context.Context, args []string) error {
 			return handleEnableStaging(ctx)
 		},
@@ -283,7 +283,7 @@ func init() {
 			cli.NewStringArgument("target", PTarget),
 			ccommon.TargetArg,
 		},
-		AcceptsFlags: []cli.Flag{ccommon.TargetFlag},
+		Flags: []cli.Flag{ccommon.TargetFlag},
 		Exec: func(ctx context.Context, args []string) error {
 			return handleDisableStaging(ctx)
 		},
@@ -309,28 +309,28 @@ func init() {
 			cli.NewStringArgument("target", PTargetReq),
 			ccommon.TargetArg,
 		},
-		AcceptsFlags: []cli.Flag{ccommon.ConfigFlag, ccommon.ToolchainFlag, ccommon.TargetFlag},
+		Flags: []cli.Flag{ccommon.ConfigFlag, ccommon.ToolchainFlag, ccommon.TargetFlag},
 		Exec: func(ctx context.Context, args []string) error {
 			return handleGetArgs(ctx)
 		},
 	}
 	CSetup.Subcommands["detect-toolchains"] = &cli.Subcommand{
-		Description:  "Detect system toolchains",
-		AcceptsFlags: []cli.Flag{ccommon.DebugFlag},
+		Description: "Detect system toolchains",
+		Flags:       []cli.Flag{ccommon.DebugFlag},
 		Exec: func(ctx context.Context, args []string) error {
 			return handleDetectToolchains(ctx)
 		},
 	}
 	CSetup.Subcommands["add-config"] = &cli.Subcommand{
-		Description:  "Add a build configuration",
-		AcceptsFlags: []cli.Flag{ccommon.ConfigRequiredFlag, ccommon.ToolchainFlag},
+		Description: "Add a build configuration",
+		Flags:       []cli.Flag{ccommon.ConfigRequiredFlag, ccommon.ToolchainFlag},
 		Exec: func(ctx context.Context, args []string) error {
 			return handleAddConfig(ctx)
 		},
 	}
 	CSetup.Subcommands["remove-config"] = &cli.Subcommand{
-		Description:  "Remove a build configuration",
-		AcceptsFlags: []cli.Flag{ccommon.ConfigFlag},
+		Description: "Remove a build configuration",
+		Flags:       []cli.Flag{ccommon.ConfigFlag},
 		Exec: func(ctx context.Context, args []string) error {
 			return handleRemoveConfig(ctx)
 		},

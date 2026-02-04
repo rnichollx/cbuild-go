@@ -26,18 +26,18 @@ var CBuild = &cli.Runner{
 
 func init() {
 	CBuild.Subcommands["build"] = &cli.Subcommand{
-		Description:  "Build the project",
-		AcceptsFlags: []cli.Flag{ccommon.ConfigFlag, ccommon.ToolchainFlag, ccommon.TargetFlag},
-		Arguments:    []cli.Argument{ccommon.TargetArg},
+		Description: "Build the project",
+		Flags:       []cli.Flag{ccommon.ConfigFlag, ccommon.ToolchainFlag, ccommon.TargetFlag},
+		Arguments:   []cli.Argument{ccommon.TargetArg},
 		Exec: func(ctx context.Context, args []string) error {
 			return runBuild(ctx, "build", args)
 		},
 	}
 
 	CBuild.Subcommands["clean"] = &cli.Subcommand{
-		Description:  "Clean build artifacts",
-		AcceptsFlags: []cli.Flag{ccommon.ConfigFlag, ccommon.ToolchainFlag, ccommon.TargetFlag},
-		Arguments:    []cli.Argument{ccommon.TargetArg},
+		Description: "Clean build artifacts",
+		Flags:       []cli.Flag{ccommon.ConfigFlag, ccommon.ToolchainFlag, ccommon.TargetFlag},
+		Arguments:   []cli.Argument{ccommon.TargetArg},
 		Exec: func(ctx context.Context, args []string) error {
 			return runClean(ctx, args)
 		},
@@ -48,7 +48,7 @@ func init() {
 		Arguments: []cli.Argument{
 			ccommon.TargetArg,
 		},
-		AcceptsFlags: []cli.Flag{ccommon.ConfigFlag, ccommon.ToolchainFlag, ccommon.TargetFlag},
+		Flags: []cli.Flag{ccommon.ConfigFlag, ccommon.ToolchainFlag, ccommon.TargetFlag},
 		Exec: func(ctx context.Context, args []string) error {
 			targetNameVal, _ := cli.GetString(ctx, ccommon.PTarget)
 			if targetNameVal == nil || *targetNameVal == "" {
@@ -58,9 +58,9 @@ func init() {
 		},
 	}
 	CBuild.Subcommands["test"] = &cli.Subcommand{
-		Description:  "Build and run tests",
-		AcceptsFlags: []cli.Flag{ccommon.ConfigFlag, ccommon.ToolchainFlag, ccommon.TargetFlag},
-		Arguments:    []cli.Argument{ccommon.TargetArg},
+		Description: "Build and run tests",
+		Flags:       []cli.Flag{ccommon.ConfigFlag, ccommon.ToolchainFlag, ccommon.TargetFlag},
+		Arguments:   []cli.Argument{ccommon.TargetArg},
 		Exec: func(ctx context.Context, args []string) error {
 			return runTest(ctx, args)
 		},
