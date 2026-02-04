@@ -68,6 +68,10 @@ var (
 	PSource     = cli.NewParameter("source", cli.ParameterTypeString, nil, "name of the source")
 	PDependency = cli.NewParameter("dependency", cli.ParameterTypeString, nil, "name of the dependency")
 	PTarget     = cli.NewParameter("target", cli.ParameterTypeString, nil, "Name of the build target.")
+	PRevision   = cli.NewParameter("revision", cli.ParameterTypeString, nil, "Revision or tag to use.")
+	PBranch     = cli.NewParameter("branch", cli.ParameterTypeString, nil, "Branch name to use.")
+	PUpdate     = cli.NewParameter("update", cli.ParameterTypeBool, cli.PBool(false), "Update to latest revision.")
+	PNoBranch   = cli.NewParameter("no-branch", cli.ParameterTypeBool, cli.PBool(false), "Clear tracked branch.")
 )
 
 func init() {
@@ -99,7 +103,13 @@ func init() {
 			cli.NewStringArgument("path", PPath),
 		},
 		RequiredParams: []cli.Parameter{PUrl},
-		Flags:          []cli.Flag{ccommon.DownloadDepsFlag, ccommon.SubmoduleFlag, ccommon.NoSetupFlag},
+		Flags: []cli.Flag{
+			ccommon.DownloadDepsFlag,
+			ccommon.SubmoduleFlag,
+			ccommon.NoSetupFlag,
+			cli.NewStringFlag("", "branch", PBranch),
+			cli.NewStringFlag("", "revision", PRevision),
+		},
 		Exec: func(ctx context.Context, args []string) error {
 			return handleGitClone(ctx)
 		},
@@ -352,6 +362,54 @@ func init() {
 		Flags:          []cli.Flag{ccommon.ConfigFlag},
 		Exec: func(ctx context.Context, args []string) error {
 			return handleRemoveConfig(ctx)
+		},
+	}
+	CSetup.Subcommands["pin"] = &cli.Subcommand{
+		Description: "Pin a git source (HEAD by default, or a specific branch/revision)",
+		Arguments: []cli.Argument{
+			cli.NewStringArgument("source", PSource),
+		},
+		RequiredParams: []cli.Parameter{PSource},
+		Flags: []cli.Flag{
+			cli.NewStringFlag("", "branch", PBranch),
+			cli.NewStringFlag("", "revision", PRevision),
+			cli.NewBoolFlag("", "update", PUpdate),
+			cli.NewBoolFlag("", "no-branch", PNoBranch),
+		},
+		Exec: func(ctx context.Context, args []string) error {
+			return handlePin(ctx)
+		},
+	}
+	CSetup.Subcommands["unpin"] = &cli.Subcommand{
+		Description: "Unpin a git source (clear revision)",
+		Arguments: []cli.Argument{
+			cli.NewStringArgument("source", PSource),
+		},
+		RequiredParams: []cli.Parameter{PSource},
+		Exec: func(ctx context.Context, args []string) error {
+			return handleUnpin(ctx)
+		},
+	}
+	CSetup.Subcommands["status"] = &cli.Subcommand{
+		Description: "Show status for sources (clean/modified, HEAD, expected revision)",
+		Arguments: []cli.Argument{
+			cli.NewStringArgument("source", PSource),
+		},
+		Exec: func(ctx context.Context, args []string) error {
+			return handleStatus(ctx)
+		},
+	}
+	CSetup.Subcommands["update"] = &cli.Subcommand{
+		Description: "Update a git source (pull latest or move to revision)",
+		Arguments: []cli.Argument{
+			cli.NewStringArgument("source", PSource),
+		},
+		RequiredParams: []cli.Parameter{PSource},
+		Flags: []cli.Flag{
+			cli.NewStringFlag("", "revision", PRevision),
+		},
+		Exec: func(ctx context.Context, args []string) error {
+			return handleUpdate(ctx)
 		},
 	}
 }

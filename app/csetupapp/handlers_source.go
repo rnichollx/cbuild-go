@@ -37,10 +37,50 @@ func handleListSources(ctx context.Context) error {
 		srcPath, err := target.CMakeSourcePath(ctx, ws)
 		if err == nil {
 			if info, err := os.Stat(srcPath); err == nil && info.IsDir() {
-				if target.Config.ExternalSourceOverride != nil {
+				external := target.Config.ExternalSourceOverride != nil
+				sourceName := target.Config.Source
+				if sourceName == "" {
+					sourceName = name
+				}
+				if source, ok := ws.Config.Sources[sourceName]; ok && source.Local != "" {
+					external = true
+				}
+
+				if external {
 					status = "[OK EXTERNAL]"
 				} else {
 					status = "[OK]"
+				}
+			}
+		}
+
+		// Determine git modifications and revision mismatch
+		if status != "[MISSING]" {
+			sourceName := target.Config.Source
+			if sourceName == "" {
+				sourceName = name
+			}
+			if source, ok := ws.Config.Sources[sourceName]; ok && source.Git != nil {
+				dirty, head, err := ws.GitStatus(ctx, srcPath)
+				if err != nil {
+					return err
+				}
+				modified := dirty
+				if source.Git.Revision != nil && *source.Git.Revision != "" {
+					resolved, err := ws.GitResolveRevision(ctx, srcPath, *source.Git.Revision)
+					if err != nil || resolved != head {
+						modified = true
+					}
+				}
+				if modified {
+					if target.Config.ExternalSourceOverride != nil {
+						status = "[MODIFIED EXTERNAL]"
+					} else {
+						status = "[MODIFIED]"
+					}
+					if source.Local != "" {
+						status = "[MODIFIED EXTERNAL]"
+					}
 				}
 			}
 		}
@@ -202,9 +242,22 @@ func handleGitClone(ctx context.Context) error {
 	downloadDeps := downloadDepsRaw != nil && *downloadDepsRaw
 	noSetupRaw, _ := cli.GetBool(ctx, ccommon.PNoSetup)
 	noSetup := noSetupRaw != nil && *noSetupRaw
+	branchVal, _ := cli.GetString(ctx, PBranch)
+	branch := ""
+	if branchVal != nil {
+		branch = *branchVal
+	}
+	revisionVal, _ := cli.GetString(ctx, PRevision)
+	revision := ""
+	if revisionVal != nil {
+		revision = *revisionVal
+	}
 
 	if repoURL == "" {
 		return fmt.Errorf("usage: csetup git-clone <repo_url> [dest_name] [--download-deps] [--submodule] [--no-setup]")
+	}
+	if branch != "" && revision != "" {
+		return fmt.Errorf("use either --branch or --revision, not both")
 	}
 
 	if destName == "" {
@@ -234,6 +287,11 @@ func handleGitClone(ctx context.Context) error {
 		Git: &ccommon.GitSource{
 			Repository: repoURL,
 		},
+	}
+	if revision != "" {
+		ws.Config.Sources[destName].Git.Revision = &revision
+	} else if branch != "" {
+		ws.Config.Sources[destName].Git.Branch = &branch
 	}
 
 	err = ws.DownloadSource(ctx, destName)
