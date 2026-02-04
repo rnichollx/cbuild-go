@@ -388,8 +388,24 @@ func (w *WorkspaceContext) buildModule(ctx context.Context, mod *TargetContext, 
 	return nil
 }
 
+func (w *WorkspaceContext) GetSourcePath(sourceName string) (string, error) {
+	source, ok := w.Config.Sources[sourceName]
+	if !ok {
+		return "", fmt.Errorf("source %s not found in workspace", sourceName)
+	}
+
+	if source.hasLocal() {
+		return source.Local, nil
+	}
+
+	return filepath.Join(w.WorkspacePath, "sources", sourceName), nil
+}
+
 func (w *WorkspaceContext) ProcessCSetupConfig(ctx context.Context, sourceName string) error {
-	sourcePath := filepath.Join(w.WorkspacePath, "sources", sourceName)
+	sourcePath, err := w.GetSourcePath(sourceName)
+	if err != nil {
+		return err
+	}
 
 	csetupFiles := []string{"csetup.yml", "csetuplists.yml", "CSetup.yml", "CSetupLists.yml"}
 	var csetupFile string
@@ -521,12 +537,22 @@ func (w *WorkspaceContext) ProcessCSetupFile(ctx context.Context, targetName str
 }
 
 func (w *WorkspaceContext) DownloadSource(ctx context.Context, sourceName string) error {
+	sourceDir, err := w.GetSourcePath(sourceName)
+	if err != nil {
+		return err
+	}
+
+	if _, err := os.Stat(sourceDir); err == nil {
+		fmt.Printf("Source %s already exists at %s, skipping download.\n", sourceName, sourceDir)
+		return nil
+	}
+
 	source, ok := w.Config.Sources[sourceName]
 	if !ok {
 		return fmt.Errorf("source %s not found in workspace configuration", sourceName)
 	}
 
-	err := w.Get(ctx, sourceName, *source)
+	err = w.Get(ctx, sourceName, *source)
 	if err != nil {
 		return err
 	}
@@ -1093,11 +1119,11 @@ func (w *WorkspaceContext) LoadDefaults(ctx context.Context, sourceName string) 
 }
 
 func (w *WorkspaceContext) DropSourceFiles(ctx context.Context, sourceName string) error {
-	if _, ok := w.Config.Sources[sourceName]; !ok {
-		return fmt.Errorf("source %s not found in workspace configuration", sourceName)
+	sourceDir, err := w.GetSourcePath(sourceName)
+	if err != nil {
+		return err
 	}
 
-	sourceDir := filepath.Join(w.WorkspacePath, "sources", sourceName)
 	if info, err := os.Stat(sourceDir); err == nil && info.IsDir() {
 		fmt.Printf("Deleting source folder: %s\n", sourceDir)
 		err = os.RemoveAll(sourceDir)

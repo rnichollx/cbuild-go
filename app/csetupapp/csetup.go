@@ -83,6 +83,16 @@ func init() {
 			return handleInit(ctx)
 		},
 	}
+	CSetup.Subcommands["dev-init"] = &cli.Subcommand{
+		Description: "Initialize a new workspace for development in the current directory",
+		Arguments: []cli.Argument{
+			cli.NewStringArgument("path", PPath),
+		},
+		AcceptsFlags: []cli.Flag{ccommon.DownloadDepsFlag, ccommon.NoSetupFlag},
+		Exec: func(ctx context.Context, args []string) error {
+			return handleDevInit(ctx)
+		},
+	}
 	CSetup.Subcommands["git-clone"] = &cli.Subcommand{
 		Description: "Clone a git repository into the workspace",
 		Arguments: []cli.Argument{

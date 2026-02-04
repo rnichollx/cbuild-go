@@ -206,7 +206,7 @@ func (t *TargetContext) CMakeSourcePath(ctx context.Context, workspace *Workspac
 		if filepath.IsAbs(path) {
 			return path, nil
 		}
-		return filepath.Join(workspace.WorkspacePath, "sources", path), nil
+		return workspace.GetSourcePath(path)
 	}
 
 	sourceName := t.Config.Source
@@ -214,7 +214,10 @@ func (t *TargetContext) CMakeSourcePath(ctx context.Context, workspace *Workspac
 		sourceName = t.Name
 	}
 
-	sourcePath := filepath.Join(workspace.WorkspacePath, "sources", sourceName)
+	sourcePath, err := workspace.GetSourcePath(sourceName)
+	if err != nil {
+		return "", err
+	}
 	if t.Config.RootPath != "" {
 		sourcePath = filepath.Join(sourcePath, t.Config.RootPath)
 	}

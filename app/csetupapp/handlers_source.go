@@ -413,9 +413,11 @@ func handleDownload(ctx context.Context) error {
 	}
 
 	for _, sourceName := range sourcesToDownload {
-		sourceDir := filepath.Join(workspacePath, "sources", sourceName)
-		if _, err := os.Stat(sourceDir); err == nil {
-			continue
+		sourceDir, err := ws.GetSourcePath(sourceName)
+		if err == nil {
+			if _, err := os.Stat(sourceDir); err == nil {
+				continue
+			}
 		}
 
 		err = ws.DownloadSource(ctx, sourceName)
