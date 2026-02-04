@@ -21,7 +21,7 @@ func TestParsingLists(t *testing.T) {
 			t.Fatalf("unexpected error: %v", err)
 		}
 
-		val, _ := GetStringList(ctx, pList)
+		val := GetStringList(ctx, pList)
 		expected := []string{"val1", "val2"}
 		if val == nil || !reflect.DeepEqual(*val, expected) {
 			t.Errorf("expected list to be %v, got %v", expected, val)
@@ -59,13 +59,13 @@ func TestParsingLists(t *testing.T) {
 			t.Fatalf("unexpected error: %v", err)
 		}
 
-		val, _ := GetStringList(ctx, pList)
+		val := GetStringList(ctx, pList)
 		expected := []string{"val1", "val2"}
 		if val == nil || !reflect.DeepEqual(*val, expected) {
 			t.Errorf("expected list to be %v, got %v", expected, val)
 		}
 
-		otherVal, _ := GetBool(ctx, pOther)
+		otherVal := GetBool(ctx, pOther)
 		if otherVal == nil || !*otherVal {
 			t.Errorf("expected other to be true")
 		}
@@ -89,7 +89,7 @@ func TestParsingLists(t *testing.T) {
 			t.Fatalf("unexpected error: %v", err)
 		}
 
-		val, _ := GetStringList(ctx, pList)
+		val := GetStringList(ctx, pList)
 		expected := []string{"val1", "val2", "val3"}
 		if val == nil || !reflect.DeepEqual(*val, expected) {
 			t.Errorf("expected list to be %v, got %v", expected, val)

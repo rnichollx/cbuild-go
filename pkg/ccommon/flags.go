@@ -81,6 +81,6 @@ var (
 )
 
 func IsDebug(ctx context.Context) bool {
-	val, _ := cli.GetBool(ctx, PDebug)
+	val := cli.GetBool(ctx, PDebug)
 	return val != nil && *val
 }

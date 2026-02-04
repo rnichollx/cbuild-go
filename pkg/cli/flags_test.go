@@ -26,15 +26,15 @@ func TestParseFlags(t *testing.T) {
 			t.Fatalf("unexpected error: %v", err)
 		}
 
-		valA, _ := GetBool(ctx, pa)
+		valA := GetBool(ctx, pa)
 		if valA == nil || !*valA {
 			t.Errorf("expected flag-a to be true")
 		}
-		valB, _ := GetBool(ctx, pb)
+		valB := GetBool(ctx, pb)
 		if valB == nil || !*valB {
 			t.Errorf("expected flag-b to be true")
 		}
-		valC, _ := GetString(ctx, pc)
+		valC := GetString(ctx, pc)
 		if valC == nil || *valC != "value" {
 			t.Errorf("expected flag-c to be 'value', got %v", valC)
 		}
@@ -51,7 +51,7 @@ func TestParseFlags(t *testing.T) {
 			t.Fatalf("unexpected error: %v", err)
 		}
 
-		valV, _ := GetString(ctx, pv)
+		valV := GetString(ctx, pv)
 		if valV == nil || *valV != "high" {
 			t.Errorf("expected verbose-key to be 'high', got %v", valV)
 		}
@@ -79,24 +79,24 @@ func TestParseFlags(t *testing.T) {
 			t.Fatalf("unexpected error: %v", err)
 		}
 
-		valA, _ := GetBool(ctx, pa)
+		valA := GetBool(ctx, pa)
 		if valA == nil || !*valA {
 			t.Errorf("expected flag-a to be true")
 		}
-		valB, _ := GetBool(ctx, pb)
+		valB := GetBool(ctx, pb)
 		if valB != nil {
 			t.Errorf("expected flag-b to be nil (stopped at --)")
 		}
 
-		v1, _ := GetString(ctx, p1)
+		v1 := GetString(ctx, p1)
 		if v1 == nil || *v1 != "pos1" {
 			t.Errorf("expected pos1 to be 'pos1', got %v", v1)
 		}
-		v2, _ := GetString(ctx, p2)
+		v2 := GetString(ctx, p2)
 		if v2 == nil || *v2 != "-b" {
 			t.Errorf("expected pos2 to be '-b', got %v", v2)
 		}
-		v3, _ := GetString(ctx, p3)
+		v3 := GetString(ctx, p3)
 		if v3 == nil || *v3 != "pos2" {
 			t.Errorf("expected pos3 to be 'pos2', got %v", v3)
 		}
@@ -130,11 +130,11 @@ func TestParseFlags(t *testing.T) {
 			t.Fatalf("unexpected error: %v", err)
 		}
 
-		v1, _ := GetString(ctx, p1)
+		v1 := GetString(ctx, p1)
 		if v1 == nil || *v1 != "pos1" {
 			t.Errorf("expected p1 to be 'pos1', got %v", v1)
 		}
-		v2, _ := GetString(ctx, p2)
+		v2 := GetString(ctx, p2)
 		if v2 == nil || *v2 != "-a" {
 			t.Errorf("expected p2 to be '-a', got %v", v2)
 		}

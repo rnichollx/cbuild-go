@@ -11,7 +11,7 @@ import (
 )
 
 func getWorkspacePath(ctx context.Context) string {
-	workspacePathRaw, _ := cli.GetPath(ctx, ccommon.PWorkspace)
+	workspacePathRaw := cli.GetPath(ctx, ccommon.PWorkspace)
 	workspacePath := ""
 	if workspacePathRaw != nil {
 		workspacePath = *workspacePathRaw

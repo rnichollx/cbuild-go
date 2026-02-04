@@ -41,14 +41,14 @@ func resolveSourcePath(ws *ccommon.WorkspaceContext, sourceName string) (string,
 
 func handlePin(ctx context.Context) error {
 	workspacePath := getWorkspacePath(ctx)
-	sourceVal, _ := cli.GetString(ctx, PSource)
+	sourceVal := cli.GetString(ctx, PSource)
 	if sourceVal == nil || *sourceVal == "" {
 		return fmt.Errorf("usage: csetup pin <source>")
 	}
-	branchVal, _ := cli.GetString(ctx, PBranch)
-	revisionVal, _ := cli.GetString(ctx, PRevision)
-	updateVal, _ := cli.GetBool(ctx, PUpdate)
-	noBranchVal, _ := cli.GetBool(ctx, PNoBranch)
+	branchVal := cli.GetString(ctx, PBranch)
+	revisionVal := cli.GetString(ctx, PRevision)
+	updateVal := cli.GetBool(ctx, PUpdate)
+	noBranchVal := cli.GetBool(ctx, PNoBranch)
 	update := updateVal != nil && *updateVal
 	noBranch := noBranchVal != nil && *noBranchVal
 
@@ -205,7 +205,7 @@ func handlePin(ctx context.Context) error {
 
 func handleUnpin(ctx context.Context) error {
 	workspacePath := getWorkspacePath(ctx)
-	sourceVal, _ := cli.GetString(ctx, PSource)
+	sourceVal := cli.GetString(ctx, PSource)
 	if sourceVal == nil || *sourceVal == "" {
 		return fmt.Errorf("usage: csetup unpin <source>")
 	}
@@ -234,8 +234,8 @@ func handleUnpin(ctx context.Context) error {
 
 func handleUpdate(ctx context.Context) error {
 	workspacePath := getWorkspacePath(ctx)
-	sourceVal, _ := cli.GetString(ctx, PSource)
-	revisionVal, _ := cli.GetString(ctx, PRevision)
+	sourceVal := cli.GetString(ctx, PSource)
+	revisionVal := cli.GetString(ctx, PRevision)
 	if sourceVal == nil || *sourceVal == "" {
 		return fmt.Errorf("usage: csetup update <source> [--revision <revision>]")
 	}
@@ -316,7 +316,7 @@ func handleUpdate(ctx context.Context) error {
 
 func handleStatus(ctx context.Context) error {
 	workspacePath := getWorkspacePath(ctx)
-	sourceVal, _ := cli.GetString(ctx, PSource)
+	sourceVal := cli.GetString(ctx, PSource)
 
 	ws := &ccommon.WorkspaceContext{}
 	if err := ws.Load(ctx, workspacePath); err != nil {

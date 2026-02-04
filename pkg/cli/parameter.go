@@ -39,252 +39,230 @@ type Parameter interface {
 	Description() string
 }
 
-func GetBool(ctx context.Context, parm Parameter) (*bool, error) {
-	if parm.Type() == ParameterTypeBool {
-		val := ctx.Value(parm.Key())
-		if val == nil {
-			d := parm.Default()
-			if d == nil {
-				return nil, nil
-			}
-			return d.(*bool), nil
-		}
-		b := val.(bool)
-		return &b, nil
+func GetBool(ctx context.Context, parm Parameter) *bool {
+	if parm.Type() != ParameterTypeBool {
+		panic(InvalidParameterTypeError)
 	}
-
-	return nil, InvalidParameterTypeError
+	val := ctx.Value(parm.Key())
+	if val == nil {
+		d := parm.Default()
+		if d == nil {
+			return nil
+		}
+		return d.(*bool)
+	}
+	b := val.(bool)
+	return &b
 }
 
 func SetBool(ctx context.Context, parm Parameter, val bool) (context.Context, error) {
-	if parm.Type() == ParameterTypeBool {
-		return context.WithValue(ctx, parm.Key(), val), nil
+	if parm.Type() != ParameterTypeBool {
+		panic(InvalidParameterTypeError)
 	}
-
-	return ctx, InvalidParameterTypeError
+	return context.WithValue(ctx, parm.Key(), val), nil
 }
 
 func UnsetBool(ctx context.Context, parm Parameter) (context.Context, error) {
-	if parm.Type() == ParameterTypeBool {
-		return context.WithValue(ctx, parm.Key(), nil), nil
+	if parm.Type() != ParameterTypeBool {
+		panic(InvalidParameterTypeError)
 	}
-
-	return ctx, InvalidParameterTypeError
+	return context.WithValue(ctx, parm.Key(), nil), nil
 }
 
-func GetInt(ctx context.Context, parm Parameter) (*int64, error) {
-	if parm.Type() == ParameterTypeInt {
-		val := ctx.Value(parm.Key())
-		if val == nil {
-			d := parm.Default()
-			if d == nil {
-				return nil, nil
-			}
-			return d.(*int64), nil
-		}
-		i := val.(int64)
-		return &i, nil
+func GetInt(ctx context.Context, parm Parameter) *int64 {
+	if parm.Type() != ParameterTypeInt {
+		panic(InvalidParameterTypeError)
 	}
-
-	return nil, InvalidParameterTypeError
+	val := ctx.Value(parm.Key())
+	if val == nil {
+		d := parm.Default()
+		if d == nil {
+			return nil
+		}
+		return d.(*int64)
+	}
+	i := val.(int64)
+	return &i
 }
 
 func SetInt(ctx context.Context, parm Parameter, val int64) (context.Context, error) {
-	if parm.Type() == ParameterTypeInt {
-		return context.WithValue(ctx, parm.Key(), val), nil
+	if parm.Type() != ParameterTypeInt {
+		panic(InvalidParameterTypeError)
 	}
-
-	return ctx, InvalidParameterTypeError
+	return context.WithValue(ctx, parm.Key(), val), nil
 }
 
 func UnsetInt(ctx context.Context, parm Parameter) (context.Context, error) {
-	if parm.Type() == ParameterTypeInt {
-		return context.WithValue(ctx, parm.Key(), nil), nil
+	if parm.Type() != ParameterTypeInt {
+		panic(InvalidParameterTypeError)
 	}
-
-	return ctx, InvalidParameterTypeError
+	return context.WithValue(ctx, parm.Key(), nil), nil
 }
 
-func GetString(ctx context.Context, parm Parameter) (*string, error) {
-	if parm.Type() == ParameterTypeString {
-		val := ctx.Value(parm.Key())
-		if val == nil {
-			d := parm.Default()
-			if d == nil {
-				return nil, nil
-			}
-			return d.(*string), nil
-		}
-		s := val.(string)
-		return &s, nil
+func GetString(ctx context.Context, parm Parameter) *string {
+	if parm.Type() != ParameterTypeString {
+		panic(InvalidParameterTypeError)
 	}
-
-	return nil, InvalidParameterTypeError
+	val := ctx.Value(parm.Key())
+	if val == nil {
+		d := parm.Default()
+		if d == nil {
+			return nil
+		}
+		return d.(*string)
+	}
+	s := val.(string)
+	return &s
 }
 
 func SetString(ctx context.Context, parm Parameter, val string) (context.Context, error) {
-	if parm.Type() == ParameterTypeString {
-		return context.WithValue(ctx, parm.Key(), val), nil
+	if parm.Type() != ParameterTypeString {
+		panic(InvalidParameterTypeError)
 	}
-
-	return ctx, InvalidParameterTypeError
+	return context.WithValue(ctx, parm.Key(), val), nil
 }
 
 func UnsetString(ctx context.Context, parm Parameter) (context.Context, error) {
-	if parm.Type() == ParameterTypeString {
-		return context.WithValue(ctx, parm.Key(), nil), nil
+	if parm.Type() != ParameterTypeString {
+		panic(InvalidParameterTypeError)
 	}
-
-	return ctx, InvalidParameterTypeError
+	return context.WithValue(ctx, parm.Key(), nil), nil
 }
 
-func GetPath(ctx context.Context, parm Parameter) (*string, error) {
-	if parm.Type() == ParameterTypePath {
-		val := ctx.Value(parm.Key())
-		if val == nil {
-			d := parm.Default()
-			if d == nil {
-				return nil, nil
-			}
-			return d.(*string), nil
-		}
-		s := val.(string)
-		return &s, nil
+func GetPath(ctx context.Context, parm Parameter) *string {
+	if parm.Type() != ParameterTypePath {
+		panic(InvalidParameterTypeError)
 	}
-
-	return nil, InvalidParameterTypeError
+	val := ctx.Value(parm.Key())
+	if val == nil {
+		d := parm.Default()
+		if d == nil {
+			return nil
+		}
+		return d.(*string)
+	}
+	s := val.(string)
+	return &s
 }
 
 func SetPath(ctx context.Context, parm Parameter, val string) (context.Context, error) {
-	if parm.Type() == ParameterTypePath {
-		return context.WithValue(ctx, parm.Key(), val), nil
+	if parm.Type() != ParameterTypePath {
+		panic(InvalidParameterTypeError)
 	}
-
-	return ctx, InvalidParameterTypeError
+	return context.WithValue(ctx, parm.Key(), val), nil
 }
 
 func UnsetPath(ctx context.Context, parm Parameter) (context.Context, error) {
-	if parm.Type() == ParameterTypePath {
-		return context.WithValue(ctx, parm.Key(), nil), nil
+	if parm.Type() != ParameterTypePath {
+		panic(InvalidParameterTypeError)
 	}
-
-	return ctx, InvalidParameterTypeError
+	return context.WithValue(ctx, parm.Key(), nil), nil
 }
 
-func GetDatetime(ctx context.Context, parm Parameter) (*time.Time, error) {
-	if parm.Type() == ParameterTypeDatetime {
-		val := ctx.Value(parm.Key())
-		if val == nil {
-			d := parm.Default()
-			if d == nil {
-				return nil, nil
-			}
-			return d.(*time.Time), nil
-		}
-		t := val.(time.Time)
-		return &t, nil
+func GetDatetime(ctx context.Context, parm Parameter) *time.Time {
+	if parm.Type() != ParameterTypeDatetime {
+		panic(InvalidParameterTypeError)
 	}
-
-	return nil, InvalidParameterTypeError
+	val := ctx.Value(parm.Key())
+	if val == nil {
+		d := parm.Default()
+		if d == nil {
+			return nil
+		}
+		return d.(*time.Time)
+	}
+	t := val.(time.Time)
+	return &t
 }
 
 func SetDatetime(ctx context.Context, parm Parameter, val time.Time) (context.Context, error) {
-	if parm.Type() == ParameterTypeDatetime {
-		return context.WithValue(ctx, parm.Key(), val), nil
+	if parm.Type() != ParameterTypeDatetime {
+		panic(InvalidParameterTypeError)
 	}
-
-	return ctx, InvalidParameterTypeError
+	return context.WithValue(ctx, parm.Key(), val), nil
 }
 
 func UnsetDatetime(ctx context.Context, parm Parameter) (context.Context, error) {
-	if parm.Type() == ParameterTypeDatetime {
-		return context.WithValue(ctx, parm.Key(), nil), nil
+	if parm.Type() != ParameterTypeDatetime {
+		panic(InvalidParameterTypeError)
 	}
-
-	return ctx, InvalidParameterTypeError
+	return context.WithValue(ctx, parm.Key(), nil), nil
 }
 
-func GetDuration(ctx context.Context, parm Parameter) (*time.Duration, error) {
-	if parm.Type() == ParameterTypeDuration {
-		val := ctx.Value(parm.Key())
-		if val == nil {
-			d := parm.Default()
-			if d == nil {
-				return nil, nil
-			}
-			return d.(*time.Duration), nil
-		}
-		d := val.(time.Duration)
-		return &d, nil
+func GetDuration(ctx context.Context, parm Parameter) *time.Duration {
+	if parm.Type() != ParameterTypeDuration {
+		panic(InvalidParameterTypeError)
 	}
-
-	return nil, InvalidParameterTypeError
+	val := ctx.Value(parm.Key())
+	if val == nil {
+		d := parm.Default()
+		if d == nil {
+			return nil
+		}
+		return d.(*time.Duration)
+	}
+	d := val.(time.Duration)
+	return &d
 }
 
 func SetDuration(ctx context.Context, parm Parameter, val time.Duration) (context.Context, error) {
-	if parm.Type() == ParameterTypeDuration {
-		return context.WithValue(ctx, parm.Key(), val), nil
+	if parm.Type() != ParameterTypeDuration {
+		panic(InvalidParameterTypeError)
 	}
-
-	return ctx, InvalidParameterTypeError
+	return context.WithValue(ctx, parm.Key(), val), nil
 }
 
 func UnsetDuration(ctx context.Context, parm Parameter) (context.Context, error) {
-	if parm.Type() == ParameterTypeDuration {
-		return context.WithValue(ctx, parm.Key(), nil), nil
+	if parm.Type() != ParameterTypeDuration {
+		panic(InvalidParameterTypeError)
 	}
-
-	return ctx, InvalidParameterTypeError
+	return context.WithValue(ctx, parm.Key(), nil), nil
 }
 
-func GetURI(ctx context.Context, parm Parameter) (*url.URL, error) {
-	if parm.Type() == ParameterTypeURI {
-		val := ctx.Value(parm.Key())
-		if val == nil {
-			d := parm.Default()
-			if d == nil {
-				return nil, nil
-			}
-			return d.(*url.URL), nil
-		}
-		u := val.(url.URL)
-		return &u, nil
+func GetURI(ctx context.Context, parm Parameter) *url.URL {
+	if parm.Type() != ParameterTypeURI {
+		panic(InvalidParameterTypeError)
 	}
-
-	return nil, InvalidParameterTypeError
+	val := ctx.Value(parm.Key())
+	if val == nil {
+		d := parm.Default()
+		if d == nil {
+			return nil
+		}
+		return d.(*url.URL)
+	}
+	u := val.(url.URL)
+	return &u
 }
 
 func SetURI(ctx context.Context, parm Parameter, val url.URL) (context.Context, error) {
-	if parm.Type() == ParameterTypeURI {
-		return context.WithValue(ctx, parm.Key(), val), nil
+	if parm.Type() != ParameterTypeURI {
+		panic(InvalidParameterTypeError)
 	}
-
-	return ctx, InvalidParameterTypeError
+	return context.WithValue(ctx, parm.Key(), val), nil
 }
 
 func UnsetURI(ctx context.Context, parm Parameter) (context.Context, error) {
-	if parm.Type() == ParameterTypeURI {
-		return context.WithValue(ctx, parm.Key(), nil), nil
+	if parm.Type() != ParameterTypeURI {
+		panic(InvalidParameterTypeError)
 	}
-
-	return ctx, InvalidParameterTypeError
+	return context.WithValue(ctx, parm.Key(), nil), nil
 }
 
-func GetBoolList(ctx context.Context, parm Parameter) (*[]bool, error) {
-	if parm.Type() == ParameterTypeBoolList {
-		val := ctx.Value(parm.Key())
-		if val == nil {
-			d := parm.Default()
-			if d == nil {
-				return nil, nil
-			}
-			return d.(*[]bool), nil
-		}
-		b := val.([]bool)
-		return &b, nil
+func GetBoolList(ctx context.Context, parm Parameter) *[]bool {
+	if parm.Type() != ParameterTypeBoolList {
+		panic(InvalidParameterTypeError)
 	}
-
-	return nil, InvalidParameterTypeError
+	val := ctx.Value(parm.Key())
+	if val == nil {
+		d := parm.Default()
+		if d == nil {
+			return nil
+		}
+		return d.(*[]bool)
+	}
+	b := val.([]bool)
+	return &b
 }
 
 func SetBoolList(ctx context.Context, parm Parameter, val []bool) (context.Context, error) {
@@ -303,21 +281,20 @@ func UnsetBoolList(ctx context.Context, parm Parameter) (context.Context, error)
 	return ctx, InvalidParameterTypeError
 }
 
-func GetIntList(ctx context.Context, parm Parameter) (*[]int64, error) {
-	if parm.Type() == ParameterTypeIntList {
-		val := ctx.Value(parm.Key())
-		if val == nil {
-			d := parm.Default()
-			if d == nil {
-				return nil, nil
-			}
-			return d.(*[]int64), nil
-		}
-		i := val.([]int64)
-		return &i, nil
+func GetIntList(ctx context.Context, parm Parameter) *[]int64 {
+	if parm.Type() != ParameterTypeIntList {
+		panic(InvalidParameterTypeError)
 	}
-
-	return nil, InvalidParameterTypeError
+	val := ctx.Value(parm.Key())
+	if val == nil {
+		d := parm.Default()
+		if d == nil {
+			return nil
+		}
+		return d.(*[]int64)
+	}
+	i := val.([]int64)
+	return &i
 }
 
 func SetIntList(ctx context.Context, parm Parameter, val []int64) (context.Context, error) {
@@ -336,21 +313,20 @@ func UnsetIntList(ctx context.Context, parm Parameter) (context.Context, error) 
 	return ctx, InvalidParameterTypeError
 }
 
-func GetStringList(ctx context.Context, parm Parameter) (*[]string, error) {
-	if parm.Type() == ParameterTypeStringList {
-		val := ctx.Value(parm.Key())
-		if val == nil {
-			d := parm.Default()
-			if d == nil {
-				return nil, nil
-			}
-			return d.(*[]string), nil
-		}
-		s := val.([]string)
-		return &s, nil
+func GetStringList(ctx context.Context, parm Parameter) *[]string {
+	if parm.Type() != ParameterTypeStringList {
+		panic(InvalidParameterTypeError)
 	}
-
-	return nil, InvalidParameterTypeError
+	val := ctx.Value(parm.Key())
+	if val == nil {
+		d := parm.Default()
+		if d == nil {
+			return nil
+		}
+		return d.(*[]string)
+	}
+	s := val.([]string)
+	return &s
 }
 
 func SetStringList(ctx context.Context, parm Parameter, val []string) (context.Context, error) {
@@ -369,21 +345,20 @@ func UnsetStringList(ctx context.Context, parm Parameter) (context.Context, erro
 	return ctx, InvalidParameterTypeError
 }
 
-func GetPathList(ctx context.Context, parm Parameter) (*[]string, error) {
-	if parm.Type() == ParameterTypePathList {
-		val := ctx.Value(parm.Key())
-		if val == nil {
-			d := parm.Default()
-			if d == nil {
-				return nil, nil
-			}
-			return d.(*[]string), nil
-		}
-		s := val.([]string)
-		return &s, nil
+func GetPathList(ctx context.Context, parm Parameter) *[]string {
+	if parm.Type() != ParameterTypePathList {
+		panic(InvalidParameterTypeError)
 	}
-
-	return nil, InvalidParameterTypeError
+	val := ctx.Value(parm.Key())
+	if val == nil {
+		d := parm.Default()
+		if d == nil {
+			return nil
+		}
+		return d.(*[]string)
+	}
+	s := val.([]string)
+	return &s
 }
 
 func SetPathList(ctx context.Context, parm Parameter, val []string) (context.Context, error) {
@@ -402,21 +377,20 @@ func UnsetPathList(ctx context.Context, parm Parameter) (context.Context, error)
 	return ctx, InvalidParameterTypeError
 }
 
-func GetDatetimeList(ctx context.Context, parm Parameter) (*[]time.Time, error) {
-	if parm.Type() == ParameterTypeDatetimeList {
-		val := ctx.Value(parm.Key())
-		if val == nil {
-			d := parm.Default()
-			if d == nil {
-				return nil, nil
-			}
-			return d.(*[]time.Time), nil
-		}
-		t := val.([]time.Time)
-		return &t, nil
+func GetDatetimeList(ctx context.Context, parm Parameter) *[]time.Time {
+	if parm.Type() != ParameterTypeDatetimeList {
+		panic(InvalidParameterTypeError)
 	}
-
-	return nil, InvalidParameterTypeError
+	val := ctx.Value(parm.Key())
+	if val == nil {
+		d := parm.Default()
+		if d == nil {
+			return nil
+		}
+		return d.(*[]time.Time)
+	}
+	t := val.([]time.Time)
+	return &t
 }
 
 func SetDatetimeList(ctx context.Context, parm Parameter, val []time.Time) (context.Context, error) {
@@ -435,21 +409,20 @@ func UnsetDatetimeList(ctx context.Context, parm Parameter) (context.Context, er
 	return ctx, InvalidParameterTypeError
 }
 
-func GetDurationList(ctx context.Context, parm Parameter) (*[]time.Duration, error) {
-	if parm.Type() == ParameterTypeDurationList {
-		val := ctx.Value(parm.Key())
-		if val == nil {
-			d := parm.Default()
-			if d == nil {
-				return nil, nil
-			}
-			return d.(*[]time.Duration), nil
-		}
-		d := val.([]time.Duration)
-		return &d, nil
+func GetDurationList(ctx context.Context, parm Parameter) *[]time.Duration {
+	if parm.Type() != ParameterTypeDurationList {
+		panic(InvalidParameterTypeError)
 	}
-
-	return nil, InvalidParameterTypeError
+	val := ctx.Value(parm.Key())
+	if val == nil {
+		d := parm.Default()
+		if d == nil {
+			return nil
+		}
+		return d.(*[]time.Duration)
+	}
+	d := val.([]time.Duration)
+	return &d
 }
 
 func SetDurationList(ctx context.Context, parm Parameter, val []time.Duration) (context.Context, error) {
@@ -468,21 +441,20 @@ func UnsetDurationList(ctx context.Context, parm Parameter) (context.Context, er
 	return ctx, InvalidParameterTypeError
 }
 
-func GetURIList(ctx context.Context, parm Parameter) (*[]url.URL, error) {
-	if parm.Type() == ParameterTypeURIList {
-		val := ctx.Value(parm.Key())
-		if val == nil {
-			d := parm.Default()
-			if d == nil {
-				return nil, nil
-			}
-			return d.(*[]url.URL), nil
-		}
-		u := val.([]url.URL)
-		return &u, nil
+func GetURIList(ctx context.Context, parm Parameter) *[]url.URL {
+	if parm.Type() != ParameterTypeURIList {
+		panic(InvalidParameterTypeError)
 	}
-
-	return nil, InvalidParameterTypeError
+	val := ctx.Value(parm.Key())
+	if val == nil {
+		d := parm.Default()
+		if d == nil {
+			return nil
+		}
+		return d.(*[]url.URL)
+	}
+	u := val.([]url.URL)
+	return &u
 }
 
 func SetURIList(ctx context.Context, parm Parameter, val []url.URL) (context.Context, error) {
@@ -617,20 +589,14 @@ func SetParameterList(ctx context.Context, parm Parameter, inputs []string) (con
 func AppendParameter(ctx context.Context, parm Parameter, inputs []string) (context.Context, error) {
 	switch parm.Type() {
 	case ParameterTypeStringList:
-		existing, err := GetStringList(ctx, parm)
-		if err != nil {
-			return ctx, err
-		}
+		existing := GetStringList(ctx, parm)
 		var list []string
 		if existing != nil {
 			list = *existing
 		}
 		return SetStringList(ctx, parm, append(list, inputs...))
 	case ParameterTypeIntList:
-		existing, err := GetIntList(ctx, parm)
-		if err != nil {
-			return ctx, err
-		}
+		existing := GetIntList(ctx, parm)
 		var list []int64
 		if existing != nil {
 			list = *existing
@@ -644,10 +610,7 @@ func AppendParameter(ctx context.Context, parm Parameter, inputs []string) (cont
 		}
 		return SetIntList(ctx, parm, list)
 	case ParameterTypeBoolList:
-		existing, err := GetBoolList(ctx, parm)
-		if err != nil {
-			return ctx, err
-		}
+		existing := GetBoolList(ctx, parm)
 		var list []bool
 		if existing != nil {
 			list = *existing
@@ -661,20 +624,14 @@ func AppendParameter(ctx context.Context, parm Parameter, inputs []string) (cont
 		}
 		return SetBoolList(ctx, parm, list)
 	case ParameterTypePathList:
-		existing, err := GetPathList(ctx, parm)
-		if err != nil {
-			return ctx, err
-		}
+		existing := GetPathList(ctx, parm)
 		var list []string
 		if existing != nil {
 			list = *existing
 		}
 		return SetPathList(ctx, parm, append(list, inputs...))
 	case ParameterTypeDatetimeList:
-		existing, err := GetDatetimeList(ctx, parm)
-		if err != nil {
-			return ctx, err
-		}
+		existing := GetDatetimeList(ctx, parm)
 		var list []time.Time
 		if existing != nil {
 			list = *existing
@@ -688,10 +645,7 @@ func AppendParameter(ctx context.Context, parm Parameter, inputs []string) (cont
 		}
 		return SetDatetimeList(ctx, parm, list)
 	case ParameterTypeDurationList:
-		existing, err := GetDurationList(ctx, parm)
-		if err != nil {
-			return ctx, err
-		}
+		existing := GetDurationList(ctx, parm)
 		var list []time.Duration
 		if existing != nil {
 			list = *existing
@@ -705,10 +659,7 @@ func AppendParameter(ctx context.Context, parm Parameter, inputs []string) (cont
 		}
 		return SetDurationList(ctx, parm, list)
 	case ParameterTypeURIList:
-		existing, err := GetURIList(ctx, parm)
-		if err != nil {
-			return ctx, err
-		}
+		existing := GetURIList(ctx, parm)
 		var list []url.URL
 		if existing != nil {
 			list = *existing

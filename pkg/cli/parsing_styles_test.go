@@ -62,8 +62,8 @@ func TestParsingStyles(t *testing.T) {
 				// cluster 'abc':
 				// 'a' is found, is bool, so it doesn't take value.
 				// 'b' is found, is string, so it takes 'c' as value.
-				valA, _ := GetBool(ctx, pa)
-				valB, _ := GetString(ctx, pb)
+				valA := GetBool(ctx, pa)
+				valB := GetString(ctx, pb)
 				if valA == nil || !*valA {
 					t.Errorf("expected a to be true")
 				}
@@ -91,7 +91,7 @@ func TestParsingStyles(t *testing.T) {
 			t.Fatalf("unexpected error: %v", err)
 		}
 
-		val, _ := GetString(ctx, pFoo)
+		val := GetString(ctx, pFoo)
 		if val == nil || *val != "bar" {
 			t.Errorf("expected foo to be 'bar', got %v", val)
 		}
@@ -112,7 +112,7 @@ func TestParsingStyles(t *testing.T) {
 			t.Fatalf("unexpected error: %v", err)
 		}
 
-		val, _ := GetString(ctx, pFoo)
+		val := GetString(ctx, pFoo)
 		if val == nil || *val != "bar" {
 			t.Errorf("expected foo to be 'bar', got %v", val)
 		}
@@ -138,12 +138,12 @@ func TestParsingStyles(t *testing.T) {
 			t.Fatalf("unexpected error: %v", err)
 		}
 
-		val, _ := GetString(ctx, pFoo)
+		val := GetString(ctx, pFoo)
 		if val == nil || *val != "bar" {
 			t.Errorf("expected foo to be 'bar', got %v", val)
 		}
 
-		argVal, _ := GetString(ctx, pArg)
+		argVal := GetString(ctx, pArg)
 		if argVal == nil || *argVal != "-baz" {
 			t.Errorf("expected arg to be '-baz', got %v", argVal)
 		}

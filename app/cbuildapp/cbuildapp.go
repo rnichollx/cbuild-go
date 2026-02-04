@@ -51,7 +51,7 @@ func init() {
 		RequiredParams: []cli.Parameter{ccommon.PTarget},
 		Flags:          []cli.Flag{ccommon.ConfigFlag, ccommon.ToolchainFlag, ccommon.TargetFlag},
 		Exec: func(ctx context.Context, args []string) error {
-			targetNameVal, _ := cli.GetString(ctx, ccommon.PTarget)
+			targetNameVal := cli.GetString(ctx, ccommon.PTarget)
 			if targetNameVal == nil || *targetNameVal == "" {
 				return fmt.Errorf("usage: cbuild build-deps <targetname>")
 			}
@@ -69,9 +69,9 @@ func init() {
 }
 
 func runClean(ctx context.Context, args []string) error {
-	buildConfigRaw, _ := cli.GetStringList(ctx, ccommon.PConfig)
-	workspacePathRaw, _ := cli.GetPath(ctx, ccommon.PWorkspace)
-	targetFlagRaw, _ := cli.GetString(ctx, ccommon.PTarget)
+	buildConfigRaw := cli.GetStringList(ctx, ccommon.PConfig)
+	workspacePathRaw := cli.GetPath(ctx, ccommon.PWorkspace)
+	targetFlagRaw := cli.GetString(ctx, ccommon.PTarget)
 	workspacePath := ""
 	if workspacePathRaw != nil {
 		workspacePath = *workspacePathRaw
@@ -80,7 +80,7 @@ func runClean(ctx context.Context, args []string) error {
 		workspacePath = "."
 	}
 
-	dryRunRaw, _ := cli.GetBool(ctx, ccommon.PDryRun)
+	dryRunRaw := cli.GetBool(ctx, ccommon.PDryRun)
 	dryRun := dryRunRaw != nil && *dryRunRaw
 
 	ws := &ccommon.WorkspaceContext{}
@@ -89,7 +89,7 @@ func runClean(ctx context.Context, args []string) error {
 		return fmt.Errorf("error loading configuration: %w", err)
 	}
 
-	toolchainFlagRaw, _ := cli.GetString(ctx, ccommon.PToolchain)
+	toolchainFlagRaw := cli.GetString(ctx, ccommon.PToolchain)
 	toolchainFlag := ""
 	if toolchainFlagRaw != nil {
 		toolchainFlag = *toolchainFlagRaw
@@ -143,8 +143,8 @@ func runClean(ctx context.Context, args []string) error {
 }
 
 func runBuild(ctx context.Context, command string, args []string) error {
-	buildConfigRaw, _ := cli.GetStringList(ctx, ccommon.PConfig)
-	workspacePathRaw, _ := cli.GetPath(ctx, ccommon.PWorkspace)
+	buildConfigRaw := cli.GetStringList(ctx, ccommon.PConfig)
+	workspacePathRaw := cli.GetPath(ctx, ccommon.PWorkspace)
 	workspacePath := ""
 	if workspacePathRaw != nil {
 		workspacePath = *workspacePathRaw
@@ -152,12 +152,12 @@ func runBuild(ctx context.Context, command string, args []string) error {
 	if workspacePath == "" {
 		workspacePath = "."
 	}
-	targetNameRaw, _ := cli.GetString(ctx, ccommon.PTarget)
+	targetNameRaw := cli.GetString(ctx, ccommon.PTarget)
 	targetName := ""
 	if targetNameRaw != nil {
 		targetName = *targetNameRaw
 	}
-	toolchainRaw, _ := cli.GetString(ctx, ccommon.PToolchain)
+	toolchainRaw := cli.GetString(ctx, ccommon.PToolchain)
 	toolchain := ""
 	if toolchainRaw != nil {
 		toolchain = *toolchainRaw
@@ -165,7 +165,7 @@ func runBuild(ctx context.Context, command string, args []string) error {
 	if toolchain == "" {
 		toolchain = "all"
 	}
-	dryRunRaw, _ := cli.GetBool(ctx, ccommon.PDryRun)
+	dryRunRaw := cli.GetBool(ctx, ccommon.PDryRun)
 	dryRun := dryRunRaw != nil && *dryRunRaw
 
 	ws := &ccommon.WorkspaceContext{}
@@ -231,9 +231,9 @@ func runBuild(ctx context.Context, command string, args []string) error {
 }
 
 func runTest(ctx context.Context, args []string) error {
-	buildConfigRaw, _ := cli.GetStringList(ctx, ccommon.PConfig)
-	workspacePathRaw, _ := cli.GetPath(ctx, ccommon.PWorkspace)
-	targetFlagRaw, _ := cli.GetString(ctx, ccommon.PTarget)
+	buildConfigRaw := cli.GetStringList(ctx, ccommon.PConfig)
+	workspacePathRaw := cli.GetPath(ctx, ccommon.PWorkspace)
+	targetFlagRaw := cli.GetString(ctx, ccommon.PTarget)
 	workspacePath := ""
 	if workspacePathRaw != nil {
 		workspacePath = *workspacePathRaw
@@ -242,7 +242,7 @@ func runTest(ctx context.Context, args []string) error {
 		workspacePath = "."
 	}
 
-	dryRunRaw, _ := cli.GetBool(ctx, ccommon.PDryRun)
+	dryRunRaw := cli.GetBool(ctx, ccommon.PDryRun)
 	dryRun := dryRunRaw != nil && *dryRunRaw
 
 	ws := &ccommon.WorkspaceContext{}
@@ -251,7 +251,7 @@ func runTest(ctx context.Context, args []string) error {
 		return fmt.Errorf("error loading configuration: %w", err)
 	}
 
-	toolchainFlagRaw, _ := cli.GetString(ctx, ccommon.PToolchain)
+	toolchainFlagRaw := cli.GetString(ctx, ccommon.PToolchain)
 	toolchainFlag := ""
 	if toolchainFlagRaw != nil {
 		toolchainFlag = *toolchainFlagRaw

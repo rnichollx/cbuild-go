@@ -39,12 +39,12 @@ func TestSubcommands(t *testing.T) {
 		t.Errorf("Expected subcommands [cmd], got %v", result.Subcommands)
 	}
 
-	subVal, _ := GetBool(result.Ctx, pSub)
+	subVal := GetBool(result.Ctx, pSub)
 	if subVal == nil || !*subVal {
 		t.Errorf("Expected sub flag to be true")
 	}
 
-	argVal, _ := GetString(result.Ctx, pArg)
+	argVal := GetString(result.Ctx, pArg)
 	if argVal == nil || *argVal != "foo" {
 		t.Errorf("Expected arg to be 'foo', got %v", argVal)
 	}
@@ -89,12 +89,12 @@ func TestNestedSubcommands(t *testing.T) {
 		t.Errorf("Expected subcommands [sub1 sub2], got %v", result.Subcommands)
 	}
 
-	v1, _ := GetBool(result.Ctx, p1)
+	v1 := GetBool(result.Ctx, p1)
 	if v1 == nil || !*v1 {
 		t.Errorf("Expected p1 to be true")
 	}
 
-	v2, _ := GetBool(result.Ctx, p2)
+	v2 := GetBool(result.Ctx, p2)
 	if v2 == nil || !*v2 {
 		t.Errorf("Expected p2 to be true")
 	}
@@ -159,12 +159,12 @@ func TestSubcommandRestriction(t *testing.T) {
 		t.Errorf("Expected no subcommands, got %v", result.Subcommands)
 	}
 
-	arg1Val, _ := GetString(result.Ctx, pArg1)
+	arg1Val := GetString(result.Ctx, pArg1)
 	if arg1Val == nil || *arg1Val != "foo" {
 		t.Errorf("Expected first arg to be 'foo'")
 	}
 
-	arg2Val, _ := GetString(result.Ctx, pArg2)
+	arg2Val := GetString(result.Ctx, pArg2)
 	if arg2Val == nil || *arg2Val != "cmd" {
 		t.Errorf("Expected second arg to be 'cmd', got %v", arg2Val)
 	}

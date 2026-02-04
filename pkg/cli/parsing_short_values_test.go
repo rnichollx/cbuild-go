@@ -19,7 +19,7 @@ func TestShortFlagValues(t *testing.T) {
 			t.Fatalf("unexpected error: %v", err)
 		}
 
-		val, _ := GetString(ctx, pd)
+		val := GetString(ctx, pd)
 		if val == nil || *val != "foo" {
 			t.Errorf("expected D to be 'foo', got %v", val)
 		}
@@ -33,7 +33,7 @@ func TestShortFlagValues(t *testing.T) {
 			t.Fatalf("unexpected error: %v", err)
 		}
 
-		val, _ := GetString(ctx, pd)
+		val := GetString(ctx, pd)
 		if val == nil || *val != "foobar" {
 			t.Errorf("expected D to be 'foobar', got %v", val)
 		}
@@ -47,7 +47,7 @@ func TestShortFlagValues(t *testing.T) {
 			t.Fatalf("unexpected error: %v", err)
 		}
 
-		val, _ := GetString(ctx, pd)
+		val := GetString(ctx, pd)
 		if val == nil || *val != "foobar" {
 			t.Errorf("expected D to be 'foobar', got %v", val)
 		}
@@ -61,7 +61,7 @@ func TestShortFlagValues(t *testing.T) {
 			t.Fatalf("unexpected error: %v", err)
 		}
 
-		val, _ := GetString(ctx, pd)
+		val := GetString(ctx, pd)
 		if val == nil || *val != "foobar" {
 			t.Errorf("expected D to be 'foobar', got %v", val)
 		}
@@ -75,7 +75,7 @@ func TestShortFlagValues(t *testing.T) {
 			t.Fatalf("unexpected error: %v", err)
 		}
 
-		val, _ := GetString(ctx, pd)
+		val := GetString(ctx, pd)
 		if val == nil || *val != "foobar" {
 			t.Errorf("expected D to be 'foobar', got %v", val)
 		}
@@ -89,7 +89,7 @@ func TestShortFlagValues(t *testing.T) {
 			t.Fatalf("unexpected error: %v", err)
 		}
 
-		val, _ := GetString(ctx, pd)
+		val := GetString(ctx, pd)
 		if val == nil || *val != "foobar" {
 			t.Errorf("expected D to be 'foobar', got %v", val)
 		}
@@ -103,7 +103,7 @@ func TestShortFlagValues(t *testing.T) {
 			t.Fatalf("unexpected error: %v", err)
 		}
 
-		val, _ := GetString(ctx, pd)
+		val := GetString(ctx, pd)
 		if val == nil || *val != "foobar" {
 			t.Errorf("expected D to be 'foobar', got %v", val)
 		}

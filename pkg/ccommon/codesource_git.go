@@ -19,7 +19,7 @@ type GitSource struct {
 
 func (ws *WorkspaceContext) GetFromGit(ctx context.Context, name string, source GitSource) error {
 	destDir := filepath.Join(ws.WorkspacePath, "sources", name)
-	useSubmoduleRaw, _ := cli.GetBool(ctx, PSubmodule)
+	useSubmoduleRaw := cli.GetBool(ctx, PSubmodule)
 	useSubmodule := useSubmoduleRaw != nil && *useSubmoduleRaw
 
 	if useSubmodule {

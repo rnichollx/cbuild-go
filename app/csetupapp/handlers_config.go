@@ -10,19 +10,13 @@ import (
 
 func handleSetCXXVersion(ctx context.Context) error {
 	workspacePath := getWorkspacePath(ctx)
-	version, err := cli.GetString(ctx, ccommon.PCxxVersion)
-	if err != nil {
-		return err
-	}
+	version := cli.GetString(ctx, ccommon.PCxxVersion)
 	if version == nil {
 		return fmt.Errorf("no CXX version provided")
 	}
-	target, err := cli.GetString(ctx, PTarget)
-	if err != nil {
-		return fmt.Errorf("getString: %w", err)
-	}
+	target := cli.GetString(ctx, PTarget)
 	ws := &ccommon.WorkspaceContext{}
-	err = ws.Load(ctx, workspacePath)
+	err := ws.Load(ctx, workspacePath)
 	if err != nil {
 		return fmt.Errorf("error loading workspace: %w", err)
 	}
@@ -32,7 +26,7 @@ func handleSetCXXVersion(ctx context.Context) error {
 
 func handleEnableStaging(ctx context.Context) error {
 	workspacePath := getWorkspacePath(ctx)
-	targetVal, _ := cli.GetString(ctx, PTarget)
+	targetVal := cli.GetString(ctx, PTarget)
 	target := ""
 	if targetVal != nil {
 		target = *targetVal
@@ -49,7 +43,7 @@ func handleEnableStaging(ctx context.Context) error {
 
 func handleDisableStaging(ctx context.Context) error {
 	workspacePath := getWorkspacePath(ctx)
-	targetVal, _ := cli.GetString(ctx, PTarget)
+	targetVal := cli.GetString(ctx, PTarget)
 	target := ""
 	if targetVal != nil {
 		target = *targetVal
@@ -66,7 +60,7 @@ func handleDisableStaging(ctx context.Context) error {
 
 func handleAddConfig(ctx context.Context) error {
 	workspacePath := getWorkspacePath(ctx)
-	configNameVal, _ := cli.GetStringList(ctx, ccommon.PConfig)
+	configNameVal := cli.GetStringList(ctx, ccommon.PConfig)
 	configName := ""
 	if configNameVal != nil && len(*configNameVal) > 0 {
 		configName = (*configNameVal)[0]
@@ -83,7 +77,7 @@ func handleAddConfig(ctx context.Context) error {
 
 func handleRemoveConfig(ctx context.Context) error {
 	workspacePath := getWorkspacePath(ctx)
-	configNameVal, _ := cli.GetStringList(ctx, ccommon.PConfig)
+	configNameVal := cli.GetStringList(ctx, ccommon.PConfig)
 	configName := ""
 	if configNameVal != nil && len(*configNameVal) > 0 {
 		configName = (*configNameVal)[0]

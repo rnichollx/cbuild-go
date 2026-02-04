@@ -458,7 +458,7 @@ func (w *WorkspaceContext) ProcessCSetupConfig(ctx context.Context, sourceName s
 		}
 
 		if _, exists := w.Config.Targets[depName]; !exists {
-			autoDownloadRaw, _ := cli.GetBool(ctx, PDownloadDeps)
+			autoDownloadRaw := cli.GetBool(ctx, PDownloadDeps)
 			autoDownload := autoDownloadRaw != nil && *autoDownloadRaw
 			if !autoDownload {
 				fmt.Printf("Dependency '%s' is not present in sources, source '%s' suggests getting it from '%s', download it? [Y/n] ", depName, sourceName, sdep.From())

@@ -86,7 +86,7 @@ func (r *Runner) Run(ctx context.Context, args []string) error {
 	}
 
 	// 2. Help detection
-	helpVal, _ := GetBool(result.Ctx, NewParameter("help", ParameterTypeBool, PBool(false), ""))
+	helpVal := GetBool(result.Ctx, NewParameter("help", ParameterTypeBool, PBool(false), ""))
 	if helpVal != nil && *helpVal {
 		if len(result.Subcommands) == 0 {
 			r.PrintUsage("")
