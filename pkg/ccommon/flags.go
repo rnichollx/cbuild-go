@@ -29,8 +29,10 @@ var (
 	PWorkspace    = cli.NewParameter(FlagWorkspace, cli.ParameterTypePath, nil, "Path to the workspace directory.", false)
 	WorkspaceFlag = cli.NewStringFlag("w", "workspace", PWorkspace)
 
-	PConfig    = cli.NewParameter(FlagConfig, cli.ParameterTypeStringList, nil, "Build configuration to use (e.g., Debug, Release), comma separated", false)
-	ConfigFlag = cli.NewStringFlag("c", "config", PConfig)
+	PConfig            = cli.NewParameter(FlagConfig, cli.ParameterTypeStringList, nil, "Build configuration to use (e.g., Debug, Release), comma separated", false)
+	ConfigFlag         = cli.NewStringFlag("c", "config", PConfig)
+	PConfigRequired    = cli.NewParameter(FlagConfig, cli.ParameterTypeStringList, nil, "Build configuration to use (e.g., Debug, Release), comma separated", true)
+	ConfigRequiredFlag = cli.NewStringFlag("c", "config", PConfigRequired)
 
 	PTarget    = cli.NewParameter(FlagTarget, cli.ParameterTypeString, nil, "Specific target to build/modify.", false)
 	TargetArg  = cli.NewStringArgument("target", PTarget)

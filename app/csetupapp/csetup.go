@@ -323,7 +323,7 @@ func init() {
 	}
 	CSetup.Subcommands["add-config"] = &cli.Subcommand{
 		Description:  "Add a build configuration",
-		AcceptsFlags: []cli.Flag{ccommon.ConfigFlag, ccommon.ToolchainFlag},
+		AcceptsFlags: []cli.Flag{ccommon.ConfigRequiredFlag, ccommon.ToolchainFlag},
 		Exec: func(ctx context.Context, args []string) error {
 			return handleAddConfig(ctx)
 		},
