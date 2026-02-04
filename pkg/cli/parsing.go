@@ -72,7 +72,7 @@ func ParseFlags(ctx context.Context, opts ParseOptions, args []string) (context.
 		Tokens: args,
 	})
 	if err != nil {
-		return result.Ctx, nil, err
+		return nil, nil, err
 	}
 	return result.Ctx, result.Unparsed, nil
 }
