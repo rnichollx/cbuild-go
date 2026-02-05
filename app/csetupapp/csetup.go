@@ -70,8 +70,7 @@ var (
 	PTarget     = cli.NewParameter("target", cli.ParameterTypeString, nil, "Name of the build target.")
 	PRevision   = cli.NewParameter("revision", cli.ParameterTypeString, nil, "Revision or tag to use.")
 	PBranch     = cli.NewParameter("branch", cli.ParameterTypeString, nil, "Branch name to use.")
-	PUpdate     = cli.NewParameter("update", cli.ParameterTypeBool, cli.PBool(false), "Update to latest revision.")
-	PNoBranch   = cli.NewParameter("no-branch", cli.ParameterTypeBool, cli.PBool(false), "Clear tracked branch.")
+	PNoTrack    = cli.NewParameter("no-track", cli.ParameterTypeBool, cli.PBool(false), "Do not track the cloned branch.")
 )
 
 func init() {
@@ -109,6 +108,7 @@ func init() {
 			ccommon.NoSetupFlag,
 			cli.NewStringFlag("", "branch", PBranch),
 			cli.NewStringFlag("", "revision", PRevision),
+			cli.NewBoolFlag("", "no-track", PNoTrack),
 		},
 		Exec: func(ctx context.Context, args []string) error {
 			return handleGitClone(ctx)
@@ -365,19 +365,36 @@ func init() {
 		},
 	}
 	CSetup.Subcommands["pin"] = &cli.Subcommand{
-		Description: "Pin a git source (HEAD by default, or a specific branch/revision)",
+		Description: "Pin a git source (HEAD by default, or a specific revision)",
+		Arguments: []cli.Argument{
+			cli.NewStringArgument("source", PSource),
+		},
+		Flags: []cli.Flag{
+			cli.NewStringFlag("", "revision", PRevision),
+		},
+		Exec: func(ctx context.Context, args []string) error {
+			return handlePin(ctx)
+		},
+	}
+	CSetup.Subcommands["track"] = &cli.Subcommand{
+		Description: "Track a branch for a git source",
+		Arguments: []cli.Argument{
+			cli.NewStringArgument("source", PSource),
+			cli.NewStringArgument("branch", PBranch),
+		},
+		RequiredParams: []cli.Parameter{PSource, PBranch},
+		Exec: func(ctx context.Context, args []string) error {
+			return handleTrack(ctx)
+		},
+	}
+	CSetup.Subcommands["untrack"] = &cli.Subcommand{
+		Description: "Stop tracking a branch for a git source",
 		Arguments: []cli.Argument{
 			cli.NewStringArgument("source", PSource),
 		},
 		RequiredParams: []cli.Parameter{PSource},
-		Flags: []cli.Flag{
-			cli.NewStringFlag("", "branch", PBranch),
-			cli.NewStringFlag("", "revision", PRevision),
-			cli.NewBoolFlag("", "update", PUpdate),
-			cli.NewBoolFlag("", "no-branch", PNoBranch),
-		},
 		Exec: func(ctx context.Context, args []string) error {
-			return handlePin(ctx)
+			return handleUntrack(ctx)
 		},
 	}
 	CSetup.Subcommands["unpin"] = &cli.Subcommand{
@@ -397,6 +414,15 @@ func init() {
 		},
 		Exec: func(ctx context.Context, args []string) error {
 			return handleStatus(ctx)
+		},
+	}
+	CSetup.Subcommands["versions"] = &cli.Subcommand{
+		Description: "List pinned/unpinned versions for sources",
+		Arguments: []cli.Argument{
+			cli.NewStringArgument("source", PSource),
+		},
+		Exec: func(ctx context.Context, args []string) error {
+			return handleVersions(ctx)
 		},
 	}
 	CSetup.Subcommands["update"] = &cli.Subcommand{

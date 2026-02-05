@@ -127,3 +127,15 @@ func (ws *WorkspaceContext) GitPull(ctx context.Context, repoPath string) error 
 	cmd.Stderr = os.Stderr
 	return cmd.Run()
 }
+
+func (ws *WorkspaceContext) GitCurrentBranch(ctx context.Context, repoPath string) (string, error) {
+	out, err := exec.CommandContext(ctx, "git", "-C", repoPath, "rev-parse", "--abbrev-ref", "HEAD").Output()
+	if err != nil {
+		return "", fmt.Errorf("failed to get current branch: %w", err)
+	}
+	branch := strings.TrimSpace(string(out))
+	if branch == "HEAD" {
+		return "", nil
+	}
+	return branch, nil
+}

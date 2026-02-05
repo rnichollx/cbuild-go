@@ -252,6 +252,8 @@ func handleGitClone(ctx context.Context) error {
 	if revisionVal != nil {
 		revision = *revisionVal
 	}
+	noTrackVal := cli.GetBool(ctx, PNoTrack)
+	noTrack := noTrackVal != nil && *noTrackVal
 
 	if repoURL == "" {
 		return fmt.Errorf("usage: csetup git-clone <repo_url> [dest_name] [--download-deps] [--submodule] [--no-setup]")
@@ -297,6 +299,17 @@ func handleGitClone(ctx context.Context) error {
 	err = ws.DownloadSource(ctx, destName)
 	if err != nil {
 		return fmt.Errorf("error downloading source: %w", err)
+	}
+
+	if revision == "" && branch == "" && !noTrack {
+		// Track the branch we checked out by default.
+		sourcePath := filepath.Join(workspacePath, "sources", destName)
+		if b, err := ws.GitCurrentBranch(ctx, sourcePath); err == nil && b != "" {
+			ws.Config.Sources[destName].Git.Branch = &b
+			if err := ws.Save(ctx); err != nil {
+				return err
+			}
+		}
 	}
 
 	// 3. Update cbuild_workspace.yml with target if it doesn't exist
