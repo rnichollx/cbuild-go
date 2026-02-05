@@ -77,7 +77,7 @@ func init() {
 	CSetup.Subcommands["init"] = &cli.Subcommand{
 		Description: "Initialize a new workspace",
 		Arguments: []cli.Argument{
-			cli.NewStringArgument("path", PPath),
+			cli.NewStringArgument("path", ccommon.PWorkspace),
 		},
 		RequiredParams: []cli.Parameter{PPath},
 		Flags:          []cli.Flag{ccommon.ReinitFlag},
@@ -128,10 +128,10 @@ func init() {
 	CSetup.Subcommands["declare-local-source"] = &cli.Subcommand{
 		Description: "Add local source information to the workspace",
 		Arguments: []cli.Argument{
-			cli.NewStringArgument("local_path", PLocalPath),
+			cli.NewStringArgument("source", PSource),
 			cli.NewStringArgument("path", PPath),
 		},
-		RequiredParams: []cli.Parameter{PLocalPath},
+		RequiredParams: []cli.Parameter{PSource, PPath},
 		Exec: func(ctx context.Context, args []string) error {
 			return handleDeclareLocalSource(ctx)
 		},

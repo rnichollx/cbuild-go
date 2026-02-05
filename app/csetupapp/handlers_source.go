@@ -405,24 +405,19 @@ func handleDeclareGitSource(ctx context.Context) error {
 
 func handleDeclareLocalSource(ctx context.Context) error {
 	workspacePath := getWorkspacePath(ctx)
-	localPathVal := cli.GetPath(ctx, PLocalPath)
-	localPath := ""
-	if localPathVal != nil {
-		localPath = *localPathVal
-	}
-	destNameVal := cli.GetPath(ctx, PPath)
+	destNameVal := cli.GetString(ctx, PSource)
 	destName := ""
 	if destNameVal != nil {
 		destName = *destNameVal
 	}
-
-	if localPath == "" {
-		return fmt.Errorf("usage: csetup declare-local-source <local_path> [dest_name]")
+	localPathVal := cli.GetPath(ctx, PPath)
+	localPath := ""
+	if localPathVal != nil {
+		localPath = *localPathVal
 	}
 
-	if destName == "" {
-		// Extract destName from localPath
-		destName = filepath.Base(localPath)
+	if destName == "" || localPath == "" {
+		return fmt.Errorf("usage: csetup declare-local-source <source> <path>")
 	}
 
 	// 1. Check if cbuild_workspace.yml exists
