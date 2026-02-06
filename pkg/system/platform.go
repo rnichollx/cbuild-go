@@ -56,6 +56,8 @@ func (p *Platform) UnmarshalYAML(value *yaml.Node) error {
 		*p = PlatformLinux
 	case "freebsd":
 		*p = PlatformFreeBSD
+	case "openbsd":
+		*p = PlatformOpenBSD
 	case "unknown":
 		*p = PlatformUnknown
 	default:

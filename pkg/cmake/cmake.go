@@ -81,6 +81,8 @@ func PlatformToCMakeName(platform system.Platform) (string, error) {
 		return "Linux", nil
 	case system.PlatformFreeBSD:
 		return "FreeBSD", nil
+	case system.PlatformOpenBSD:
+		return "OpenBSD", nil
 	case system.PlatformWindows:
 		return "Windows", nil
 	default:

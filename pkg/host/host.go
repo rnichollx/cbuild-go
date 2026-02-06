@@ -13,7 +13,7 @@ func DetectHostPlatform() system.Platform {
 	case "linux":
 		return system.PlatformLinux
 	case "windows":
-		return system.PlatformUnknown
+		return system.PlatformWindows
 	case "darwin":
 		return system.PlatformMac
 	case "freebsd":

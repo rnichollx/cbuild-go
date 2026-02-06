@@ -40,6 +40,32 @@ func TestProcessorToCMakeName(t *testing.T) {
 	}
 }
 
+func TestPlatformToCMakeName(t *testing.T) {
+	tests := []struct {
+		platform system.Platform
+		want     string
+		wantErr  bool
+	}{
+		{system.PlatformMac, "Darwin", false},
+		{system.PlatformLinux, "Linux", false},
+		{system.PlatformFreeBSD, "FreeBSD", false},
+		{system.PlatformOpenBSD, "OpenBSD", false},
+		{system.PlatformWindows, "Windows", false},
+		{system.PlatformUnknown, "", true},
+	}
+
+	for _, tt := range tests {
+		got, err := PlatformToCMakeName(tt.platform)
+		if (err != nil) != tt.wantErr {
+			t.Errorf("PlatformToCMakeName(%v) error = %v, wantErr %v", tt.platform, err, tt.wantErr)
+			continue
+		}
+		if got != tt.want {
+			t.Errorf("PlatformToCMakeName(%v) = %v, want %v", tt.platform, got, tt.want)
+		}
+	}
+}
+
 func TestGenerateToolchainFile(t *testing.T) {
 	tmpDir := t.TempDir()
 	outputFile := filepath.Join(tmpDir, "toolchain.cmake")

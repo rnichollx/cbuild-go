@@ -18,6 +18,7 @@ func TestPlatformYAML(t *testing.T) {
 		{"darwin", PlatformMac},
 		{"linux", PlatformLinux},
 		{"freebsd", PlatformFreeBSD},
+		{"openbsd", PlatformOpenBSD},
 		{"unknown", PlatformUnknown},
 	}
 
