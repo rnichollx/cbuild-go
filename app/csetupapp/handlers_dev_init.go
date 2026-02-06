@@ -12,10 +12,12 @@ import (
 
 func handleDevInit(ctx context.Context) error {
 	workspaceNameVal := cli.GetOptionalPath(ctx, PathParameter)
-	workspaceName := "workspace"
+	workspaceName := "dev-workspace"
 	if workspaceNameVal != nil && *workspaceNameVal != "" {
 		workspaceName = *workspaceNameVal
 	}
+	noSetupRaw := cli.GetOptionalBool(ctx, ccommon.NoSetupParameter)
+	noSetup := noSetupRaw != nil && *noSetupRaw
 
 	currentDir, err := os.Getwd()
 	if err != nil {
@@ -64,15 +66,14 @@ func handleDevInit(ctx context.Context) error {
 		return fmt.Errorf("error saving workspace: %w", err)
 	}
 
-	// Now we need to process CSetup.yml if it exists
-	err = ws.LoadDefaults(ctx, sourceName)
-	if err != nil {
-		return fmt.Errorf("error loading defaults from CSetup.yml: %w", err)
-	}
-
-	err = ws.Save(ctx)
-	if err != nil {
-		return fmt.Errorf("error saving workspace after processing CSetup.yml: %w", err)
+	if noSetup {
+		fmt.Println("Skipping setup as requested by --no-setup.")
+	} else {
+		// Process csetup defaults unless explicitly disabled.
+		err = ws.LoadDefaults(ctx, sourceName)
+		if err != nil {
+			return fmt.Errorf("error loading defaults from CSetup.yml: %w", err)
+		}
 	}
 
 	fmt.Printf("Initialized dev workspace in %s with source %s from %s\n", workspaceName, sourceName, currentDirAbs)

@@ -2,6 +2,7 @@ package ccommon
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"fmt"
 	"io/ioutil"
@@ -427,7 +428,9 @@ func (w *WorkspaceContext) ProcessCSetupConfig(ctx context.Context, sourceName s
 	}
 
 	var csetup CSetupLists
-	err = yaml.Unmarshal(data, &csetup)
+	decoder := yaml.NewDecoder(bytes.NewReader(data))
+	decoder.KnownFields(true)
+	err = decoder.Decode(&csetup)
 	if err != nil {
 		return fmt.Errorf("failed to parse csetup file %s: %w", csetupFile, err)
 	}
@@ -452,6 +455,30 @@ func (w *WorkspaceContext) ProcessCSetupConfig(ctx context.Context, sourceName s
 	}
 
 	// Process Suggested Dependencies
+	addDependencyToTargetsUsingSource := func(depName string) {
+		for targetName, targetConfig := range w.Config.Targets {
+			targetSourceName := targetConfig.Source
+			if targetSourceName == "" {
+				targetSourceName = targetName
+			}
+			if targetSourceName != sourceName {
+				continue
+			}
+
+			found := false
+			for _, d := range targetConfig.Depends {
+				if d == depName {
+					found = true
+					break
+				}
+			}
+			if !found {
+				targetConfig.Depends = append(targetConfig.Depends, depName)
+				fmt.Printf("Added dependency '%s' to target '%s'.\n", depName, targetName)
+			}
+		}
+	}
+
 	for depName, sdep := range csetup.SuggestedSources {
 		if err := sdep.ValidateWeb(); err != nil {
 			return fmt.Errorf("invalid suggested source for dependency %s: %w", depName, err)
@@ -489,27 +516,6 @@ func (w *WorkspaceContext) ProcessCSetupConfig(ctx context.Context, sourceName s
 				}
 				fmt.Printf("Added target '%s' to workspace.\n", depName)
 
-				// Also add it as a dependency to the targets using current source
-				for targetName, targetConfig := range w.Config.Targets {
-					targetSourceName := targetConfig.Source
-					if targetSourceName == "" {
-						targetSourceName = targetName
-					}
-					if targetSourceName == sourceName {
-						found := false
-						for _, d := range targetConfig.Depends {
-							if d == depName {
-								found = true
-								break
-							}
-						}
-						if !found {
-							targetConfig.Depends = append(targetConfig.Depends, depName)
-							fmt.Printf("Added dependency '%s' to target '%s'.\n", depName, targetName)
-						}
-					}
-				}
-
 				// Recursively process the new target's csetup file
 				err = w.ProcessCSetupConfig(ctx, depName)
 				if err != nil {
@@ -517,6 +523,13 @@ func (w *WorkspaceContext) ProcessCSetupConfig(ctx context.Context, sourceName s
 				}
 			}
 		}
+
+		if _, exists := w.Config.Targets[depName]; !exists {
+			continue
+		}
+
+		// Wire existing suggested targets too (not only freshly downloaded ones).
+		addDependencyToTargetsUsingSource(depName)
 	}
 
 	return w.Save(ctx)
