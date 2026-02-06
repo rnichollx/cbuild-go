@@ -7,5 +7,6 @@ type CSetupLists struct {
 }
 
 type CSetupProjectDefaults struct {
-	CxxVersion string `yaml:"cxx_version,omitempty"`
+	CxxVersion                 string   `yaml:"cxx_version,omitempty"`
+	DefaultBuildConfigurations []string `yaml:"default_build_configurations,omitempty"`
 }

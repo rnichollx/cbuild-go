@@ -440,6 +440,9 @@ func (w *WorkspaceContext) ProcessCSetupConfig(ctx context.Context, sourceName s
 		if csetup.ProjectDefaultConfig.CxxVersion != "" {
 			w.Config.CXXVersion = csetup.ProjectDefaultConfig.CxxVersion
 		}
+		if len(csetup.ProjectDefaultConfig.DefaultBuildConfigurations) > 0 {
+			w.Config.Configurations = append([]string{}, csetup.ProjectDefaultConfig.DefaultBuildConfigurations...)
+		}
 	}
 
 	reader := bufio.NewReader(os.Stdin)

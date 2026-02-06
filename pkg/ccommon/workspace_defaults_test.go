@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -115,6 +116,7 @@ func TestLoadDefaultsProjectDefaultsAreIgnoredByDefault(t *testing.T) {
 	csetupContent := `default_configuration: {}
 project_default_configuration:
   cxx_version: "23"
+  default_build_configurations: ["DebugASAN"]
 `
 	if err := os.WriteFile(filepath.Join(mainSourceDir, "csetup.yml"), []byte(csetupContent), 0644); err != nil {
 		t.Fatalf("failed to write csetup.yml: %v", err)
@@ -129,6 +131,7 @@ project_default_configuration:
 			Targets: map[string]*TargetConfiguration{
 				"main": {Source: "main"},
 			},
+			Configurations: []string{"Debug", "Release"},
 		},
 	}
 
@@ -138,6 +141,9 @@ project_default_configuration:
 
 	if ws.Config.CXXVersion != "" {
 		t.Fatalf("expected global cxx_version to remain unset by default, got %q", ws.Config.CXXVersion)
+	}
+	if !reflect.DeepEqual(ws.Config.Configurations, []string{"Debug", "Release"}) {
+		t.Fatalf("expected configurations to remain unchanged by default, got %v", ws.Config.Configurations)
 	}
 }
 
@@ -151,6 +157,7 @@ func TestLoadDefaultsProjectDefaultsAppliedWhenEnabled(t *testing.T) {
 	csetupContent := `default_configuration: {}
 project_default_configuration:
   cxx_version: "23"
+  default_build_configurations: ["DebugASAN", "ReleaseASAN"]
 `
 	if err := os.WriteFile(filepath.Join(mainSourceDir, "csetup.yml"), []byte(csetupContent), 0644); err != nil {
 		t.Fatalf("failed to write csetup.yml: %v", err)
@@ -165,6 +172,7 @@ project_default_configuration:
 			Targets: map[string]*TargetConfiguration{
 				"main": {Source: "main"},
 			},
+			Configurations: []string{"Debug", "Release"},
 		},
 	}
 
@@ -177,6 +185,9 @@ project_default_configuration:
 
 	if ws.Config.CXXVersion != "23" {
 		t.Fatalf("expected global cxx_version to be set from project defaults, got %q", ws.Config.CXXVersion)
+	}
+	if !reflect.DeepEqual(ws.Config.Configurations, []string{"DebugASAN", "ReleaseASAN"}) {
+		t.Fatalf("expected configurations to be set from project defaults, got %v", ws.Config.Configurations)
 	}
 }
 
@@ -198,6 +209,7 @@ func TestLoadDefaultsProjectDefaultsDoNotPropagateToDependencies(t *testing.T) {
 default_configuration: {}
 project_default_configuration:
   cxx_version: "20"
+  default_build_configurations: ["Quick"]
 `
 	if err := os.WriteFile(filepath.Join(mainSourceDir, "csetup.yml"), []byte(mainCsetup), 0644); err != nil {
 		t.Fatalf("failed to write main csetup.yml: %v", err)
@@ -206,6 +218,7 @@ project_default_configuration:
 	depCsetup := `default_configuration: {}
 project_default_configuration:
   cxx_version: "17"
+  default_build_configurations: ["DebugTSAN"]
 `
 	if err := os.WriteFile(filepath.Join(depSourceDir, "csetup.yml"), []byte(depCsetup), 0644); err != nil {
 		t.Fatalf("failed to write dep csetup.yml: %v", err)
@@ -220,6 +233,7 @@ project_default_configuration:
 			Targets: map[string]*TargetConfiguration{
 				"main": {Source: "main"},
 			},
+			Configurations: []string{"Debug", "Release"},
 		},
 	}
 
@@ -237,5 +251,8 @@ project_default_configuration:
 
 	if ws.Config.CXXVersion != "20" {
 		t.Fatalf("expected root project defaults to remain applied, got %q", ws.Config.CXXVersion)
+	}
+	if !reflect.DeepEqual(ws.Config.Configurations, []string{"Quick"}) {
+		t.Fatalf("expected dependency project defaults not to override root defaults, got %v", ws.Config.Configurations)
 	}
 }
