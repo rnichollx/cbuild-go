@@ -77,9 +77,9 @@ func init() {
 	CSetup.Subcommands["init"] = &cli.Subcommand{
 		Description: "Initialize a new workspace",
 		Arguments: []cli.Argument{
-			cli.Argument{Name: "path", Parameter: ccommon.WorkspaceParameter},
+			cli.Argument{Name: "workspace", Parameter: ccommon.WorkspaceParameter},
 		},
-		RequiredParams: []cli.Parameter{PathParameter},
+		RequiredParams: []cli.Parameter{ccommon.WorkspaceParameter},
 		Flags:          []cli.Flag{ccommon.ReinitFlag},
 		Exec: func(ctx context.Context, args []string) error {
 			return handleInit(ctx)

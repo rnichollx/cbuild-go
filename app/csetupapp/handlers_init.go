@@ -3,6 +3,7 @@ package csetupapp
 import (
 	"context"
 	"fmt"
+
 	"gitlab.com/rpnx/cbuild-go/pkg/ccommon"
 	"gitlab.com/rpnx/cbuild-go/pkg/cli"
 )
@@ -10,18 +11,14 @@ import (
 func handleInit(ctx context.Context) error {
 	reinitRaw := cli.GetOptionalBool(ctx, ccommon.ReinitParameter)
 	reinit := reinitRaw != nil && *reinitRaw
-	workspaceNameVal := cli.GetOptionalPath(ctx, PathParameter)
-	workspaceName := ""
-	if workspaceNameVal != nil {
-		workspaceName = *workspaceNameVal
-	}
+	workspacePath := cli.GetPath(ctx, ccommon.WorkspaceParameter)
 
-	if workspaceName == "" {
-		return fmt.Errorf("usage: csetup init <workspace name> [--reinit]")
+	if workspacePath == "" {
+		return fmt.Errorf("usage: csetup init <workspace path> [--reinit]")
 	}
 
 	ws := &ccommon.WorkspaceContext{
-		WorkspacePath: workspaceName,
+		WorkspacePath: workspacePath,
 	}
 
 	err := ws.Init(ctx, reinit)
@@ -29,6 +26,6 @@ func handleInit(ctx context.Context) error {
 		return err
 	}
 
-	fmt.Printf("Initialized empty workspace in %s\n", workspaceName)
+	fmt.Printf("Initialized empty workspace in %s\n", workspacePath)
 	return nil
 }
