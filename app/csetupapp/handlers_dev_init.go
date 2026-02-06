@@ -83,6 +83,7 @@ func handleDevInit(ctx context.Context) error {
 		if err != nil {
 			return fmt.Errorf("error setting default download behavior: %w", err)
 		}
+		loadDefaultsCtx = ccommon.WithApplyProjectDefaults(loadDefaultsCtx, true)
 
 		// Process csetup defaults unless explicitly disabled.
 		err = ws.LoadDefaults(loadDefaultsCtx, sourceName)

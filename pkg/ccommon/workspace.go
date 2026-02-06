@@ -435,6 +435,13 @@ func (w *WorkspaceContext) ProcessCSetupConfig(ctx context.Context, sourceName s
 		return fmt.Errorf("failed to parse csetup file %s: %w", csetupFile, err)
 	}
 
+	applyProjectDefaults := applyProjectDefaultsEnabled(ctx)
+	if applyProjectDefaults && csetup.ProjectDefaultConfig != nil {
+		if csetup.ProjectDefaultConfig.CxxVersion != "" {
+			w.Config.CXXVersion = csetup.ProjectDefaultConfig.CxxVersion
+		}
+	}
+
 	reader := bufio.NewReader(os.Stdin)
 
 	// Update targets that use this source
@@ -517,7 +524,11 @@ func (w *WorkspaceContext) ProcessCSetupConfig(ctx context.Context, sourceName s
 				fmt.Printf("Added target '%s' to workspace.\n", depName)
 
 				// Recursively process the new target's csetup file
-				err = w.ProcessCSetupConfig(ctx, depName)
+				childCtx := ctx
+				if applyProjectDefaults {
+					childCtx = WithApplyProjectDefaults(childCtx, false)
+				}
+				err = w.ProcessCSetupConfig(childCtx, depName)
 				if err != nil {
 					return fmt.Errorf("error processing csetup file for %s: %w", depName, err)
 				}
