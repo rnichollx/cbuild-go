@@ -49,10 +49,10 @@ workspace/
 
 ### Commands
 
-- **`init [path] [--reinit]`**: Initialize a new workspace at the given path.
-- **`git-clone <repo_url> <dest_name> [--download-deps] [--submodule] [--no-setup]`**: Clone a git repository into the `sources` directory and add it to the workspace.
-- **`declare-git-source <repo_url> <dest_name>`**: Add git source information to the workspace without downloading.
-- **`declare-local-source <local_path> <dest_name>`**: Add local source information to the workspace.
+- **`init <workspace> [--reinit]`**: Initialize a new workspace at the given path.
+- **`git-clone <repo_url> [source] [--download-deps] [--submodule] [--no-setup]`**: Clone a git repository into the `sources` directory and add it to the workspace.
+- **`declare-git-source <repo_url> [source]`**: Add git source information to the workspace without downloading.
+- **`declare-local-source <source> <sourcepath> [--sourcepath <path>]`**: Add local source information to the workspace.
 - **`download [source] [--download-deps] [--submodule] [--no-setup]`**: Download missing sources.
 - **`load-defaults <source>`**: Load default configuration for a source from its `csetup.yml`.
 - **`add-dependency <target> <dependency>`**: Add a dependency to a target.
@@ -139,5 +139,4 @@ set up their exports in the build tree. In general, avoid this if you can, it le
 
 It's worth noting that we do not set CMAKE_INSTALL_PREFIX for doing installation, but instead rely solely on `--prefix`,
 so packages that rely on CMAKE_INSTALL_PREFIX being set at configuration time are not supported.
-
 

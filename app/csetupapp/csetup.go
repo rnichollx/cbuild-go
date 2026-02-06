@@ -62,9 +62,9 @@ var CSetup = &cli.Runner{
 }
 
 var (
-	PathParameter       = cli.Parameter{Key: "path", Type: cli.ParameterTypePath, DefaultValue: nil, Description: "path to the workspace or source"}
 	URLParameter        = cli.Parameter{Key: "url", Type: cli.ParameterTypeURI, DefaultValue: nil, Description: "URL of the repository"}
-	LocalPathParameter  = cli.Parameter{Key: "local_path", Type: cli.ParameterTypePath, DefaultValue: nil, Description: "path to the local source"}
+	SourcePathParameter = cli.Parameter{Key: "sourcepath", Type: cli.ParameterTypePath, DefaultValue: nil, Description: "path to the local source"}
+	SourcePathFlag      = cli.Flag{Short: "", Long: "sourcepath", Parameter: SourcePathParameter}
 	SourceParameter     = cli.Parameter{Key: "source", Type: cli.ParameterTypeString, DefaultValue: nil, Description: "name of the source"}
 	DependencyParameter = cli.Parameter{Key: "dependency", Type: cli.ParameterTypeString, DefaultValue: nil, Description: "name of the dependency"}
 	TargetParameter     = cli.Parameter{Key: "target", Type: cli.ParameterTypeString, DefaultValue: nil, Description: "Name of the build target."}
@@ -88,7 +88,7 @@ func init() {
 	CSetup.Subcommands["dev-init"] = &cli.Subcommand{
 		Description: "Initialize a new workspace for development in the current directory",
 		Arguments: []cli.Argument{
-			cli.Argument{Name: "path", Parameter: PathParameter},
+			cli.Argument{Name: "workspace", Parameter: ccommon.WorkspaceParameter},
 		},
 		Flags: []cli.Flag{ccommon.DownloadDepsFlag, ccommon.NoSetupFlag},
 		Exec: func(ctx context.Context, args []string) error {
@@ -99,7 +99,7 @@ func init() {
 		Description: "Clone a git repository into the workspace",
 		Arguments: []cli.Argument{
 			cli.Argument{Name: "url", Parameter: URLParameter},
-			cli.Argument{Name: "path", Parameter: PathParameter},
+			cli.Argument{Name: "source", Parameter: SourceParameter},
 		},
 		RequiredParams: []cli.Parameter{URLParameter},
 		Flags: []cli.Flag{
@@ -118,7 +118,7 @@ func init() {
 		Description: "Add git source information to the workspace without downloading",
 		Arguments: []cli.Argument{
 			cli.Argument{Name: "url", Parameter: URLParameter},
-			cli.Argument{Name: "path", Parameter: PathParameter},
+			cli.Argument{Name: "source", Parameter: SourceParameter},
 		},
 		RequiredParams: []cli.Parameter{URLParameter},
 		Exec: func(ctx context.Context, args []string) error {
@@ -129,9 +129,10 @@ func init() {
 		Description: "Add local source information to the workspace",
 		Arguments: []cli.Argument{
 			cli.Argument{Name: "source", Parameter: SourceParameter},
-			cli.Argument{Name: "path", Parameter: PathParameter},
+			cli.Argument{Name: "sourcepath", Parameter: SourcePathParameter},
 		},
-		RequiredParams: []cli.Parameter{SourceParameter, PathParameter},
+		RequiredParams: []cli.Parameter{SourceParameter, SourcePathParameter},
+		Flags:          []cli.Flag{SourcePathFlag},
 		Exec: func(ctx context.Context, args []string) error {
 			return handleDeclareLocalSource(ctx)
 		},

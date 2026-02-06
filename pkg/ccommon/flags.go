@@ -49,7 +49,7 @@ var (
 	ReinitParameter = cli.Parameter{Key: ReinitKey, Type: cli.ParameterTypeBool, DefaultValue: cli.PBool(false), Description: "Reinitialize the workspace."}
 	ReinitFlag      = cli.Flag{Short: "", Long: "reinit", Parameter: ReinitParameter}
 
-	DownloadDepsParameter = cli.Parameter{Key: DownloadDepsKey, Type: cli.ParameterTypeBool, DefaultValue: cli.PBool(false), Description: "Download dependencies during clone."}
+	DownloadDepsParameter = cli.Parameter{Key: DownloadDepsKey, Type: cli.ParameterTypeBool, DefaultValue: nil, Description: "Download dependencies during clone."}
 	DownloadDepsFlag      = cli.Flag{Short: "", Long: "download-deps", Parameter: DownloadDepsParameter}
 
 	SubmoduleParameter = cli.Parameter{Key: SubmoduleKey, Type: cli.ParameterTypeBool, DefaultValue: cli.PBool(false), Description: "Add as a git submodule instead of cloning."}

@@ -233,7 +233,7 @@ func handleGitClone(ctx context.Context) error {
 	if repoURLVal != nil {
 		repoURL = repoURLVal.String()
 	}
-	destNameVal := cli.GetOptionalPath(ctx, PathParameter)
+	destNameVal := cli.GetOptionalString(ctx, SourceParameter)
 	destName := ""
 	if destNameVal != nil {
 		destName = *destNameVal
@@ -355,7 +355,7 @@ func handleDeclareGitSource(ctx context.Context) error {
 	if repoURLVal != nil {
 		repoURL = repoURLVal.String()
 	}
-	destNameVal := cli.GetOptionalPath(ctx, PathParameter)
+	destNameVal := cli.GetOptionalString(ctx, SourceParameter)
 	destName := ""
 	if destNameVal != nil {
 		destName = *destNameVal
@@ -410,14 +410,14 @@ func handleDeclareLocalSource(ctx context.Context) error {
 	if destNameVal != nil {
 		destName = *destNameVal
 	}
-	localPathVal := cli.GetOptionalPath(ctx, PathParameter)
+	localPathVal := cli.GetOptionalPath(ctx, SourcePathParameter)
 	localPath := ""
 	if localPathVal != nil {
 		localPath = *localPathVal
 	}
 
 	if destName == "" || localPath == "" {
-		return fmt.Errorf("usage: csetup declare-local-source <source> <path>")
+		return fmt.Errorf("usage: csetup declare-local-source <source> <sourcepath>")
 	}
 
 	// 1. Check if cbuild_workspace.yml exists

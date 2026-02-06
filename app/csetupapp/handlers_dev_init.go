@@ -11,7 +11,7 @@ import (
 )
 
 func handleDevInit(ctx context.Context) error {
-	workspaceNameVal := cli.GetOptionalPath(ctx, PathParameter)
+	workspaceNameVal := cli.GetOptionalPath(ctx, ccommon.WorkspaceParameter)
 	workspaceName := "dev-workspace"
 	if workspaceNameVal != nil && *workspaceNameVal != "" {
 		workspaceName = *workspaceNameVal
@@ -66,11 +66,26 @@ func handleDevInit(ctx context.Context) error {
 		return fmt.Errorf("error saving workspace: %w", err)
 	}
 
+	fmt.Println("Detecting toolchains...")
+	err = ws.DetectToolchains(ctx)
+	if err != nil {
+		return fmt.Errorf("error detecting toolchains: %w", err)
+	}
+
 	if noSetup {
 		fmt.Println("Skipping setup as requested by --no-setup.")
 	} else {
+		loadDefaultsCtx := ctx
+
+		// dev-init defaults to auto-downloading suggested dependencies unless explicitly disabled.
+		downloadDeps := cli.GetBoolOr(ctx, ccommon.DownloadDepsParameter, cli.PBool(true))
+		loadDefaultsCtx, err = cli.SetBool(loadDefaultsCtx, ccommon.DownloadDepsParameter, *downloadDeps)
+		if err != nil {
+			return fmt.Errorf("error setting default download behavior: %w", err)
+		}
+
 		// Process csetup defaults unless explicitly disabled.
-		err = ws.LoadDefaults(ctx, sourceName)
+		err = ws.LoadDefaults(loadDefaultsCtx, sourceName)
 		if err != nil {
 			return fmt.Errorf("error loading defaults from CSetup.yml: %w", err)
 		}
