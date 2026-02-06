@@ -30,6 +30,7 @@ workspace/
 - **`build [target]`** (default): Build the specified target(s). If no target is specified, it builds all targets.
 - **`clean [target]`**: Remove build artifacts from `buildspaces` for the specified target(s).
 - **`build-deps <target>`**: Build only the dependencies for a specific target.
+- **`help [subcommand]`**: Show general help or help for a specific subcommand.
 
 ### Global Flags
 
@@ -68,6 +69,7 @@ workspace/
 - **`drop-files <source>`**: Delete local source files without removing them from configuration.
 - **`get-args <target> [-c <config>] [-T <toolchain>]`**: Get the build arguments that would be passed to the build system (e.g., CMake).
 - **`detect-toolchains`**: Automatically detect system toolchains and create definitions in `toolchains/`.
+- **`help [subcommand]`**: Show general help or help for a specific subcommand.
 - **`add-config [-c <config>] [-T <toolchain>]`**: Add a build configuration.
 - **`remove-config -c <config>`**: Remove a build configuration.
 
@@ -139,4 +141,3 @@ set up their exports in the build tree. In general, avoid this if you can, it le
 
 It's worth noting that we do not set CMAKE_INSTALL_PREFIX for doing installation, but instead rely solely on `--prefix`,
 so packages that rely on CMAKE_INSTALL_PREFIX being set at configuration time are not supported.
-

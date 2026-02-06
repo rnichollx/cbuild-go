@@ -62,18 +62,29 @@ var CSetup = &cli.Runner{
 }
 
 var (
-	URLParameter        = cli.Parameter{Key: "url", Type: cli.ParameterTypeURI, DefaultValue: nil, Description: "URL of the repository"}
-	SourcePathParameter = cli.Parameter{Key: "sourcepath", Type: cli.ParameterTypePath, DefaultValue: nil, Description: "path to the local source"}
-	SourcePathFlag      = cli.Flag{Short: "", Long: "sourcepath", Parameter: SourcePathParameter}
-	SourceParameter     = cli.Parameter{Key: "source", Type: cli.ParameterTypeString, DefaultValue: nil, Description: "name of the source"}
-	DependencyParameter = cli.Parameter{Key: "dependency", Type: cli.ParameterTypeString, DefaultValue: nil, Description: "name of the dependency"}
-	TargetParameter     = cli.Parameter{Key: "target", Type: cli.ParameterTypeString, DefaultValue: nil, Description: "Name of the build target."}
-	RevisionParameter   = cli.Parameter{Key: "revision", Type: cli.ParameterTypeString, DefaultValue: nil, Description: "Revision or tag to use."}
-	BranchParameter     = cli.Parameter{Key: "branch", Type: cli.ParameterTypeString, DefaultValue: nil, Description: "Branch name to use."}
-	NoTrackParameter    = cli.Parameter{Key: "no-track", Type: cli.ParameterTypeBool, DefaultValue: cli.PBool(false), Description: "Do not track the cloned branch."}
+	URLParameter            = cli.Parameter{Key: "url", Type: cli.ParameterTypeURI, DefaultValue: nil, Description: "URL of the repository"}
+	SourcePathParameter     = cli.Parameter{Key: "sourcepath", Type: cli.ParameterTypePath, DefaultValue: nil, Description: "path to the local source"}
+	SourcePathFlag          = cli.Flag{Short: "", Long: "sourcepath", Parameter: SourcePathParameter}
+	HelpSubcommandParameter = cli.Parameter{Key: "help-subcommand", Type: cli.ParameterTypeString, DefaultValue: nil, Description: "subcommand to show help for"}
+	SourceParameter         = cli.Parameter{Key: "source", Type: cli.ParameterTypeString, DefaultValue: nil, Description: "name of the source"}
+	DependencyParameter     = cli.Parameter{Key: "dependency", Type: cli.ParameterTypeString, DefaultValue: nil, Description: "name of the dependency"}
+	TargetParameter         = cli.Parameter{Key: "target", Type: cli.ParameterTypeString, DefaultValue: nil, Description: "Name of the build target."}
+	RevisionParameter       = cli.Parameter{Key: "revision", Type: cli.ParameterTypeString, DefaultValue: nil, Description: "Revision or tag to use."}
+	BranchParameter         = cli.Parameter{Key: "branch", Type: cli.ParameterTypeString, DefaultValue: nil, Description: "Branch name to use."}
+	NoTrackParameter        = cli.Parameter{Key: "no-track", Type: cli.ParameterTypeBool, DefaultValue: cli.PBool(false), Description: "Do not track the cloned branch."}
 )
 
 func init() {
+	CSetup.Subcommands["help"] = &cli.Subcommand{
+		Description: "Show help for csetup or a specific subcommand",
+		Arguments: []cli.Argument{
+			cli.Argument{Name: "subcommand", Parameter: HelpSubcommandParameter},
+		},
+		Exec: func(ctx context.Context, args []string) error {
+			return handleHelp(ctx)
+		},
+	}
+
 	CSetup.Subcommands["init"] = &cli.Subcommand{
 		Description: "Initialize a new workspace",
 		Arguments: []cli.Argument{

@@ -24,7 +24,21 @@ var CBuild = &cli.Runner{
 	DefaultSubcmd: "build",
 }
 
+var (
+	HelpSubcommandParameter = cli.Parameter{Key: "help-subcommand", Type: cli.ParameterTypeString, DefaultValue: nil, Description: "subcommand to show help for"}
+)
+
 func init() {
+	CBuild.Subcommands["help"] = &cli.Subcommand{
+		Description: "Show help for cbuild or a specific subcommand",
+		Arguments: []cli.Argument{
+			{Name: "subcommand", Parameter: HelpSubcommandParameter},
+		},
+		Exec: func(ctx context.Context, args []string) error {
+			return handleHelp(ctx)
+		},
+	}
+
 	CBuild.Subcommands["build"] = &cli.Subcommand{
 		Description: "Build the project",
 		Flags:       []cli.Flag{ccommon.ConfigFlag, ccommon.ToolchainFlag, ccommon.TargetFlag},
