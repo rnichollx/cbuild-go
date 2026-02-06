@@ -396,7 +396,10 @@ func (w *WorkspaceContext) GetSourcePath(sourceName string) (string, error) {
 	}
 
 	if source.hasLocal() {
-		return source.Local, nil
+		if filepath.IsAbs(source.Local) {
+			return source.Local, nil
+		}
+		return filepath.Join(w.WorkspacePath, source.Local), nil
 	}
 
 	return filepath.Join(w.WorkspacePath, "sources", sourceName), nil

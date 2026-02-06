@@ -29,7 +29,16 @@ func handleDevInit(ctx context.Context) error {
 		return fmt.Errorf("error getting absolute path of current directory: %w", err)
 	}
 
+	workspacePathAbs, err := filepath.Abs(workspaceName)
+	if err != nil {
+		return fmt.Errorf("error getting absolute path of workspace: %w", err)
+	}
+
 	sourceName := filepath.Base(currentDirAbs)
+	sourceLocalPath := currentDirAbs
+	if relPath, err := filepath.Rel(workspacePathAbs, currentDirAbs); err == nil && relPath != "" {
+		sourceLocalPath = relPath
+	}
 
 	ws := &ccommon.WorkspaceContext{
 		WorkspacePath: workspaceName,
@@ -50,7 +59,7 @@ func handleDevInit(ctx context.Context) error {
 		ws.Config.Sources = make(map[string]*ccommon.CodeSource)
 	}
 	ws.Config.Sources[sourceName] = &ccommon.CodeSource{
-		Local: currentDirAbs,
+		Local: sourceLocalPath,
 	}
 
 	if ws.Config.Targets == nil {
