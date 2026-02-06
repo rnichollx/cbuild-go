@@ -6,16 +6,16 @@ import (
 )
 
 func TestParseFlags(t *testing.T) {
-	pa := NewParameter("flag-a", ParameterTypeBool, nil, "")
-	pb := NewParameter("flag-b", ParameterTypeBool, nil, "")
-	pc := NewParameter("flag-c", ParameterTypeString, nil, "")
-	pv := NewParameter("verbose-key", ParameterTypeString, nil, "")
+	pa := Parameter{Key: "flag-a", Type: ParameterTypeBool, DefaultValue: nil, Description: ""}
+	pb := Parameter{Key: "flag-b", Type: ParameterTypeBool, DefaultValue: nil, Description: ""}
+	pc := Parameter{Key: "flag-c", Type: ParameterTypeString, DefaultValue: nil, Description: ""}
+	pv := Parameter{Key: "verbose-key", Type: ParameterTypeString, DefaultValue: nil, Description: ""}
 
 	flags := []Flag{
-		NewBoolFlag("a", "", pa),
-		NewBoolFlag("b", "", pb),
-		NewStringFlag("c", "", pc),
-		NewStringFlag("", "verbose", pv),
+		Flag{Short: "a", Long: "", Parameter: pa},
+		Flag{Short: "b", Long: "", Parameter: pb},
+		Flag{Short: "c", Long: "", Parameter: pc},
+		Flag{Short: "", Long: "verbose", Parameter: pv},
 	}
 
 	t.Run("GNU style short args", func(t *testing.T) {
@@ -26,15 +26,15 @@ func TestParseFlags(t *testing.T) {
 			t.Fatalf("unexpected error: %v", err)
 		}
 
-		valA := GetBool(ctx, pa)
+		valA := GetOptionalBool(ctx, pa)
 		if valA == nil || !*valA {
 			t.Errorf("expected flag-a to be true")
 		}
-		valB := GetBool(ctx, pb)
+		valB := GetOptionalBool(ctx, pb)
 		if valB == nil || !*valB {
 			t.Errorf("expected flag-b to be true")
 		}
-		valC := GetString(ctx, pc)
+		valC := GetOptionalString(ctx, pc)
 		if valC == nil || *valC != "value" {
 			t.Errorf("expected flag-c to be 'value', got %v", valC)
 		}
@@ -51,7 +51,7 @@ func TestParseFlags(t *testing.T) {
 			t.Fatalf("unexpected error: %v", err)
 		}
 
-		valV := GetString(ctx, pv)
+		valV := GetOptionalString(ctx, pv)
 		if valV == nil || *valV != "high" {
 			t.Errorf("expected verbose-key to be 'high', got %v", valV)
 		}
@@ -64,39 +64,39 @@ func TestParseFlags(t *testing.T) {
 		ctx := context.Background()
 		args := []string{"-a", "pos1", "--", "-b", "pos2"}
 		// Define arguments for opts to allow positional values
-		p1 := NewParameter("pos1", ParameterTypeString, nil, "")
-		p2 := NewParameter("pos2", ParameterTypeString, nil, "")
-		p3 := NewParameter("pos3", ParameterTypeString, nil, "")
+		p1 := Parameter{Key: "pos1", Type: ParameterTypeString, DefaultValue: nil, Description: ""}
+		p2 := Parameter{Key: "pos2", Type: ParameterTypeString, DefaultValue: nil, Description: ""}
+		p3 := Parameter{Key: "pos3", Type: ParameterTypeString, DefaultValue: nil, Description: ""}
 		ctx, nonFlagArgs, err := ParseFlags(ctx, ParseOptions{
 			Flags: flags,
 			Arguments: []Argument{
-				NewStringArgument("p1", p1),
-				NewStringArgument("p2", p2),
-				NewStringArgument("p3", p3),
+				Argument{Name: "p1", Parameter: p1},
+				Argument{Name: "p2", Parameter: p2},
+				Argument{Name: "p3", Parameter: p3},
 			},
 		}, args)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
 
-		valA := GetBool(ctx, pa)
+		valA := GetOptionalBool(ctx, pa)
 		if valA == nil || !*valA {
 			t.Errorf("expected flag-a to be true")
 		}
-		valB := GetBool(ctx, pb)
+		valB := GetOptionalBool(ctx, pb)
 		if valB != nil {
 			t.Errorf("expected flag-b to be nil (stopped at --)")
 		}
 
-		v1 := GetString(ctx, p1)
+		v1 := GetOptionalString(ctx, p1)
 		if v1 == nil || *v1 != "pos1" {
 			t.Errorf("expected pos1 to be 'pos1', got %v", v1)
 		}
-		v2 := GetString(ctx, p2)
+		v2 := GetOptionalString(ctx, p2)
 		if v2 == nil || *v2 != "-b" {
 			t.Errorf("expected pos2 to be '-b', got %v", v2)
 		}
-		v3 := GetString(ctx, p3)
+		v3 := GetOptionalString(ctx, p3)
 		if v3 == nil || *v3 != "pos2" {
 			t.Errorf("expected pos3 to be 'pos2', got %v", v3)
 		}
@@ -117,24 +117,24 @@ func TestParseFlags(t *testing.T) {
 	t.Run("Default behavior - double dash removal", func(t *testing.T) {
 		ctx := context.Background()
 		args := []string{"--verbose", "high", "--", "pos1", "-a"}
-		p1 := NewParameter("p1", ParameterTypeString, nil, "")
-		p2 := NewParameter("p2", ParameterTypeString, nil, "")
+		p1 := Parameter{Key: "p1", Type: ParameterTypeString, DefaultValue: nil, Description: ""}
+		p2 := Parameter{Key: "p2", Type: ParameterTypeString, DefaultValue: nil, Description: ""}
 		ctx, nonFlagArgs, err := ParseFlags(ctx, ParseOptions{
 			Flags: flags,
 			Arguments: []Argument{
-				NewStringArgument("p1", p1),
-				NewStringArgument("p2", p2),
+				Argument{Name: "p1", Parameter: p1},
+				Argument{Name: "p2", Parameter: p2},
 			},
 		}, args)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
 
-		v1 := GetString(ctx, p1)
+		v1 := GetOptionalString(ctx, p1)
 		if v1 == nil || *v1 != "pos1" {
 			t.Errorf("expected p1 to be 'pos1', got %v", v1)
 		}
-		v2 := GetString(ctx, p2)
+		v2 := GetOptionalString(ctx, p2)
 		if v2 == nil || *v2 != "-a" {
 			t.Errorf("expected p2 to be '-a', got %v", v2)
 		}

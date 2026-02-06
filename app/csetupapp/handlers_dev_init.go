@@ -11,7 +11,7 @@ import (
 )
 
 func handleDevInit(ctx context.Context) error {
-	workspaceNameVal := cli.GetPath(ctx, PPath)
+	workspaceNameVal := cli.GetOptionalPath(ctx, PathParameter)
 	workspaceName := "workspace"
 	if workspaceNameVal != nil && *workspaceNameVal != "" {
 		workspaceName = *workspaceNameVal

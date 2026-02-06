@@ -10,11 +10,11 @@ import (
 
 func handleSetCXXVersion(ctx context.Context) error {
 	workspacePath := getWorkspacePath(ctx)
-	version := cli.GetString(ctx, ccommon.PCxxVersion)
+	version := cli.GetOptionalString(ctx, ccommon.CxxVersionParameter)
 	if version == nil {
 		return fmt.Errorf("no CXX version provided")
 	}
-	target := cli.GetString(ctx, PTarget)
+	target := cli.GetOptionalString(ctx, TargetParameter)
 	ws := &ccommon.WorkspaceContext{}
 	err := ws.Load(ctx, workspacePath)
 	if err != nil {
@@ -26,7 +26,7 @@ func handleSetCXXVersion(ctx context.Context) error {
 
 func handleEnableStaging(ctx context.Context) error {
 	workspacePath := getWorkspacePath(ctx)
-	targetVal := cli.GetString(ctx, PTarget)
+	targetVal := cli.GetOptionalString(ctx, TargetParameter)
 	target := ""
 	if targetVal != nil {
 		target = *targetVal
@@ -43,7 +43,7 @@ func handleEnableStaging(ctx context.Context) error {
 
 func handleDisableStaging(ctx context.Context) error {
 	workspacePath := getWorkspacePath(ctx)
-	targetVal := cli.GetString(ctx, PTarget)
+	targetVal := cli.GetOptionalString(ctx, TargetParameter)
 	target := ""
 	if targetVal != nil {
 		target = *targetVal
@@ -60,7 +60,7 @@ func handleDisableStaging(ctx context.Context) error {
 
 func handleAddConfig(ctx context.Context) error {
 	workspacePath := getWorkspacePath(ctx)
-	configNameVal := cli.GetStringList(ctx, ccommon.PConfig)
+	configNameVal := cli.GetOptionalStringList(ctx, ccommon.ConfigParameter)
 	configName := ""
 	if configNameVal != nil && len(*configNameVal) > 0 {
 		configName = (*configNameVal)[0]
@@ -77,7 +77,7 @@ func handleAddConfig(ctx context.Context) error {
 
 func handleRemoveConfig(ctx context.Context) error {
 	workspacePath := getWorkspacePath(ctx)
-	configNameVal := cli.GetStringList(ctx, ccommon.PConfig)
+	configNameVal := cli.GetOptionalStringList(ctx, ccommon.ConfigParameter)
 	configName := ""
 	if configNameVal != nil && len(*configNameVal) > 0 {
 		configName = (*configNameVal)[0]

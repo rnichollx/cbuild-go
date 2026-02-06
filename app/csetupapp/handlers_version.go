@@ -41,8 +41,8 @@ func resolveSourcePath(ws *ccommon.WorkspaceContext, sourceName string) (string,
 
 func handlePin(ctx context.Context) error {
 	workspacePath := getWorkspacePath(ctx)
-	sourceVal := cli.GetString(ctx, PSource)
-	revisionVal := cli.GetString(ctx, PRevision)
+	sourceVal := cli.GetOptionalString(ctx, SourceParameter)
+	revisionVal := cli.GetOptionalString(ctx, RevisionParameter)
 
 	ws := &ccommon.WorkspaceContext{}
 	if err := ws.Load(ctx, workspacePath); err != nil {
@@ -132,8 +132,8 @@ func handlePin(ctx context.Context) error {
 
 func handleTrack(ctx context.Context) error {
 	workspacePath := getWorkspacePath(ctx)
-	sourceVal := cli.GetString(ctx, PSource)
-	branchVal := cli.GetString(ctx, PBranch)
+	sourceVal := cli.GetOptionalString(ctx, SourceParameter)
+	branchVal := cli.GetOptionalString(ctx, BranchParameter)
 	if sourceVal == nil || *sourceVal == "" || branchVal == nil || *branchVal == "" {
 		return fmt.Errorf("usage: csetup track <source> <branch>")
 	}
@@ -163,7 +163,7 @@ func handleTrack(ctx context.Context) error {
 
 func handleUntrack(ctx context.Context) error {
 	workspacePath := getWorkspacePath(ctx)
-	sourceVal := cli.GetString(ctx, PSource)
+	sourceVal := cli.GetOptionalString(ctx, SourceParameter)
 	if sourceVal == nil || *sourceVal == "" {
 		return fmt.Errorf("usage: csetup untrack <source>")
 	}
@@ -192,7 +192,7 @@ func handleUntrack(ctx context.Context) error {
 
 func handleUnpin(ctx context.Context) error {
 	workspacePath := getWorkspacePath(ctx)
-	sourceVal := cli.GetString(ctx, PSource)
+	sourceVal := cli.GetOptionalString(ctx, SourceParameter)
 	if sourceVal == nil || *sourceVal == "" {
 		return fmt.Errorf("usage: csetup unpin <source>")
 	}
@@ -205,9 +205,6 @@ func handleUnpin(ctx context.Context) error {
 	source, err := ensureGitSource(ws, *sourceVal)
 	if err != nil {
 		return err
-	}
-	if isExternallyManagedSource(source) {
-		return fmt.Errorf("source %s is externally managed; update is only supported for sources in the workspace sources list", *sourceVal)
 	}
 	if isExternallyManagedSource(source) {
 		return fmt.Errorf("source %s is externally managed; unpin is only supported for sources in the workspace sources list", *sourceVal)
@@ -224,8 +221,8 @@ func handleUnpin(ctx context.Context) error {
 
 func handleUpdate(ctx context.Context) error {
 	workspacePath := getWorkspacePath(ctx)
-	sourceVal := cli.GetString(ctx, PSource)
-	revisionVal := cli.GetString(ctx, PRevision)
+	sourceVal := cli.GetOptionalString(ctx, SourceParameter)
+	revisionVal := cli.GetOptionalString(ctx, RevisionParameter)
 	if sourceVal == nil || *sourceVal == "" {
 		return fmt.Errorf("usage: csetup update <source> [--revision <revision>]")
 	}
@@ -238,6 +235,9 @@ func handleUpdate(ctx context.Context) error {
 	source, err := ensureGitSource(ws, *sourceVal)
 	if err != nil {
 		return err
+	}
+	if isExternallyManagedSource(source) {
+		return fmt.Errorf("source %s is externally managed; update is only supported for sources in the workspace sources list", *sourceVal)
 	}
 
 	sourcePath, err := resolveSourcePath(ws, *sourceVal)
@@ -306,7 +306,7 @@ func handleUpdate(ctx context.Context) error {
 
 func handleStatus(ctx context.Context) error {
 	workspacePath := getWorkspacePath(ctx)
-	sourceVal := cli.GetString(ctx, PSource)
+	sourceVal := cli.GetOptionalString(ctx, SourceParameter)
 
 	ws := &ccommon.WorkspaceContext{}
 	if err := ws.Load(ctx, workspacePath); err != nil {
@@ -389,7 +389,7 @@ func handleStatus(ctx context.Context) error {
 
 func handleVersions(ctx context.Context) error {
 	workspacePath := getWorkspacePath(ctx)
-	sourceVal := cli.GetString(ctx, PSource)
+	sourceVal := cli.GetOptionalString(ctx, SourceParameter)
 
 	ws := &ccommon.WorkspaceContext{}
 	if err := ws.Load(ctx, workspacePath); err != nil {

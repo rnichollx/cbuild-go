@@ -12,12 +12,12 @@ func TestParsingStyles(t *testing.T) {
 		// Wait, the comment says: ParsingStylePOSIX treats single dash as arg+value,
 		// e.g. -abc is equivalent to `-a=bc` rather than `-a -b -c`
 
-		pa := NewParameter("a", ParameterTypeBool, nil, "")
-		pb := NewParameter("b", ParameterTypeString, nil, "")
+		pa := Parameter{Key: "a", Type: ParameterTypeBool, DefaultValue: nil, Description: ""}
+		pb := Parameter{Key: "b", Type: ParameterTypeString, DefaultValue: nil, Description: ""}
 
 		flags := []Flag{
-			NewBoolFlag("a", "", pa),
-			NewStringFlag("b", "", pb),
+			Flag{Short: "a", Long: "", Parameter: pa},
+			Flag{Short: "b", Long: "", Parameter: pb},
 		}
 
 		// If ParsingStylePOSIX is used, -abc should be -a with value bc if 'a' took a value.
@@ -62,8 +62,8 @@ func TestParsingStyles(t *testing.T) {
 				// cluster 'abc':
 				// 'a' is found, is bool, so it doesn't take value.
 				// 'b' is found, is string, so it takes 'c' as value.
-				valA := GetBool(ctx, pa)
-				valB := GetString(ctx, pb)
+				valA := GetOptionalBool(ctx, pa)
+				valB := GetOptionalString(ctx, pb)
 				if valA == nil || !*valA {
 					t.Errorf("expected a to be true")
 				}
@@ -78,9 +78,9 @@ func TestParsingStyles(t *testing.T) {
 
 	t.Run("ParsingStyleShort", func(t *testing.T) {
 		// ParsingStyleShort: long flags are passed like -foo instead of --foo
-		pFoo := NewParameter("foo", ParameterTypeString, nil, "")
+		pFoo := Parameter{Key: "foo", Type: ParameterTypeString, DefaultValue: nil, Description: ""}
 		flags := []Flag{
-			NewStringFlag("", "foo", pFoo),
+			Flag{Short: "", Long: "foo", Parameter: pFoo},
 		}
 
 		ctx, _, err := ParseFlags(context.Background(), ParseOptions{
@@ -91,7 +91,7 @@ func TestParsingStyles(t *testing.T) {
 			t.Fatalf("unexpected error: %v", err)
 		}
 
-		val := GetString(ctx, pFoo)
+		val := GetOptionalString(ctx, pFoo)
 		if val == nil || *val != "bar" {
 			t.Errorf("expected foo to be 'bar', got %v", val)
 		}
@@ -99,9 +99,9 @@ func TestParsingStyles(t *testing.T) {
 
 	t.Run("ParsingStyleWindows", func(t *testing.T) {
 		// ParsingStyleWindows: /option:value
-		pFoo := NewParameter("foo", ParameterTypeString, nil, "")
+		pFoo := Parameter{Key: "foo", Type: ParameterTypeString, DefaultValue: nil, Description: ""}
 		flags := []Flag{
-			NewStringFlag("", "foo", pFoo),
+			Flag{Short: "", Long: "foo", Parameter: pFoo},
 		}
 
 		ctx, _, err := ParseFlags(context.Background(), ParseOptions{
@@ -112,7 +112,7 @@ func TestParsingStyles(t *testing.T) {
 			t.Fatalf("unexpected error: %v", err)
 		}
 
-		val := GetString(ctx, pFoo)
+		val := GetOptionalString(ctx, pFoo)
 		if val == nil || *val != "bar" {
 			t.Errorf("expected foo to be 'bar', got %v", val)
 		}
@@ -120,13 +120,13 @@ func TestParsingStyles(t *testing.T) {
 
 	t.Run("ParsingStyleShortWindows", func(t *testing.T) {
 		// ParsingStyleShortWindows: -foo and --% terminator
-		pFoo := NewParameter("foo", ParameterTypeString, nil, "")
-		pArg := NewParameter("arg", ParameterTypeString, nil, "")
+		pFoo := Parameter{Key: "foo", Type: ParameterTypeString, DefaultValue: nil, Description: ""}
+		pArg := Parameter{Key: "arg", Type: ParameterTypeString, DefaultValue: nil, Description: ""}
 		flags := []Flag{
-			NewStringFlag("", "foo", pFoo),
+			Flag{Short: "", Long: "foo", Parameter: pFoo},
 		}
 		args := []Argument{
-			NewStringArgument("arg", pArg),
+			Argument{Name: "arg", Parameter: pArg},
 		}
 
 		ctx, _, err := ParseFlags(context.Background(), ParseOptions{
@@ -138,12 +138,12 @@ func TestParsingStyles(t *testing.T) {
 			t.Fatalf("unexpected error: %v", err)
 		}
 
-		val := GetString(ctx, pFoo)
+		val := GetOptionalString(ctx, pFoo)
 		if val == nil || *val != "bar" {
 			t.Errorf("expected foo to be 'bar', got %v", val)
 		}
 
-		argVal := GetString(ctx, pArg)
+		argVal := GetOptionalString(ctx, pArg)
 		if argVal == nil || *argVal != "-baz" {
 			t.Errorf("expected arg to be '-baz', got %v", argVal)
 		}

@@ -120,12 +120,12 @@ func handleListSources(ctx context.Context) error {
 
 func handleRemoveSource(ctx context.Context) error {
 	workspacePath := getWorkspacePath(ctx)
-	sourceVal := cli.GetString(ctx, PSource)
+	sourceVal := cli.GetOptionalString(ctx, SourceParameter)
 	sourceName := ""
 	if sourceVal != nil {
 		sourceName = *sourceVal
 	}
-	removeFolderRaw := cli.GetBool(ctx, ccommon.PDelete)
+	removeFolderRaw := cli.GetOptionalBool(ctx, ccommon.DeleteParameter)
 	removeFolder := removeFolderRaw != nil && *removeFolderRaw
 
 	if sourceName == "" {
@@ -143,7 +143,7 @@ func handleRemoveSource(ctx context.Context) error {
 
 func handleTidy(ctx context.Context) error {
 	workspacePath := getWorkspacePath(ctx)
-	dryRunRaw := cli.GetBool(ctx, ccommon.PDryRun)
+	dryRunRaw := cli.GetOptionalBool(ctx, ccommon.DryRunParameter)
 	dryRun := dryRunRaw != nil && *dryRunRaw
 
 	ws := &ccommon.WorkspaceContext{}
@@ -157,7 +157,7 @@ func handleTidy(ctx context.Context) error {
 
 func handleRemoveTarget(ctx context.Context) error {
 	workspacePath := getWorkspacePath(ctx)
-	targetVal := cli.GetString(ctx, PTarget)
+	targetVal := cli.GetOptionalString(ctx, TargetParameter)
 	targetName := ""
 	if targetVal != nil {
 		targetName = *targetVal
@@ -177,12 +177,12 @@ func handleRemoveTarget(ctx context.Context) error {
 
 func handleRemoveProject(ctx context.Context) error {
 	workspacePath := getWorkspacePath(ctx)
-	sourceVal := cli.GetString(ctx, ccommon.PSource)
+	sourceVal := cli.GetOptionalString(ctx, ccommon.SourceParameter)
 	sourceName := ""
 	if sourceVal != nil {
 		sourceName = *sourceVal
 	}
-	removeFolderRaw := cli.GetBool(ctx, ccommon.PDelete)
+	removeFolderRaw := cli.GetOptionalBool(ctx, ccommon.DeleteParameter)
 	removeFolder := removeFolderRaw != nil && *removeFolderRaw
 
 	if sourceName == "" {
@@ -207,7 +207,7 @@ func handleDropFiles(ctx context.Context) error {
 	}
 
 	sourcesToDrop := []string{}
-	sourceVal := cli.GetString(ctx, PSource)
+	sourceVal := cli.GetOptionalString(ctx, SourceParameter)
 	if sourceVal != nil && *sourceVal != "" {
 		sourcesToDrop = append(sourcesToDrop, *sourceVal)
 	} else {
@@ -228,31 +228,31 @@ func handleDropFiles(ctx context.Context) error {
 
 func handleGitClone(ctx context.Context) error {
 	workspacePath := getWorkspacePath(ctx)
-	repoURLVal := cli.GetURI(ctx, PUrl)
+	repoURLVal := cli.GetOptionalURI(ctx, URLParameter)
 	repoURL := ""
 	if repoURLVal != nil {
 		repoURL = repoURLVal.String()
 	}
-	destNameVal := cli.GetPath(ctx, PPath)
+	destNameVal := cli.GetOptionalPath(ctx, PathParameter)
 	destName := ""
 	if destNameVal != nil {
 		destName = *destNameVal
 	}
-	downloadDepsRaw := cli.GetBool(ctx, ccommon.PDownloadDeps)
+	downloadDepsRaw := cli.GetOptionalBool(ctx, ccommon.DownloadDepsParameter)
 	downloadDeps := downloadDepsRaw != nil && *downloadDepsRaw
-	noSetupRaw := cli.GetBool(ctx, ccommon.PNoSetup)
+	noSetupRaw := cli.GetOptionalBool(ctx, ccommon.NoSetupParameter)
 	noSetup := noSetupRaw != nil && *noSetupRaw
-	branchVal := cli.GetString(ctx, PBranch)
+	branchVal := cli.GetOptionalString(ctx, BranchParameter)
 	branch := ""
 	if branchVal != nil {
 		branch = *branchVal
 	}
-	revisionVal := cli.GetString(ctx, PRevision)
+	revisionVal := cli.GetOptionalString(ctx, RevisionParameter)
 	revision := ""
 	if revisionVal != nil {
 		revision = *revisionVal
 	}
-	noTrackVal := cli.GetBool(ctx, PNoTrack)
+	noTrackVal := cli.GetOptionalBool(ctx, NoTrackParameter)
 	noTrack := noTrackVal != nil && *noTrackVal
 
 	if repoURL == "" {
@@ -350,12 +350,12 @@ func handleGitClone(ctx context.Context) error {
 
 func handleDeclareGitSource(ctx context.Context) error {
 	workspacePath := getWorkspacePath(ctx)
-	repoURLVal := cli.GetURI(ctx, PUrl)
+	repoURLVal := cli.GetOptionalURI(ctx, URLParameter)
 	repoURL := ""
 	if repoURLVal != nil {
 		repoURL = repoURLVal.String()
 	}
-	destNameVal := cli.GetPath(ctx, PPath)
+	destNameVal := cli.GetOptionalPath(ctx, PathParameter)
 	destName := ""
 	if destNameVal != nil {
 		destName = *destNameVal
@@ -405,12 +405,12 @@ func handleDeclareGitSource(ctx context.Context) error {
 
 func handleDeclareLocalSource(ctx context.Context) error {
 	workspacePath := getWorkspacePath(ctx)
-	destNameVal := cli.GetString(ctx, PSource)
+	destNameVal := cli.GetOptionalString(ctx, SourceParameter)
 	destName := ""
 	if destNameVal != nil {
 		destName = *destNameVal
 	}
-	localPathVal := cli.GetPath(ctx, PPath)
+	localPathVal := cli.GetOptionalPath(ctx, PathParameter)
 	localPath := ""
 	if localPathVal != nil {
 		localPath = *localPathVal
@@ -452,9 +452,9 @@ func handleDeclareLocalSource(ctx context.Context) error {
 
 func handleDownload(ctx context.Context) error {
 	workspacePath := getWorkspacePath(ctx)
-	downloadDepsRaw := cli.GetBool(ctx, ccommon.PDownloadDeps)
+	downloadDepsRaw := cli.GetOptionalBool(ctx, ccommon.DownloadDepsParameter)
 	downloadDeps := downloadDepsRaw != nil && *downloadDepsRaw
-	noSetupRaw := cli.GetBool(ctx, ccommon.PNoSetup)
+	noSetupRaw := cli.GetOptionalBool(ctx, ccommon.NoSetupParameter)
 	noSetup := noSetupRaw != nil && *noSetupRaw
 
 	ws := &ccommon.WorkspaceContext{}
@@ -465,7 +465,7 @@ func handleDownload(ctx context.Context) error {
 	}
 
 	sourcesToDownload := []string{}
-	sourceVal := cli.GetString(ctx, PSource)
+	sourceVal := cli.GetOptionalString(ctx, SourceParameter)
 	if sourceVal != nil && *sourceVal != "" {
 		sourceName := *sourceVal
 		if _, ok := ws.Config.Sources[sourceName]; !ok {
@@ -504,7 +504,7 @@ func handleDownload(ctx context.Context) error {
 
 func handleLoadDefaults(ctx context.Context) error {
 	workspacePath := getWorkspacePath(ctx)
-	sourceVal := cli.GetString(ctx, PSource)
+	sourceVal := cli.GetOptionalString(ctx, SourceParameter)
 	sourceName := ""
 	if sourceVal != nil {
 		sourceName = *sourceVal

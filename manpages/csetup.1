@@ -1,4 +1,4 @@
-.TH CSETUP 1 "2026-01-29" "" ""
+.TH CSETUP 1 "2026-02-05" "" ""
 .SH NAME
 csetup \- Workspace setup tool for cbuild
 .SH SYNOPSIS
@@ -49,7 +49,7 @@ csetup declare-git-source <url> [path]
 Add local source information to the workspace
 
 .B Synopsis:
-csetup declare-local-source <local_path> [path]
+csetup declare-local-source <source> <path>
 
 .SS detect-toolchains
 Detect system toolchains
@@ -61,11 +61,24 @@ csetup detect-toolchains
 .TP
 .B \-\-debug
 Show debug information.
+.SS dev-init
+Initialize a new workspace for development in the current directory
+
+.B Synopsis:
+csetup dev-init [path]
+
+.B Options for dev-init:
+.TP
+.B \-\-download-deps
+Download dependencies during clone.
+.TP
+.B \-\-no-setup
+Don't run setup after downloading or cloning.
 .SS disable-staging
 Disable staging for a target
 
 .B Synopsis:
-csetup disable-staging [target] [target]
+csetup disable-staging <target> <target>
 
 .B Options for disable-staging:
 .TP
@@ -97,13 +110,13 @@ Add as a git submodule instead of cloning.
 Delete local source files without removing them from configuration
 
 .B Synopsis:
-csetup drop-files <source>
+csetup drop-files [source]
 
 .SS enable-staging
 Enable staging for a target
 
 .B Synopsis:
-csetup enable-staging [target] [target]
+csetup enable-staging <target> <target>
 
 .B Options for enable-staging:
 .TP
@@ -119,7 +132,7 @@ csetup enable-testing <target>
 Get build arguments for a target
 
 .B Synopsis:
-csetup get-args <target> [target]
+csetup get-args <target> <target>
 
 .B Options for get-args:
 .TP
@@ -147,6 +160,15 @@ Add as a git submodule instead of cloning.
 .TP
 .B \-\-no-setup
 Don't run setup after downloading or cloning.
+.TP
+.B \-\-branch <value>
+Branch name to use.
+.TP
+.B \-\-revision <value>
+Revision or tag to use.
+.TP
+.B \-\-no-track
+Do not track the cloned branch.
 .SS init
 Initialize a new workspace
 
@@ -173,7 +195,7 @@ csetup load-defaults <source>
 Add a new target to the workspace
 
 .B Synopsis:
-csetup new-target [target] [source]
+csetup new-target [target] <source>
 
 .B Options for new-target:
 .TP
@@ -191,6 +213,16 @@ The project type (e.g., CMake).
 .TP
 .B \-\-cmake-package-name <value>
 The CMake package name.
+.SS pin
+Pin a git source (HEAD by default, or a specific revision)
+
+.B Synopsis:
+csetup pin [source]
+
+.B Options for pin:
+.TP
+.B \-\-revision <value>
+Revision or tag to use.
 .SS remove-config
 Remove a build configuration
 
@@ -211,7 +243,7 @@ csetup remove-dependency <target> <dependency>
 Remove a source and all its associated targets from the workspace
 
 .B Synopsis:
-csetup remove-project [source]
+csetup remove-project <source>
 
 .B Options for remove-project:
 .TP
@@ -224,7 +256,7 @@ Specific source to modify.
 Remove a source from the workspace
 
 .B Synopsis:
-csetup remove-source [source]
+csetup remove-source <source>
 
 .B Options for remove-source:
 .TP
@@ -237,7 +269,7 @@ Specific source to modify.
 Remove a target from the workspace
 
 .B Synopsis:
-csetup remove-target [target]
+csetup remove-target <target>
 
 .B Options for remove-target:
 .TP
@@ -259,6 +291,12 @@ csetup set-cxx-version <version> [target]
 .TP
 .B \-t <value>, \-\-target <value>
 Specific target to build/modify.
+.SS status
+Show status for sources (clean/modified, HEAD, expected revision)
+
+.B Synopsis:
+csetup status [source]
+
 .SS tidy
 Delete source folders that are not in the sources list
 
@@ -269,3 +307,37 @@ csetup tidy
 .TP
 .B \-d, \-\-dry-run
 Show commands without executing them.
+.SS track
+Track a branch for a git source
+
+.B Synopsis:
+csetup track <source> <branch>
+
+.SS unpin
+Unpin a git source (clear revision)
+
+.B Synopsis:
+csetup unpin <source>
+
+.SS untrack
+Stop tracking a branch for a git source
+
+.B Synopsis:
+csetup untrack <source>
+
+.SS update
+Update a git source (pull latest or move to revision)
+
+.B Synopsis:
+csetup update <source>
+
+.B Options for update:
+.TP
+.B \-\-revision <value>
+Revision or tag to use.
+.SS versions
+List pinned/unpinned versions for sources
+
+.B Synopsis:
+csetup versions [source]
+

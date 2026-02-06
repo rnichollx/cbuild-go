@@ -11,23 +11,23 @@ import (
 func handleNewTarget(ctx context.Context) error {
 	workspacePath := getWorkspacePath(ctx)
 
-	source := cli.GetString(ctx, ccommon.PSource)
+	source := cli.GetOptionalString(ctx, ccommon.SourceParameter)
 	if source == nil {
 		return fmt.Errorf("source is required")
 	}
 
-	target := cli.GetString(ctx, ccommon.PTarget)
+	target := cli.GetOptionalString(ctx, ccommon.TargetParameter)
 
 	targetName := *source
 	if target != nil && *target != "" {
 		targetName = *target
 	}
 
-	overwriteVal := cli.GetBool(ctx, ccommon.POverwrite)
+	overwriteVal := cli.GetOptionalBool(ctx, ccommon.OverwriteParameter)
 	overwrite := overwriteVal != nil && *overwriteVal
 
-	projectType := cli.GetString(ctx, ccommon.PProjectType)
-	cmakePackageName := cli.GetString(ctx, ccommon.PCMakePackageName)
+	projectType := cli.GetOptionalString(ctx, ccommon.ProjectTypeParameter)
+	cmakePackageName := cli.GetOptionalString(ctx, ccommon.CMakePackageNameParameter)
 
 	ws := &ccommon.WorkspaceContext{}
 	err := ws.Load(ctx, workspacePath)
@@ -54,7 +54,7 @@ func handleNewTarget(ctx context.Context) error {
 
 func handleEnableTesting(ctx context.Context) error {
 	workspacePath := getWorkspacePath(ctx)
-	targetVal := cli.GetString(ctx, PTarget)
+	targetVal := cli.GetOptionalString(ctx, TargetParameter)
 	target := ""
 	if targetVal != nil {
 		target = *targetVal
@@ -71,7 +71,7 @@ func handleEnableTesting(ctx context.Context) error {
 
 func handleDisableTesting(ctx context.Context) error {
 	workspacePath := getWorkspacePath(ctx)
-	targetVal := cli.GetString(ctx, PTarget)
+	targetVal := cli.GetOptionalString(ctx, TargetParameter)
 	target := ""
 	if targetVal != nil {
 		target = *targetVal

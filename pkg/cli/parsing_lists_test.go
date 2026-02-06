@@ -8,9 +8,9 @@ import (
 
 func TestParsingLists(t *testing.T) {
 	t.Run("RPNX style list specifier", func(t *testing.T) {
-		pList := NewParameter("list", ParameterTypeStringList, nil, "")
+		pList := Parameter{Key: "list", Type: ParameterTypeStringList, DefaultValue: nil, Description: ""}
 		flags := []Flag{
-			NewStringFlag("l", "list", pList),
+			Flag{Short: "l", Long: "list", Parameter: pList},
 		}
 
 		ctx, _, err := ParseFlags(context.Background(), ParseOptions{
@@ -21,7 +21,7 @@ func TestParsingLists(t *testing.T) {
 			t.Fatalf("unexpected error: %v", err)
 		}
 
-		val := GetStringList(ctx, pList)
+		val := GetOptionalStringList(ctx, pList)
 		expected := []string{"val1", "val2"}
 		if val == nil || !reflect.DeepEqual(*val, expected) {
 			t.Errorf("expected list to be %v, got %v", expected, val)
@@ -29,13 +29,13 @@ func TestParsingLists(t *testing.T) {
 	})
 
 	t.Run("Greedy list flag", func(t *testing.T) {
-		pList := NewParameter("list", ParameterTypeStringList, nil, "")
+		pList := Parameter{Key: "list", Type: ParameterTypeStringList, DefaultValue: nil, Description: ""}
 		flags := []Flag{
-			&baseFlag{
-				short:     "l",
-				long:      "list",
-				parameter: pList,
-				greedy:    true,
+			Flag{
+				Short:     "l",
+				Long:      "list",
+				Parameter: pList,
+				Greedy:    true,
 			},
 		}
 
@@ -49,8 +49,8 @@ func TestParsingLists(t *testing.T) {
 		}
 
 		// Try with valid args after greedy
-		pOther := NewParameter("other", ParameterTypeBool, nil, "")
-		flags = append(flags, NewBoolFlag("o", "other", pOther))
+		pOther := Parameter{Key: "other", Type: ParameterTypeBool, DefaultValue: nil, Description: ""}
+		flags = append(flags, Flag{Short: "o", Long: "other", Parameter: pOther})
 
 		ctx, _, err = ParseFlags(ctx, ParseOptions{
 			Flags: flags,
@@ -59,26 +59,26 @@ func TestParsingLists(t *testing.T) {
 			t.Fatalf("unexpected error: %v", err)
 		}
 
-		val := GetStringList(ctx, pList)
+		val := GetOptionalStringList(ctx, pList)
 		expected := []string{"val1", "val2"}
 		if val == nil || !reflect.DeepEqual(*val, expected) {
 			t.Errorf("expected list to be %v, got %v", expected, val)
 		}
 
-		otherVal := GetBool(ctx, pOther)
+		otherVal := GetOptionalBool(ctx, pOther)
 		if otherVal == nil || !*otherVal {
 			t.Errorf("expected other to be true")
 		}
 	})
 
 	t.Run("Argument list with separator", func(t *testing.T) {
-		pList := NewParameter("list", ParameterTypeStringList, nil, "")
+		pList := Parameter{Key: "list", Type: ParameterTypeStringList, DefaultValue: nil, Description: ""}
 		sep := ","
 		args := []Argument{
-			&baseArgument{
-				name:      "list",
-				parameter: pList,
-				separator: &sep,
+			Argument{
+				Name:      "list",
+				Parameter: pList,
+				Separator: &sep,
 			},
 		}
 
@@ -89,7 +89,7 @@ func TestParsingLists(t *testing.T) {
 			t.Fatalf("unexpected error: %v", err)
 		}
 
-		val := GetStringList(ctx, pList)
+		val := GetOptionalStringList(ctx, pList)
 		expected := []string{"val1", "val2", "val3"}
 		if val == nil || !reflect.DeepEqual(*val, expected) {
 			t.Errorf("expected list to be %v, got %v", expected, val)

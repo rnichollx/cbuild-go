@@ -34,10 +34,10 @@ func (r *Runner) Run(ctx context.Context, args []string) error {
 		mergedFlags := make([]Flag, 0, len(r.GlobalFlags)+len(subcmd.Flags))
 		mergedFlagsMap := make(map[ParameterKey]Flag)
 		for _, f := range r.GlobalFlags {
-			mergedFlagsMap[f.GetParameter().Key()] = f
+			mergedFlagsMap[f.Parameter.Key] = f
 		}
 		for _, f := range subcmd.Flags {
-			mergedFlagsMap[f.GetParameter().Key()] = f
+			mergedFlagsMap[f.Parameter.Key] = f
 		}
 		for _, f := range mergedFlagsMap {
 			mergedFlags = append(mergedFlags, f)
@@ -64,10 +64,10 @@ func (r *Runner) Run(ctx context.Context, args []string) error {
 			mergedFlags := make([]Flag, 0, len(r.GlobalFlags)+len(subcmd.Flags))
 			mergedFlagsMap := make(map[ParameterKey]Flag)
 			for _, f := range r.GlobalFlags {
-				mergedFlagsMap[f.GetParameter().Key()] = f
+				mergedFlagsMap[f.Parameter.Key] = f
 			}
 			for _, f := range subcmd.Flags {
-				mergedFlagsMap[f.GetParameter().Key()] = f
+				mergedFlagsMap[f.Parameter.Key] = f
 			}
 			for _, f := range mergedFlagsMap {
 				mergedFlags = append(mergedFlags, f)
@@ -86,7 +86,7 @@ func (r *Runner) Run(ctx context.Context, args []string) error {
 	}
 
 	// 2. Help detection
-	helpVal := GetBool(result.Ctx, NewParameter("help", ParameterTypeBool, PBool(false), ""))
+	helpVal := GetOptionalBool(result.Ctx, Parameter{Key: "help", Type: ParameterTypeBool, DefaultValue: PBool(false), Description: ""})
 	if helpVal != nil && *helpVal {
 		if len(result.Subcommands) == 0 {
 			r.PrintUsage("")
@@ -108,10 +108,10 @@ func (r *Runner) Run(ctx context.Context, args []string) error {
 			mergedFlags := make([]Flag, 0, len(r.GlobalFlags)+len(subcmd.Flags))
 			mergedFlagsMap := make(map[ParameterKey]Flag)
 			for _, f := range r.GlobalFlags {
-				mergedFlagsMap[f.GetParameter().Key()] = f
+				mergedFlagsMap[f.Parameter.Key] = f
 			}
 			for _, f := range subcmd.Flags {
-				mergedFlagsMap[f.GetParameter().Key()] = f
+				mergedFlagsMap[f.Parameter.Key] = f
 			}
 			for _, f := range mergedFlagsMap {
 				mergedFlags = append(mergedFlags, f)
@@ -144,10 +144,10 @@ func (r *Runner) PrintUsage(subcmdName string) {
 		argsSyn := ""
 
 		for _, arg := range subcmd.Arguments {
-			if isRequiredParam(subcmd.RequiredParams, arg.GetParameter().Key()) {
-				argsSyn += " <" + arg.Name() + ">"
+			if isRequiredParam(subcmd.RequiredParams, arg.Parameter.Key) {
+				argsSyn += " <" + arg.Name + ">"
 			} else {
-				argsSyn += " [" + arg.Name() + "]"
+				argsSyn += " [" + arg.Name + "]"
 			}
 		}
 
@@ -162,25 +162,25 @@ func (r *Runner) PrintUsage(subcmdName string) {
 		// Show flags for this subcommand
 		mergedFlagsMap := make(map[ParameterKey]Flag)
 		for _, f := range r.GlobalFlags {
-			mergedFlagsMap[f.GetParameter().Key()] = f
+			mergedFlagsMap[f.Parameter.Key] = f
 		}
 		for _, f := range subcmd.Flags {
-			mergedFlagsMap[f.GetParameter().Key()] = f
+			mergedFlagsMap[f.Parameter.Key] = f
 		}
 
 		maxFlagLen := 0
 		formatFlag := func(f Flag) string {
 			s := ""
 			val := ""
-			if f.GetParameter().Type() != ParameterTypeBool {
+			if f.Parameter.Type != ParameterTypeBool {
 				val = " <value>"
 			}
-			if f.Short() != "" {
-				s += "-" + f.Short() + val + ", "
+			if f.Short != "" {
+				s += "-" + f.Short + val + ", "
 			} else {
 				s += "    "
 			}
-			s += "--" + f.Long() + val
+			s += "--" + f.Long + val
 			return s
 		}
 
@@ -196,7 +196,7 @@ func (r *Runner) PrintUsage(subcmdName string) {
 		// Sort flags by key for consistent output
 		for i := 0; i < len(flags); i++ {
 			for j := i + 1; j < len(flags); j++ {
-				if flags[i].GetParameter().Key() > flags[j].GetParameter().Key() {
+				if flags[i].Parameter.Key > flags[j].Parameter.Key {
 					flags[i], flags[j] = flags[j], flags[i]
 				}
 			}
@@ -207,11 +207,11 @@ func (r *Runner) PrintUsage(subcmdName string) {
 			for _, f := range flags {
 				s := formatFlag(f)
 				indent := "  "
-				desc := f.GetParameter().Description()
-				if gf, ok := findGlobalFlag(r.GlobalFlags, f.GetParameter().Key()); ok {
-					if f.GetParameter().Description() != "" && f.GetParameter().Description() != gf.GetParameter().Description() {
-						desc += fmt.Sprintf(" (overrides global: %s)", gf.GetParameter().Description())
-					} else if isRequiredParam(subcmd.RequiredParams, f.GetParameter().Key()) {
+				desc := f.Parameter.Description
+				if gf, ok := findGlobalFlag(r.GlobalFlags, f.Parameter.Key); ok {
+					if f.Parameter.Description != "" && f.Parameter.Description != gf.Parameter.Description {
+						desc += fmt.Sprintf(" (overrides global: %s)", gf.Parameter.Description)
+					} else if isRequiredParam(subcmd.RequiredParams, f.Parameter.Key) {
 						desc += fmt.Sprintf(" (required for %s)", subcmdName)
 					}
 				}
@@ -232,18 +232,18 @@ func (r *Runner) PrintUsage(subcmdName string) {
 	flagSubcmds := make(map[ParameterKey][]string)
 
 	for _, f := range r.GlobalFlags {
-		flagMap[f.GetParameter().Key()] = f
+		flagMap[f.Parameter.Key] = f
 		// Global flags are always shown in "Flags:"
 	}
 
 	for _, name := range sortedSubcommandNames(r.Subcommands) {
 		sub := r.Subcommands[name]
 		for _, f := range sub.Flags {
-			flagCount[f.GetParameter().Key()]++
-			if _, exists := flagMap[f.GetParameter().Key()]; !exists {
-				flagMap[f.GetParameter().Key()] = f
+			flagCount[f.Parameter.Key]++
+			if _, exists := flagMap[f.Parameter.Key]; !exists {
+				flagMap[f.Parameter.Key] = f
 			}
-			flagSubcmds[f.GetParameter().Key()] = append(flagSubcmds[f.GetParameter().Key()], name)
+			flagSubcmds[f.Parameter.Key] = append(flagSubcmds[f.Parameter.Key], name)
 		}
 	}
 
@@ -251,7 +251,7 @@ func (r *Runner) PrintUsage(subcmdName string) {
 	for key, f := range flagMap {
 		isGlobal := false
 		for _, gf := range r.GlobalFlags {
-			if gf.GetParameter().Key() == key {
+			if gf.Parameter.Key == key {
 				isGlobal = true
 				break
 			}
@@ -266,15 +266,15 @@ func (r *Runner) PrintUsage(subcmdName string) {
 	formatFlag := func(f Flag) string {
 		s := ""
 		val := ""
-		if f.GetParameter().Type() != ParameterTypeBool {
+		if f.Parameter.Type != ParameterTypeBool {
 			val = " <value>"
 		}
-		if f.Short() != "" {
-			s += "-" + f.Short() + val + ", "
+		if f.Short != "" {
+			s += "-" + f.Short + val + ", "
 		} else {
 			s += "    "
 		}
-		s += "--" + f.Long() + val
+		s += "--" + f.Long + val
 		return s
 	}
 
@@ -294,7 +294,7 @@ func (r *Runner) PrintUsage(subcmdName string) {
 		for _, f := range sub.Flags {
 			showInSub := true
 			for _, gf := range flagsToShowGlobal {
-				if gf.GetParameter().Key() == f.GetParameter().Key() {
+				if gf.Parameter.Key == f.Parameter.Key {
 					showInSub = false
 					break
 				}
@@ -311,7 +311,7 @@ func (r *Runner) PrintUsage(subcmdName string) {
 	// Sort flagsToShowGlobal by key
 	for i := 0; i < len(flagsToShowGlobal); i++ {
 		for j := i + 1; j < len(flagsToShowGlobal); j++ {
-			if flagsToShowGlobal[i].GetParameter().Key() > flagsToShowGlobal[j].GetParameter().Key() {
+			if flagsToShowGlobal[i].Parameter.Key > flagsToShowGlobal[j].Parameter.Key {
 				flagsToShowGlobal[i], flagsToShowGlobal[j] = flagsToShowGlobal[j], flagsToShowGlobal[i]
 			}
 		}
@@ -323,7 +323,7 @@ func (r *Runner) PrintUsage(subcmdName string) {
 			s := formatFlag(f)
 			isGlobal := false
 			for _, gf := range r.GlobalFlags {
-				if gf.GetParameter().Key() == f.GetParameter().Key() {
+				if gf.Parameter.Key == f.Parameter.Key {
 					isGlobal = true
 					break
 				}
@@ -331,10 +331,10 @@ func (r *Runner) PrintUsage(subcmdName string) {
 
 			note := ""
 			if !isGlobal {
-				note = fmt.Sprintf(" (for %s subcommands only)", strings.Join(flagSubcmds[f.GetParameter().Key()], ", "))
+				note = fmt.Sprintf(" (for %s subcommands only)", strings.Join(flagSubcmds[f.Parameter.Key], ", "))
 			}
 
-			fmt.Printf("  %s%s  %s%s\n", s, strings.Repeat(" ", maxFlagLen-len(s)), f.GetParameter().Description(), note)
+			fmt.Printf("  %s%s  %s%s\n", s, strings.Repeat(" ", maxFlagLen-len(s)), f.Parameter.Description, note)
 		}
 		fmt.Println()
 	}
@@ -347,22 +347,22 @@ func (r *Runner) PrintUsage(subcmdName string) {
 			for _, f := range sub.Flags {
 				showInSub := false
 				for _, gf := range flagsToShowGlobal {
-					if gf.GetParameter().Key() == f.GetParameter().Key() {
+					if gf.Parameter.Key == f.Parameter.Key {
 						// Only show in sub if description is different
-						if f.GetParameter().Description() != "" && f.GetParameter().Description() != gf.GetParameter().Description() {
+						if f.Parameter.Description != "" && f.Parameter.Description != gf.Parameter.Description {
 							showInSub = true
 						}
 						break
 					}
 				}
-				if showInSub || !isFlagInGlobalList(flagsToShowGlobal, f.GetParameter().Key()) {
+				if showInSub || !isFlagInGlobalList(flagsToShowGlobal, f.Parameter.Key) {
 					s := formatFlag(f)
 					indent := "    "
-					desc := f.GetParameter().Description()
-					if gf, ok := findGlobalFlag(r.GlobalFlags, f.GetParameter().Key()); ok {
-						if f.GetParameter().Description() != "" && f.GetParameter().Description() != gf.GetParameter().Description() {
-							desc += fmt.Sprintf(" (overrides global: %s)", gf.GetParameter().Description())
-						} else if isRequiredParam(sub.RequiredParams, f.GetParameter().Key()) {
+					desc := f.Parameter.Description
+					if gf, ok := findGlobalFlag(r.GlobalFlags, f.Parameter.Key); ok {
+						if f.Parameter.Description != "" && f.Parameter.Description != gf.Parameter.Description {
+							desc += fmt.Sprintf(" (overrides global: %s)", gf.Parameter.Description)
+						} else if isRequiredParam(sub.RequiredParams, f.Parameter.Key) {
 							desc += fmt.Sprintf(" (required for %s)", name)
 						}
 					}
@@ -398,16 +398,16 @@ func (r *Runner) generateManpage(dir string) error {
 		for _, f := range r.GlobalFlags {
 			fmt.Fprintf(w, ".TP\n")
 			val := ""
-			if f.GetParameter().Type() != ParameterTypeBool {
+			if f.Parameter.Type != ParameterTypeBool {
 				val = " <value>"
 			}
-			if f.Short() != "" {
-				fmt.Fprintf(w, ".B \\-%s%s, \\-\\-%s%s", f.Short(), val, f.Long(), val)
+			if f.Short != "" {
+				fmt.Fprintf(w, ".B \\-%s%s, \\-\\-%s%s", f.Short, val, f.Long, val)
 			} else {
-				fmt.Fprintf(w, ".B \\-\\-%s%s", f.Long(), val)
+				fmt.Fprintf(w, ".B \\-\\-%s%s", f.Long, val)
 			}
 			fmt.Fprintf(w, "\n")
-			fmt.Fprintf(w, "%s\n", f.GetParameter().Description())
+			fmt.Fprintf(w, "%s\n", f.Parameter.Description)
 		}
 	}
 
@@ -428,10 +428,10 @@ func (r *Runner) generateManpage(dir string) error {
 		fmt.Fprintf(w, ".B Synopsis:\n")
 		argsSyn := ""
 		for _, arg := range sub.Arguments {
-			if isRequiredParam(sub.RequiredParams, arg.GetParameter().Key()) {
-				argsSyn += " <" + arg.Name() + ">"
+			if isRequiredParam(sub.RequiredParams, arg.Parameter.Key) {
+				argsSyn += " <" + arg.Name + ">"
 			} else {
-				argsSyn += " [" + arg.Name() + "]"
+				argsSyn += " [" + arg.Name + "]"
 			}
 		}
 		fmt.Fprintf(w, "%s %s%s\n\n", r.Name, name, argsSyn)
@@ -442,20 +442,20 @@ func (r *Runner) generateManpage(dir string) error {
 			for _, f := range sub.Flags {
 				fmt.Fprintf(w, ".TP\n")
 				val := ""
-				if f.GetParameter().Type() != ParameterTypeBool {
+				if f.Parameter.Type != ParameterTypeBool {
 					val = " <value>"
 				}
-				if f.Short() != "" {
-					fmt.Fprintf(w, ".B \\-%s%s, \\-\\-%s%s", f.Short(), val, f.Long(), val)
+				if f.Short != "" {
+					fmt.Fprintf(w, ".B \\-%s%s, \\-\\-%s%s", f.Short, val, f.Long, val)
 				} else {
-					fmt.Fprintf(w, ".B \\-\\-%s%s", f.Long(), val)
+					fmt.Fprintf(w, ".B \\-\\-%s%s", f.Long, val)
 				}
 				fmt.Fprintf(w, "\n")
-				desc := f.GetParameter().Description()
-				if gf, ok := findGlobalFlag(r.GlobalFlags, f.GetParameter().Key()); ok {
-					if f.GetParameter().Description() != "" && f.GetParameter().Description() != gf.GetParameter().Description() {
-						desc += fmt.Sprintf(" (overrides global: %s)", gf.GetParameter().Description())
-					} else if isRequiredParam(sub.RequiredParams, f.GetParameter().Key()) {
+				desc := f.Parameter.Description
+				if gf, ok := findGlobalFlag(r.GlobalFlags, f.Parameter.Key); ok {
+					if f.Parameter.Description != "" && f.Parameter.Description != gf.Parameter.Description {
+						desc += fmt.Sprintf(" (overrides global: %s)", gf.Parameter.Description)
+					} else if isRequiredParam(sub.RequiredParams, f.Parameter.Key) {
 						desc += fmt.Sprintf(" (required for %s)", name)
 					}
 				}
@@ -473,7 +473,7 @@ func (r *Runner) GenerateManpages(dir string) error {
 
 func isFlagInGlobalList(flags []Flag, key ParameterKey) bool {
 	for _, f := range flags {
-		if f.GetParameter().Key() == key {
+		if f.Parameter.Key == key {
 			return true
 		}
 	}
@@ -482,10 +482,7 @@ func isFlagInGlobalList(flags []Flag, key ParameterKey) bool {
 
 func isRequiredParam(required []Parameter, key ParameterKey) bool {
 	for _, p := range required {
-		if p == nil {
-			continue
-		}
-		if p.Key() == key {
+		if p.Key == key {
 			return true
 		}
 	}
@@ -494,11 +491,11 @@ func isRequiredParam(required []Parameter, key ParameterKey) bool {
 
 func findGlobalFlag(globalFlags []Flag, key ParameterKey) (Flag, bool) {
 	for _, f := range globalFlags {
-		if f.GetParameter().Key() == key {
+		if f.Parameter.Key == key {
 			return f, true
 		}
 	}
-	return nil, false
+	return Flag{}, false
 }
 
 func sortedSubcommandNames(subcommands map[string]*Subcommand) []string {

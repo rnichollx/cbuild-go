@@ -10,12 +10,12 @@ import (
 
 func handleGetArgs(ctx context.Context) error {
 	workspacePath := getWorkspacePath(ctx)
-	targetNameVal := cli.GetString(ctx, PTarget)
+	targetNameVal := cli.GetOptionalString(ctx, TargetParameter)
 	targetName := ""
 	if targetNameVal != nil {
 		targetName = *targetNameVal
 	}
-	toolchainVal := cli.GetString(ctx, ccommon.PToolchain)
+	toolchainVal := cli.GetOptionalString(ctx, ccommon.ToolchainParameter)
 	toolchain := ""
 	if toolchainVal != nil {
 		toolchain = *toolchainVal
@@ -23,7 +23,7 @@ func handleGetArgs(ctx context.Context) error {
 	if toolchain == "" {
 		toolchain = "default"
 	}
-	buildTypeVal := cli.GetStringList(ctx, ccommon.PConfig)
+	buildTypeVal := cli.GetOptionalStringList(ctx, ccommon.ConfigParameter)
 	buildType := "Debug"
 	if buildTypeVal != nil && len(*buildTypeVal) > 0 {
 		buildType = (*buildTypeVal)[0]

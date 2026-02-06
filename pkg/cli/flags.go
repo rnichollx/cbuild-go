@@ -1,28 +1,19 @@
 package cli
 
-type Flag interface {
-	Short() string
-	Long() string
-
-	GetParameter() Parameter
-
-	Greedy() bool
-
-	Overwrite() OverwritePolicy
+type Flag struct {
+	Short     string
+	Long      string
+	Parameter Parameter
+	Greedy    bool
+	Overwrite OverwritePolicy
 }
 
-type Argument interface {
-	Name() string
-	GetParameter() Parameter
-	Overwrite() OverwritePolicy
-
-	// If true, this accepts an unlimited number of arguments.
-	// Only the last argument can be Variadic
-	Variadic() bool
-
-	// For arguments of list types, if Separator return non-nil, then split the string by the separator to make list
-	// elements.
-	Separator() *string
+type Argument struct {
+	Name      string
+	Parameter Parameter
+	Overwrite OverwritePolicy
+	Variadic  bool
+	Separator *string
 }
 
 type OverwritePolicy int

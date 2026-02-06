@@ -7,18 +7,18 @@ import (
 )
 
 func TestSubcommands(t *testing.T) {
-	pSub := NewParameter("sub", ParameterTypeBool, nil, "sub flag")
-	pArg := NewParameter("arg", ParameterTypeString, nil, "arg 1")
+	pSub := Parameter{Key: "sub", Type: ParameterTypeBool, DefaultValue: nil, Description: "sub flag"}
+	pArg := Parameter{Key: "arg", Type: ParameterTypeString, DefaultValue: nil, Description: "arg 1"}
 
 	opts := ParseOptions{
 		Subcommands: map[string]SubcommandParseOptions{
 			"cmd": {
 				ParseOptions: &ParseOptions{
 					Flags: []Flag{
-						NewBoolFlag("s", "sub", pSub),
+						Flag{Short: "s", Long: "sub", Parameter: pSub},
 					},
 					Arguments: []Argument{
-						NewStringArgument("arg", pArg),
+						Argument{Name: "arg", Parameter: pArg},
 					},
 				},
 			},
@@ -39,20 +39,20 @@ func TestSubcommands(t *testing.T) {
 		t.Errorf("Expected subcommands [cmd], got %v", result.Subcommands)
 	}
 
-	subVal := GetBool(result.Ctx, pSub)
+	subVal := GetOptionalBool(result.Ctx, pSub)
 	if subVal == nil || !*subVal {
 		t.Errorf("Expected sub flag to be true")
 	}
 
-	argVal := GetString(result.Ctx, pArg)
+	argVal := GetOptionalString(result.Ctx, pArg)
 	if argVal == nil || *argVal != "foo" {
 		t.Errorf("Expected arg to be 'foo', got %v", argVal)
 	}
 }
 
 func TestNestedSubcommands(t *testing.T) {
-	p1 := NewParameter("p1", ParameterTypeBool, nil, "")
-	p2 := NewParameter("p2", ParameterTypeBool, nil, "")
+	p1 := Parameter{Key: "p1", Type: ParameterTypeBool, DefaultValue: nil, Description: ""}
+	p2 := Parameter{Key: "p2", Type: ParameterTypeBool, DefaultValue: nil, Description: ""}
 
 	opts := ParseOptions{
 		Subcommands: map[string]SubcommandParseOptions{
@@ -62,13 +62,13 @@ func TestNestedSubcommands(t *testing.T) {
 						"sub2": {
 							ParseOptions: &ParseOptions{
 								Flags: []Flag{
-									NewBoolFlag("2", "p2", p2),
+									Flag{Short: "2", Long: "p2", Parameter: p2},
 								},
 							},
 						},
 					},
 					Flags: []Flag{
-						NewBoolFlag("1", "p1", p1),
+						Flag{Short: "1", Long: "p1", Parameter: p1},
 					},
 				},
 			},
@@ -89,12 +89,12 @@ func TestNestedSubcommands(t *testing.T) {
 		t.Errorf("Expected subcommands [sub1 sub2], got %v", result.Subcommands)
 	}
 
-	v1 := GetBool(result.Ctx, p1)
+	v1 := GetOptionalBool(result.Ctx, p1)
 	if v1 == nil || !*v1 {
 		t.Errorf("Expected p1 to be true")
 	}
 
-	v2 := GetBool(result.Ctx, p2)
+	v2 := GetOptionalBool(result.Ctx, p2)
 	if v2 == nil || !*v2 {
 		t.Errorf("Expected p2 to be true")
 	}
@@ -130,12 +130,12 @@ func TestStopParsing(t *testing.T) {
 }
 
 func TestSubcommandRestriction(t *testing.T) {
-	pArg1 := NewParameter("arg1", ParameterTypeString, nil, "")
-	pArg2 := NewParameter("arg2", ParameterTypeString, nil, "")
+	pArg1 := Parameter{Key: "arg1", Type: ParameterTypeString, DefaultValue: nil, Description: ""}
+	pArg2 := Parameter{Key: "arg2", Type: ParameterTypeString, DefaultValue: nil, Description: ""}
 	opts := ParseOptions{
 		Arguments: []Argument{
-			NewStringArgument("arg1", pArg1),
-			NewStringArgument("arg2", pArg2),
+			Argument{Name: "arg1", Parameter: pArg1},
+			Argument{Name: "arg2", Parameter: pArg2},
 		},
 		Subcommands: map[string]SubcommandParseOptions{
 			"cmd": {
@@ -159,12 +159,12 @@ func TestSubcommandRestriction(t *testing.T) {
 		t.Errorf("Expected no subcommands, got %v", result.Subcommands)
 	}
 
-	arg1Val := GetString(result.Ctx, pArg1)
+	arg1Val := GetOptionalString(result.Ctx, pArg1)
 	if arg1Val == nil || *arg1Val != "foo" {
 		t.Errorf("Expected first arg to be 'foo'")
 	}
 
-	arg2Val := GetString(result.Ctx, pArg2)
+	arg2Val := GetOptionalString(result.Ctx, pArg2)
 	if arg2Val == nil || *arg2Val != "cmd" {
 		t.Errorf("Expected second arg to be 'cmd', got %v", arg2Val)
 	}

@@ -9,12 +9,12 @@ import (
 
 func handleAddDependency(ctx context.Context) error {
 	workspacePath := getWorkspacePath(ctx)
-	targetVal := cli.GetString(ctx, PTarget)
+	targetVal := cli.GetOptionalString(ctx, TargetParameter)
 	target := ""
 	if targetVal != nil {
 		target = *targetVal
 	}
-	depnameVal := cli.GetString(ctx, PDependency)
+	depnameVal := cli.GetOptionalString(ctx, DependencyParameter)
 	depname := ""
 	if depnameVal != nil {
 		depname = *depnameVal
@@ -37,12 +37,12 @@ func handleAddDependency(ctx context.Context) error {
 
 func handleAddTestingDependency(ctx context.Context) error {
 	workspacePath := getWorkspacePath(ctx)
-	targetVal := cli.GetString(ctx, PTarget)
+	targetVal := cli.GetOptionalString(ctx, TargetParameter)
 	target := ""
 	if targetVal != nil {
 		target = *targetVal
 	}
-	depnameVal := cli.GetString(ctx, PDependency)
+	depnameVal := cli.GetOptionalString(ctx, DependencyParameter)
 	depname := ""
 	if depnameVal != nil {
 		depname = *depnameVal
@@ -65,12 +65,12 @@ func handleAddTestingDependency(ctx context.Context) error {
 
 func handleRemoveDependency(ctx context.Context) error {
 	workspacePath := getWorkspacePath(ctx)
-	targetVal := cli.GetString(ctx, PTarget)
+	targetVal := cli.GetOptionalString(ctx, TargetParameter)
 	target := ""
 	if targetVal != nil {
 		target = *targetVal
 	}
-	depnameVal := cli.GetString(ctx, PDependency)
+	depnameVal := cli.GetOptionalString(ctx, DependencyParameter)
 	depname := ""
 	if depnameVal != nil {
 		depname = *depnameVal
@@ -93,12 +93,12 @@ func handleRemoveDependency(ctx context.Context) error {
 
 func handleRemoveTestingDependency(ctx context.Context) error {
 	workspacePath := getWorkspacePath(ctx)
-	targetVal := cli.GetString(ctx, PTarget)
+	targetVal := cli.GetOptionalString(ctx, TargetParameter)
 	target := ""
 	if targetVal != nil {
 		target = *targetVal
 	}
-	depnameVal := cli.GetString(ctx, PDependency)
+	depnameVal := cli.GetOptionalString(ctx, DependencyParameter)
 	depname := ""
 	if depnameVal != nil {
 		depname = *depnameVal

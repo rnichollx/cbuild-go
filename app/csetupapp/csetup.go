@@ -11,7 +11,7 @@ import (
 )
 
 func getWorkspacePath(ctx context.Context) string {
-	workspacePathRaw := cli.GetPath(ctx, ccommon.PWorkspace)
+	workspacePathRaw := cli.GetOptionalPath(ctx, ccommon.WorkspaceParameter)
 	workspacePath := ""
 	if workspacePathRaw != nil {
 		workspacePath = *workspacePathRaw
@@ -62,24 +62,24 @@ var CSetup = &cli.Runner{
 }
 
 var (
-	PPath       = cli.NewParameter("path", cli.ParameterTypePath, nil, "path to the workspace or source")
-	PUrl        = cli.NewParameter("url", cli.ParameterTypeURI, nil, "URL of the repository")
-	PLocalPath  = cli.NewParameter("local_path", cli.ParameterTypePath, nil, "path to the local source")
-	PSource     = cli.NewParameter("source", cli.ParameterTypeString, nil, "name of the source")
-	PDependency = cli.NewParameter("dependency", cli.ParameterTypeString, nil, "name of the dependency")
-	PTarget     = cli.NewParameter("target", cli.ParameterTypeString, nil, "Name of the build target.")
-	PRevision   = cli.NewParameter("revision", cli.ParameterTypeString, nil, "Revision or tag to use.")
-	PBranch     = cli.NewParameter("branch", cli.ParameterTypeString, nil, "Branch name to use.")
-	PNoTrack    = cli.NewParameter("no-track", cli.ParameterTypeBool, cli.PBool(false), "Do not track the cloned branch.")
+	PathParameter       = cli.Parameter{Key: "path", Type: cli.ParameterTypePath, DefaultValue: nil, Description: "path to the workspace or source"}
+	URLParameter        = cli.Parameter{Key: "url", Type: cli.ParameterTypeURI, DefaultValue: nil, Description: "URL of the repository"}
+	LocalPathParameter  = cli.Parameter{Key: "local_path", Type: cli.ParameterTypePath, DefaultValue: nil, Description: "path to the local source"}
+	SourceParameter     = cli.Parameter{Key: "source", Type: cli.ParameterTypeString, DefaultValue: nil, Description: "name of the source"}
+	DependencyParameter = cli.Parameter{Key: "dependency", Type: cli.ParameterTypeString, DefaultValue: nil, Description: "name of the dependency"}
+	TargetParameter     = cli.Parameter{Key: "target", Type: cli.ParameterTypeString, DefaultValue: nil, Description: "Name of the build target."}
+	RevisionParameter   = cli.Parameter{Key: "revision", Type: cli.ParameterTypeString, DefaultValue: nil, Description: "Revision or tag to use."}
+	BranchParameter     = cli.Parameter{Key: "branch", Type: cli.ParameterTypeString, DefaultValue: nil, Description: "Branch name to use."}
+	NoTrackParameter    = cli.Parameter{Key: "no-track", Type: cli.ParameterTypeBool, DefaultValue: cli.PBool(false), Description: "Do not track the cloned branch."}
 )
 
 func init() {
 	CSetup.Subcommands["init"] = &cli.Subcommand{
 		Description: "Initialize a new workspace",
 		Arguments: []cli.Argument{
-			cli.NewStringArgument("path", ccommon.PWorkspace),
+			cli.Argument{Name: "path", Parameter: ccommon.WorkspaceParameter},
 		},
-		RequiredParams: []cli.Parameter{PPath},
+		RequiredParams: []cli.Parameter{PathParameter},
 		Flags:          []cli.Flag{ccommon.ReinitFlag},
 		Exec: func(ctx context.Context, args []string) error {
 			return handleInit(ctx)
@@ -88,7 +88,7 @@ func init() {
 	CSetup.Subcommands["dev-init"] = &cli.Subcommand{
 		Description: "Initialize a new workspace for development in the current directory",
 		Arguments: []cli.Argument{
-			cli.NewStringArgument("path", PPath),
+			cli.Argument{Name: "path", Parameter: PathParameter},
 		},
 		Flags: []cli.Flag{ccommon.DownloadDepsFlag, ccommon.NoSetupFlag},
 		Exec: func(ctx context.Context, args []string) error {
@@ -98,17 +98,17 @@ func init() {
 	CSetup.Subcommands["git-clone"] = &cli.Subcommand{
 		Description: "Clone a git repository into the workspace",
 		Arguments: []cli.Argument{
-			cli.NewStringArgument("url", PUrl),
-			cli.NewStringArgument("path", PPath),
+			cli.Argument{Name: "url", Parameter: URLParameter},
+			cli.Argument{Name: "path", Parameter: PathParameter},
 		},
-		RequiredParams: []cli.Parameter{PUrl},
+		RequiredParams: []cli.Parameter{URLParameter},
 		Flags: []cli.Flag{
 			ccommon.DownloadDepsFlag,
 			ccommon.SubmoduleFlag,
 			ccommon.NoSetupFlag,
-			cli.NewStringFlag("", "branch", PBranch),
-			cli.NewStringFlag("", "revision", PRevision),
-			cli.NewBoolFlag("", "no-track", PNoTrack),
+			cli.Flag{Short: "", Long: "branch", Parameter: BranchParameter},
+			cli.Flag{Short: "", Long: "revision", Parameter: RevisionParameter},
+			cli.Flag{Short: "", Long: "no-track", Parameter: NoTrackParameter},
 		},
 		Exec: func(ctx context.Context, args []string) error {
 			return handleGitClone(ctx)
@@ -117,10 +117,10 @@ func init() {
 	CSetup.Subcommands["declare-git-source"] = &cli.Subcommand{
 		Description: "Add git source information to the workspace without downloading",
 		Arguments: []cli.Argument{
-			cli.NewStringArgument("url", PUrl),
-			cli.NewStringArgument("path", PPath),
+			cli.Argument{Name: "url", Parameter: URLParameter},
+			cli.Argument{Name: "path", Parameter: PathParameter},
 		},
-		RequiredParams: []cli.Parameter{PUrl},
+		RequiredParams: []cli.Parameter{URLParameter},
 		Exec: func(ctx context.Context, args []string) error {
 			return handleDeclareGitSource(ctx)
 		},
@@ -128,10 +128,10 @@ func init() {
 	CSetup.Subcommands["declare-local-source"] = &cli.Subcommand{
 		Description: "Add local source information to the workspace",
 		Arguments: []cli.Argument{
-			cli.NewStringArgument("source", PSource),
-			cli.NewStringArgument("path", PPath),
+			cli.Argument{Name: "source", Parameter: SourceParameter},
+			cli.Argument{Name: "path", Parameter: PathParameter},
 		},
-		RequiredParams: []cli.Parameter{PSource, PPath},
+		RequiredParams: []cli.Parameter{SourceParameter, PathParameter},
 		Exec: func(ctx context.Context, args []string) error {
 			return handleDeclareLocalSource(ctx)
 		},
@@ -139,7 +139,7 @@ func init() {
 	CSetup.Subcommands["download"] = &cli.Subcommand{
 		Description: "Download missing sources",
 		Arguments: []cli.Argument{
-			cli.NewStringArgument("source", PSource),
+			cli.Argument{Name: "source", Parameter: SourceParameter},
 		},
 		Flags: []cli.Flag{ccommon.DownloadDepsFlag, ccommon.NoSetupFlag, ccommon.SubmoduleFlag},
 		Exec: func(ctx context.Context, args []string) error {
@@ -149,9 +149,9 @@ func init() {
 	CSetup.Subcommands["load-defaults"] = &cli.Subcommand{
 		Description: "Load default configuration for a source from its csetup.yml",
 		Arguments: []cli.Argument{
-			cli.NewStringArgument("source", PSource),
+			cli.Argument{Name: "source", Parameter: SourceParameter},
 		},
-		RequiredParams: []cli.Parameter{PSource},
+		RequiredParams: []cli.Parameter{SourceParameter},
 		Exec: func(ctx context.Context, args []string) error {
 			return handleLoadDefaults(ctx)
 		},
@@ -159,10 +159,10 @@ func init() {
 	CSetup.Subcommands["add-dependency"] = &cli.Subcommand{
 		Description: "Add a dependency to a target",
 		Arguments: []cli.Argument{
-			cli.NewStringArgument("target", PTarget),
-			cli.NewStringArgument("dependency", PDependency),
+			cli.Argument{Name: "target", Parameter: TargetParameter},
+			cli.Argument{Name: "dependency", Parameter: DependencyParameter},
 		},
-		RequiredParams: []cli.Parameter{PTarget, PDependency},
+		RequiredParams: []cli.Parameter{TargetParameter, DependencyParameter},
 		Exec: func(ctx context.Context, args []string) error {
 			return handleAddDependency(ctx)
 		},
@@ -170,10 +170,10 @@ func init() {
 	CSetup.Subcommands["remove-dependency"] = &cli.Subcommand{
 		Description: "Remove a dependency from a target",
 		Arguments: []cli.Argument{
-			cli.NewStringArgument("target", PTarget),
-			cli.NewStringArgument("dependency", PDependency),
+			cli.Argument{Name: "target", Parameter: TargetParameter},
+			cli.Argument{Name: "dependency", Parameter: DependencyParameter},
 		},
-		RequiredParams: []cli.Parameter{PTarget, PDependency},
+		RequiredParams: []cli.Parameter{TargetParameter, DependencyParameter},
 		Exec: func(ctx context.Context, args []string) error {
 			return handleRemoveDependency(ctx)
 		},
@@ -181,10 +181,10 @@ func init() {
 	CSetup.Subcommands["add-testing-dependency"] = &cli.Subcommand{
 		Description: "Add a testing dependency to a target",
 		Arguments: []cli.Argument{
-			cli.NewStringArgument("target", PTarget),
-			cli.NewStringArgument("dependency", PDependency),
+			cli.Argument{Name: "target", Parameter: TargetParameter},
+			cli.Argument{Name: "dependency", Parameter: DependencyParameter},
 		},
-		RequiredParams: []cli.Parameter{PTarget, PDependency},
+		RequiredParams: []cli.Parameter{TargetParameter, DependencyParameter},
 		Exec: func(ctx context.Context, args []string) error {
 			return handleAddTestingDependency(ctx)
 		},
@@ -192,10 +192,10 @@ func init() {
 	CSetup.Subcommands["remove-testing-dependency"] = &cli.Subcommand{
 		Description: "Remove a testing dependency from a target",
 		Arguments: []cli.Argument{
-			cli.NewStringArgument("target", PTarget),
-			cli.NewStringArgument("dependency", PDependency),
+			cli.Argument{Name: "target", Parameter: TargetParameter},
+			cli.Argument{Name: "dependency", Parameter: DependencyParameter},
 		},
-		RequiredParams: []cli.Parameter{PTarget, PDependency},
+		RequiredParams: []cli.Parameter{TargetParameter, DependencyParameter},
 		Exec: func(ctx context.Context, args []string) error {
 			return handleRemoveTestingDependency(ctx)
 		},
@@ -203,9 +203,9 @@ func init() {
 	CSetup.Subcommands["enable-testing"] = &cli.Subcommand{
 		Description: "Enable testing for a target",
 		Arguments: []cli.Argument{
-			cli.NewStringArgument("target", PTarget),
+			cli.Argument{Name: "target", Parameter: TargetParameter},
 		},
-		RequiredParams: []cli.Parameter{PTarget},
+		RequiredParams: []cli.Parameter{TargetParameter},
 		Exec: func(ctx context.Context, args []string) error {
 			return handleEnableTesting(ctx)
 		},
@@ -213,9 +213,9 @@ func init() {
 	CSetup.Subcommands["disable-testing"] = &cli.Subcommand{
 		Description: "Disable testing for a target",
 		Arguments: []cli.Argument{
-			cli.NewStringArgument("target", PTarget),
+			cli.Argument{Name: "target", Parameter: TargetParameter},
 		},
-		RequiredParams: []cli.Parameter{PTarget},
+		RequiredParams: []cli.Parameter{TargetParameter},
 		Exec: func(ctx context.Context, args []string) error {
 			return handleDisableTesting(ctx)
 		},
@@ -225,7 +225,7 @@ func init() {
 		Arguments: []cli.Argument{
 			ccommon.SourceArg,
 		},
-		RequiredParams: []cli.Parameter{ccommon.PSource},
+		RequiredParams: []cli.Parameter{ccommon.SourceParameter},
 		Flags:          []cli.Flag{ccommon.DeleteFlag, ccommon.SourceFlag},
 		Exec: func(ctx context.Context, args []string) error {
 			return handleRemoveSource(ctx)
@@ -236,7 +236,7 @@ func init() {
 		Arguments: []cli.Argument{
 			ccommon.TargetArg,
 		},
-		RequiredParams: []cli.Parameter{ccommon.PTarget},
+		RequiredParams: []cli.Parameter{ccommon.TargetParameter},
 		Flags:          []cli.Flag{ccommon.TargetFlag},
 		Exec: func(ctx context.Context, args []string) error {
 			return handleRemoveTarget(ctx)
@@ -247,7 +247,7 @@ func init() {
 		Arguments: []cli.Argument{
 			ccommon.SourceArg,
 		},
-		RequiredParams: []cli.Parameter{ccommon.PSource},
+		RequiredParams: []cli.Parameter{ccommon.SourceParameter},
 		Flags:          []cli.Flag{ccommon.DeleteFlag, ccommon.SourceFlag},
 		Exec: func(ctx context.Context, args []string) error {
 			return handleRemoveProject(ctx)
@@ -266,7 +266,7 @@ func init() {
 			ccommon.TargetArg,
 			ccommon.SourceArg,
 		},
-		RequiredParams: []cli.Parameter{ccommon.PSource},
+		RequiredParams: []cli.Parameter{ccommon.SourceParameter},
 		Flags: []cli.Flag{
 			ccommon.SourceFlag,
 			ccommon.TargetFlag,
@@ -284,7 +284,7 @@ func init() {
 			ccommon.CxxVersionArg,
 			ccommon.TargetArg,
 		},
-		RequiredParams: []cli.Parameter{ccommon.PCxxVersion},
+		RequiredParams: []cli.Parameter{ccommon.CxxVersionParameter},
 		Flags:          []cli.Flag{ccommon.TargetFlag},
 		Exec: func(ctx context.Context, args []string) error {
 			return handleSetCXXVersion(ctx)
@@ -293,10 +293,10 @@ func init() {
 	CSetup.Subcommands["enable-staging"] = &cli.Subcommand{
 		Description: "Enable staging for a target",
 		Arguments: []cli.Argument{
-			cli.NewStringArgument("target", PTarget),
+			cli.Argument{Name: "target", Parameter: TargetParameter},
 			ccommon.TargetArg,
 		},
-		RequiredParams: []cli.Parameter{ccommon.PTarget},
+		RequiredParams: []cli.Parameter{ccommon.TargetParameter},
 		Flags:          []cli.Flag{ccommon.TargetFlag},
 		Exec: func(ctx context.Context, args []string) error {
 			return handleEnableStaging(ctx)
@@ -305,10 +305,10 @@ func init() {
 	CSetup.Subcommands["disable-staging"] = &cli.Subcommand{
 		Description: "Disable staging for a target",
 		Arguments: []cli.Argument{
-			cli.NewStringArgument("target", PTarget),
+			cli.Argument{Name: "target", Parameter: TargetParameter},
 			ccommon.TargetArg,
 		},
-		RequiredParams: []cli.Parameter{ccommon.PTarget},
+		RequiredParams: []cli.Parameter{ccommon.TargetParameter},
 		Flags:          []cli.Flag{ccommon.TargetFlag},
 		Exec: func(ctx context.Context, args []string) error {
 			return handleDisableStaging(ctx)
@@ -323,7 +323,7 @@ func init() {
 	CSetup.Subcommands["drop-files"] = &cli.Subcommand{
 		Description: "Delete local source files without removing them from configuration",
 		Arguments: []cli.Argument{
-			cli.NewStringArgument("source", PSource),
+			cli.Argument{Name: "source", Parameter: SourceParameter},
 		},
 		Exec: func(ctx context.Context, args []string) error {
 			return handleDropFiles(ctx)
@@ -332,10 +332,10 @@ func init() {
 	CSetup.Subcommands["get-args"] = &cli.Subcommand{
 		Description: "Get build arguments for a target",
 		Arguments: []cli.Argument{
-			cli.NewStringArgument("target", PTarget),
+			cli.Argument{Name: "target", Parameter: TargetParameter},
 			ccommon.TargetArg,
 		},
-		RequiredParams: []cli.Parameter{ccommon.PTarget},
+		RequiredParams: []cli.Parameter{ccommon.TargetParameter},
 		Flags:          []cli.Flag{ccommon.ConfigFlag, ccommon.ToolchainFlag, ccommon.TargetFlag},
 		Exec: func(ctx context.Context, args []string) error {
 			return handleGetArgs(ctx)
@@ -350,7 +350,7 @@ func init() {
 	}
 	CSetup.Subcommands["add-config"] = &cli.Subcommand{
 		Description:    "Add a build configuration",
-		RequiredParams: []cli.Parameter{ccommon.PConfig},
+		RequiredParams: []cli.Parameter{ccommon.ConfigParameter},
 		Flags:          []cli.Flag{ccommon.ConfigFlag, ccommon.ToolchainFlag},
 		Exec: func(ctx context.Context, args []string) error {
 			return handleAddConfig(ctx)
@@ -358,7 +358,7 @@ func init() {
 	}
 	CSetup.Subcommands["remove-config"] = &cli.Subcommand{
 		Description:    "Remove a build configuration",
-		RequiredParams: []cli.Parameter{ccommon.PConfig},
+		RequiredParams: []cli.Parameter{ccommon.ConfigParameter},
 		Flags:          []cli.Flag{ccommon.ConfigFlag},
 		Exec: func(ctx context.Context, args []string) error {
 			return handleRemoveConfig(ctx)
@@ -367,10 +367,10 @@ func init() {
 	CSetup.Subcommands["pin"] = &cli.Subcommand{
 		Description: "Pin a git source (HEAD by default, or a specific revision)",
 		Arguments: []cli.Argument{
-			cli.NewStringArgument("source", PSource),
+			cli.Argument{Name: "source", Parameter: SourceParameter},
 		},
 		Flags: []cli.Flag{
-			cli.NewStringFlag("", "revision", PRevision),
+			cli.Flag{Short: "", Long: "revision", Parameter: RevisionParameter},
 		},
 		Exec: func(ctx context.Context, args []string) error {
 			return handlePin(ctx)
@@ -379,10 +379,10 @@ func init() {
 	CSetup.Subcommands["track"] = &cli.Subcommand{
 		Description: "Track a branch for a git source",
 		Arguments: []cli.Argument{
-			cli.NewStringArgument("source", PSource),
-			cli.NewStringArgument("branch", PBranch),
+			cli.Argument{Name: "source", Parameter: SourceParameter},
+			cli.Argument{Name: "branch", Parameter: BranchParameter},
 		},
-		RequiredParams: []cli.Parameter{PSource, PBranch},
+		RequiredParams: []cli.Parameter{SourceParameter, BranchParameter},
 		Exec: func(ctx context.Context, args []string) error {
 			return handleTrack(ctx)
 		},
@@ -390,9 +390,9 @@ func init() {
 	CSetup.Subcommands["untrack"] = &cli.Subcommand{
 		Description: "Stop tracking a branch for a git source",
 		Arguments: []cli.Argument{
-			cli.NewStringArgument("source", PSource),
+			cli.Argument{Name: "source", Parameter: SourceParameter},
 		},
-		RequiredParams: []cli.Parameter{PSource},
+		RequiredParams: []cli.Parameter{SourceParameter},
 		Exec: func(ctx context.Context, args []string) error {
 			return handleUntrack(ctx)
 		},
@@ -400,9 +400,9 @@ func init() {
 	CSetup.Subcommands["unpin"] = &cli.Subcommand{
 		Description: "Unpin a git source (clear revision)",
 		Arguments: []cli.Argument{
-			cli.NewStringArgument("source", PSource),
+			cli.Argument{Name: "source", Parameter: SourceParameter},
 		},
-		RequiredParams: []cli.Parameter{PSource},
+		RequiredParams: []cli.Parameter{SourceParameter},
 		Exec: func(ctx context.Context, args []string) error {
 			return handleUnpin(ctx)
 		},
@@ -410,7 +410,7 @@ func init() {
 	CSetup.Subcommands["status"] = &cli.Subcommand{
 		Description: "Show status for sources (clean/modified, HEAD, expected revision)",
 		Arguments: []cli.Argument{
-			cli.NewStringArgument("source", PSource),
+			cli.Argument{Name: "source", Parameter: SourceParameter},
 		},
 		Exec: func(ctx context.Context, args []string) error {
 			return handleStatus(ctx)
@@ -419,7 +419,7 @@ func init() {
 	CSetup.Subcommands["versions"] = &cli.Subcommand{
 		Description: "List pinned/unpinned versions for sources",
 		Arguments: []cli.Argument{
-			cli.NewStringArgument("source", PSource),
+			cli.Argument{Name: "source", Parameter: SourceParameter},
 		},
 		Exec: func(ctx context.Context, args []string) error {
 			return handleVersions(ctx)
@@ -428,11 +428,11 @@ func init() {
 	CSetup.Subcommands["update"] = &cli.Subcommand{
 		Description: "Update a git source (pull latest or move to revision)",
 		Arguments: []cli.Argument{
-			cli.NewStringArgument("source", PSource),
+			cli.Argument{Name: "source", Parameter: SourceParameter},
 		},
-		RequiredParams: []cli.Parameter{PSource},
+		RequiredParams: []cli.Parameter{SourceParameter},
 		Flags: []cli.Flag{
-			cli.NewStringFlag("", "revision", PRevision),
+			cli.Flag{Short: "", Long: "revision", Parameter: RevisionParameter},
 		},
 		Exec: func(ctx context.Context, args []string) error {
 			return handleUpdate(ctx)

@@ -8,9 +8,9 @@ import (
 )
 
 func handleInit(ctx context.Context) error {
-	reinitRaw := cli.GetBool(ctx, ccommon.PReinit)
+	reinitRaw := cli.GetOptionalBool(ctx, ccommon.ReinitParameter)
 	reinit := reinitRaw != nil && *reinitRaw
-	workspaceNameVal := cli.GetPath(ctx, PPath)
+	workspaceNameVal := cli.GetOptionalPath(ctx, PathParameter)
 	workspaceName := ""
 	if workspaceNameVal != nil {
 		workspaceName = *workspaceNameVal
