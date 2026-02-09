@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"gitlab.com/rpnx/cbuild-go/pkg/host"
 	"gitlab.com/rpnx/cbuild-go/pkg/system"
 )
 
@@ -107,5 +108,90 @@ func TestGenerateToolchainFile(t *testing.T) {
 		if !strings.Contains(sContent, e) {
 			t.Errorf("Expected content %q not found in toolchain file:\n%s", e, sContent)
 		}
+	}
+}
+
+func TestGenerateToolchainFileNativeTarget(t *testing.T) {
+	hostPlatform := host.DetectHostPlatform()
+	hostProcessor := host.DetectHostProcessor()
+	if hostPlatform == system.PlatformUnknown || hostProcessor == system.ProcessorUnknown {
+		t.Skip("host platform/processor unknown")
+	}
+
+	tmpDir := t.TempDir()
+	outputFile := filepath.Join(tmpDir, "toolchain.cmake")
+
+	opts := GenerateToolchainFileOptions{
+		CompilerType:    CompilerTypeGCC,
+		CCompiler:       "gcc",
+		CXXCompiler:     "g++",
+		SystemPlatform:  hostPlatform,
+		SystemProcessor: hostProcessor,
+		WorkspaceDir:    ".",
+		OutputFile:      outputFile,
+	}
+
+	err := GenerateToolchainFile(nil, opts)
+	if err != nil {
+		t.Fatalf("GenerateToolchainFile failed: %v", err)
+	}
+
+	content, err := os.ReadFile(outputFile)
+	if err != nil {
+		t.Fatalf("Failed to read output file: %v", err)
+	}
+
+	sContent := string(content)
+	if strings.Contains(sContent, "set(CMAKE_SYSTEM_NAME") {
+		t.Fatalf("Expected native toolchain not to set CMAKE_SYSTEM_NAME:\n%s", sContent)
+	}
+	if strings.Contains(sContent, "set(CMAKE_SYSTEM_PROCESSOR") {
+		t.Fatalf("Expected native toolchain not to set CMAKE_SYSTEM_PROCESSOR:\n%s", sContent)
+	}
+	if !strings.Contains(sContent, "set(CMAKE_CROSSCOMPILING FALSE)") {
+		t.Fatalf("Expected native toolchain to set CMAKE_CROSSCOMPILING FALSE:\n%s", sContent)
+	}
+}
+
+func TestGenerateToolchainFileCrossTarget(t *testing.T) {
+	hostPlatform := host.DetectHostPlatform()
+
+	targetPlatform := system.PlatformLinux
+	if hostPlatform == system.PlatformLinux {
+		targetPlatform = system.PlatformWindows
+	}
+
+	tmpDir := t.TempDir()
+	outputFile := filepath.Join(tmpDir, "toolchain.cmake")
+
+	opts := GenerateToolchainFileOptions{
+		CompilerType:    CompilerTypeGCC,
+		CCompiler:       "gcc",
+		CXXCompiler:     "g++",
+		SystemPlatform:  targetPlatform,
+		SystemProcessor: system.ProcessorX64,
+		WorkspaceDir:    ".",
+		OutputFile:      outputFile,
+	}
+
+	err := GenerateToolchainFile(nil, opts)
+	if err != nil {
+		t.Fatalf("GenerateToolchainFile failed: %v", err)
+	}
+
+	content, err := os.ReadFile(outputFile)
+	if err != nil {
+		t.Fatalf("Failed to read output file: %v", err)
+	}
+
+	sContent := string(content)
+	if !strings.Contains(sContent, "set(CMAKE_SYSTEM_NAME") {
+		t.Fatalf("Expected cross toolchain to set CMAKE_SYSTEM_NAME:\n%s", sContent)
+	}
+	if !strings.Contains(sContent, "set(CMAKE_SYSTEM_PROCESSOR") {
+		t.Fatalf("Expected cross toolchain to set CMAKE_SYSTEM_PROCESSOR:\n%s", sContent)
+	}
+	if strings.Contains(sContent, "set(CMAKE_CROSSCOMPILING FALSE)") {
+		t.Fatalf("Expected cross toolchain not to force CMAKE_CROSSCOMPILING FALSE:\n%s", sContent)
 	}
 }

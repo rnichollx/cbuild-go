@@ -9,6 +9,7 @@ import (
 	"regexp"
 	"strings"
 
+	"gitlab.com/rpnx/cbuild-go/pkg/host"
 	"gitlab.com/rpnx/cbuild-go/pkg/system"
 	"gopkg.in/yaml.v3"
 )
@@ -174,6 +175,17 @@ func guessCompilerType(opts *GenerateToolchainFileOptions) CompilerType {
 	return CompilerTypeUnknown
 }
 
+func isNativeToolchainTarget(targetPlatform system.Platform, targetProcessor system.Processor) bool {
+	hostPlatform := host.DetectHostPlatform()
+	hostProcessor := host.DetectHostProcessor()
+
+	if hostPlatform == system.PlatformUnknown || hostProcessor == system.ProcessorUnknown {
+		return false
+	}
+
+	return targetPlatform == hostPlatform && targetProcessor == hostProcessor
+}
+
 func GenerateToolchainFile(ctx context.Context, opts GenerateToolchainFileOptions) error {
 
 	if opts.CompilerType == CompilerTypeUnknown {
@@ -193,24 +205,28 @@ func GenerateToolchainFile(ctx context.Context, opts GenerateToolchainFileOption
 	cxxCompiler := opts.CXXCompiler
 	linker := opts.Linker
 
-	systemName, err := PlatformToCMakeName(opts.SystemPlatform)
-	if err != nil {
-		return fmt.Errorf("failed to get CMake platform name: %w", err)
-	}
-
-	systemProcessor, err := ProcessorToCMakeName(opts.SystemPlatform, opts.SystemProcessor)
-	if err != nil {
-		return fmt.Errorf("failed to get CMake processor name: %w", err)
-	}
-
 	var sb strings.Builder
 	sb.WriteString("# Automatically generated toolchain file\n")
 
-	if systemName != "" {
-		sb.WriteString(fmt.Sprintf("set(CMAKE_SYSTEM_NAME \"%s\")\n", systemName))
-	}
-	if systemProcessor != "" {
-		sb.WriteString(fmt.Sprintf("set(CMAKE_SYSTEM_PROCESSOR \"%s\")\n", systemProcessor))
+	if isNativeToolchainTarget(opts.SystemPlatform, opts.SystemProcessor) {
+		sb.WriteString("set(CMAKE_CROSSCOMPILING FALSE)\n")
+	} else {
+		systemName, err := PlatformToCMakeName(opts.SystemPlatform)
+		if err != nil {
+			return fmt.Errorf("failed to get CMake platform name: %w", err)
+		}
+
+		systemProcessor, err := ProcessorToCMakeName(opts.SystemPlatform, opts.SystemProcessor)
+		if err != nil {
+			return fmt.Errorf("failed to get CMake processor name: %w", err)
+		}
+
+		if systemName != "" {
+			sb.WriteString(fmt.Sprintf("set(CMAKE_SYSTEM_NAME \"%s\")\n", systemName))
+		}
+		if systemProcessor != "" {
+			sb.WriteString(fmt.Sprintf("set(CMAKE_SYSTEM_PROCESSOR \"%s\")\n", systemProcessor))
+		}
 	}
 
 	if cCompiler != "" {
