@@ -70,6 +70,7 @@ type GenerateToolchainFileOptions struct {
 	ExtraCXXFlags      []string
 	SystemPlatform     system.Platform
 	SystemProcessor    system.Processor
+	BuildConfig        string
 	WorkspaceDir       string
 	OutputFile         string
 }
@@ -255,7 +256,8 @@ func GenerateToolchainFile(ctx context.Context, opts GenerateToolchainFileOption
 	var relASANFlags []string
 	var relTSANFlags []string
 
-	supportedConfigs := []string{"Debug", "Release", "RelWithDebInfo", "Quick", "Profile"}
+	baseConfigs := []string{"Debug", "Release", "RelWithDebInfo", "Quick", "Profile"}
+	supportedConfigs := append([]string{}, baseConfigs...)
 
 	if opts.CompilerType == CompilerTypeClang {
 		debugFlags = append(debugFlags, "-fdebug-compilation-dir=.")
@@ -325,6 +327,13 @@ func GenerateToolchainFile(ctx context.Context, opts GenerateToolchainFileOption
 		debugCoverageFlags = append(debugCoverageFlags, debugFlags...)
 	}
 
+	if opts.BuildConfig != "" {
+		if !contains(supportedConfigs, opts.BuildConfig) {
+			return fmt.Errorf("unsupported build config %q for compiler type %s", opts.BuildConfig, opts.CompilerType)
+		}
+		supportedConfigs = []string{opts.BuildConfig}
+	}
+
 	var commonFlags []string
 	commonFlags = append(commonFlags, opts.ExtraCompilerFlags...)
 
@@ -334,7 +343,7 @@ func GenerateToolchainFile(ctx context.Context, opts GenerateToolchainFileOption
 	sb.WriteString(fmt.Sprintf("set(CMAKE_C_FLAGS_INIT %q)\n", strings.Join(cFlags, " ")))
 	sb.WriteString(fmt.Sprintf("set(CMAKE_CXX_FLAGS_INIT %q)\n", strings.Join(cxxFlags, " ")))
 
-	if len(supportedConfigs) > 0 {
+	if len(supportedConfigs) > 0 && opts.BuildConfig == "" {
 		sb.WriteString(fmt.Sprintf("set(CMAKE_CONFIGURATION_TYPES %q CACHE STRING \"\" FORCE)\n", strings.Join(supportedConfigs, ";")))
 	}
 

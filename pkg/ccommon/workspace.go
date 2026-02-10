@@ -83,7 +83,7 @@ func (w *WorkspaceContext) Save(ctx context.Context) error {
 	return nil
 }
 
-func (w *WorkspaceContext) GenerateToolchainFile(ctx context.Context, opts *CMakeGenerateToolchainFileOptions, systemName system.Platform, systemProcessor system.Processor, targetPath string) error {
+func (w *WorkspaceContext) GenerateToolchainFile(ctx context.Context, opts *CMakeGenerateToolchainFileOptions, systemName system.Platform, systemProcessor system.Processor, targetPath string, buildConfig string) error {
 	return cmake.GenerateToolchainFile(ctx, cmake.GenerateToolchainFileOptions{
 		CCompiler:       opts.CCompiler,
 		CXXCompiler:     opts.CXXCompiler,
@@ -93,6 +93,7 @@ func (w *WorkspaceContext) GenerateToolchainFile(ctx context.Context, opts *CMak
 		SystemProcessor: systemProcessor,
 		WorkspaceDir:    w.WorkspacePath,
 		OutputFile:      targetPath,
+		BuildConfig:     buildConfig,
 	})
 }
 
@@ -124,7 +125,16 @@ func (w *WorkspaceContext) ToolchainFilePath(ctx context.Context, modConfig *Tar
 	if tcf, ok := tc.CMakeToolchain[hostPlatform]; ok {
 		var tcfPath string
 		if tcf.Generate != nil {
-			tcfPath = filepath.Join(w.WorkspacePath, "buildspaces", bp.Toolchain, "generated_toolchain.cmake")
+			if tcf.Generate.ToolchainPerBuildType {
+				configName := strings.TrimSpace(bp.BuildType)
+				if configName == "" {
+					return "", fmt.Errorf("toolchain %q requires a build config when generate.toolchain_per_buildtype is enabled", bp.Toolchain)
+				}
+				configName = strings.NewReplacer("/", "_", "\\", "_").Replace(configName)
+				tcfPath = filepath.Join(w.WorkspacePath, "buildspaces", bp.Toolchain, fmt.Sprintf("generated-toolchain-%s.cmake", configName))
+			} else {
+				tcfPath = filepath.Join(w.WorkspacePath, "buildspaces", bp.Toolchain, "generated_toolchain.cmake")
+			}
 		} else {
 			tcfPath = filepath.Join(tcPath, tcf.CMakeToolchainFile)
 		}
@@ -152,7 +162,11 @@ func (w *WorkspaceContext) Prebuild(ctx context.Context, bp TargetBuildParameter
 			return "", err
 		}
 		if tcf.Generate != nil {
-			err := w.GenerateToolchainFile(ctx, tcf.Generate, tc.TargetSystem, tc.TargetArch, tcfPath)
+			generateBuildConfig := ""
+			if tcf.Generate.ToolchainPerBuildType {
+				generateBuildConfig = bp.BuildType
+			}
+			err := w.GenerateToolchainFile(ctx, tcf.Generate, tc.TargetSystem, tc.TargetArch, tcfPath, generateBuildConfig)
 			if err != nil {
 				return "", fmt.Errorf("failed to generate toolchain file: %w", err)
 			}
@@ -1015,16 +1029,17 @@ func (ws *WorkspaceContext) DetectToolchains(ctx context.Context) error {
 				CMakeToolchain: map[string]CMakeToolchainOptions{
 					hostKey: {
 						Generate: &CMakeGenerateToolchainFileOptions{
-							CCompiler:     d.cCompiler,
-							CXXCompiler:   d.cxxCompiler,
-							ExtraCXXFlags: d.extraCXXFlags,
+							CCompiler:             d.cCompiler,
+							CXXCompiler:           d.cxxCompiler,
+							ExtraCXXFlags:         d.extraCXXFlags,
+							ToolchainPerBuildType: true,
 						},
 					},
 				},
 			}
 
 			// We need a workspace to call GenerateToolchainFile, but we can call cmake.GenerateToolchainFile directly
-			err = ws.GenerateToolchainFile(ctx, tc.CMakeToolchain[hostKey].Generate, targetSystem, targetArch, tcFilePath)
+			err = ws.GenerateToolchainFile(ctx, tc.CMakeToolchain[hostKey].Generate, targetSystem, targetArch, tcFilePath, "")
 			if err != nil {
 				return fmt.Errorf("failed to generate test toolchain file: %w", err)
 			}
@@ -1069,9 +1084,10 @@ func (ws *WorkspaceContext) DetectToolchains(ctx context.Context) error {
 				CMakeToolchain: map[string]CMakeToolchainOptions{
 					hostKey: {
 						Generate: &CMakeGenerateToolchainFileOptions{
-							CCompiler:     d.cCompiler,
-							CXXCompiler:   d.cxxCompiler,
-							ExtraCXXFlags: d.extraCXXFlags,
+							CCompiler:             d.cCompiler,
+							CXXCompiler:           d.cxxCompiler,
+							ExtraCXXFlags:         d.extraCXXFlags,
+							ToolchainPerBuildType: true,
 						},
 					},
 				},

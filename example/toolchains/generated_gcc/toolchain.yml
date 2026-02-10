@@ -3,6 +3,7 @@ cmake_toolchain:
     generate:
       c_compiler: "/usr/bin/gcc"
       cxx_compiler: "/usr/bin/g++"
+      toolchain_per_buildtype: true
 
 target_arch: "x64"
 target_system: "linux"

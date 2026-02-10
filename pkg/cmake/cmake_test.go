@@ -195,3 +195,61 @@ func TestGenerateToolchainFileCrossTarget(t *testing.T) {
 		t.Fatalf("Expected cross toolchain not to force CMAKE_CROSSCOMPILING FALSE:\n%s", sContent)
 	}
 }
+
+func TestGenerateToolchainFileSeparateByBuildConfig(t *testing.T) {
+	tmpDir := t.TempDir()
+	outputFile := filepath.Join(tmpDir, "toolchain.cmake")
+
+	opts := GenerateToolchainFileOptions{
+		CompilerType:    CompilerTypeGCC,
+		CCompiler:       "gcc",
+		CXXCompiler:     "g++",
+		SystemPlatform:  system.PlatformLinux,
+		SystemProcessor: system.ProcessorX64,
+		BuildConfig:     "Debug",
+		WorkspaceDir:    ".",
+		OutputFile:      outputFile,
+	}
+
+	err := GenerateToolchainFile(nil, opts)
+	if err != nil {
+		t.Fatalf("GenerateToolchainFile failed: %v", err)
+	}
+
+	content, err := os.ReadFile(outputFile)
+	if err != nil {
+		t.Fatalf("Failed to read output file: %v", err)
+	}
+
+	sContent := string(content)
+	if strings.Contains(sContent, "set(CMAKE_CONFIGURATION_TYPES") {
+		t.Fatalf("Expected config-specific toolchain not to set CMAKE_CONFIGURATION_TYPES:\n%s", sContent)
+	}
+	if !strings.Contains(sContent, "set(CMAKE_C_FLAGS_DEBUG_INIT") {
+		t.Fatalf("Expected config-specific toolchain to include Debug flags:\n%s", sContent)
+	}
+	if strings.Contains(sContent, "set(CMAKE_C_FLAGS_RELEASE_INIT") {
+		t.Fatalf("Expected config-specific toolchain to exclude Release flags:\n%s", sContent)
+	}
+}
+
+func TestGenerateToolchainFileSeparateByBuildConfigInvalidConfig(t *testing.T) {
+	tmpDir := t.TempDir()
+	outputFile := filepath.Join(tmpDir, "toolchain.cmake")
+
+	opts := GenerateToolchainFileOptions{
+		CompilerType:    CompilerTypeGCC,
+		CCompiler:       "gcc",
+		CXXCompiler:     "g++",
+		SystemPlatform:  system.PlatformLinux,
+		SystemProcessor: system.ProcessorX64,
+		BuildConfig:     "NotAConfig",
+		WorkspaceDir:    ".",
+		OutputFile:      outputFile,
+	}
+
+	err := GenerateToolchainFile(nil, opts)
+	if err == nil {
+		t.Fatalf("expected error for unsupported build config")
+	}
+}

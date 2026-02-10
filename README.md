@@ -118,6 +118,7 @@ cmake_toolchain:
       c_compiler: "/usr/bin/gcc"
       cxx_compiler: "/usr/bin/g++"
       linker: "/usr/bin/ld"       # Optional
+      toolchain_per_buildtype: true # Optional: generate one toolchain file per build config
 ```
 
 The `<host_key>` typically follows the format `host-<os>-<arch>` (e.g., `host-linux-x64`).
