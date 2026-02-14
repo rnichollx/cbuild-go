@@ -378,7 +378,7 @@ func runTest(ctx context.Context, args []string) error {
 		for _, res := range allResults {
 			status := "PASS"
 			if res.NoTests {
-				status = "NO_TESTS"
+				status = "NO_CTEST"
 			} else if !res.Passed {
 				status = "FAIL"
 			}
@@ -402,7 +402,7 @@ func runTest(ctx context.Context, args []string) error {
 			for _, res := range allResults {
 				status := "PASS"
 				if res.NoTests {
-					status = "NO_TESTS"
+					status = "NO_CTEST"
 					noTestsCount++
 					passedCount++
 				} else if !res.Passed {
