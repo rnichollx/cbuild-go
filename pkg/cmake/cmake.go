@@ -269,7 +269,6 @@ func GenerateToolchainFile(ctx context.Context, opts GenerateToolchainFileOption
 
 	if opts.CompilerType == CompilerTypeClang || opts.CompilerType == CompilerTypeGCC {
 		debugFlags = append(debugFlags, "-g")
-		debugFlags = append(debugFlags, "-Og")
 
 		ASANFlags = append(ASANFlags, "-fsanitize=address")
 		ASANFlags = append(ASANFlags, "-fsanitize=undefined")
