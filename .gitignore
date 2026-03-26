@@ -7,3 +7,6 @@
 /cbuild
 /csetup
 /gen-manpages
+.gocache
+.DS_store
+.cache

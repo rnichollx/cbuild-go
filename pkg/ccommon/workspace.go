@@ -1165,9 +1165,17 @@ func (w *WorkspaceContext) LoadDefaults(ctx context.Context, sourceName string) 
 }
 
 func (w *WorkspaceContext) DropSourceFiles(ctx context.Context, sourceName string) error {
+	source, ok := w.Config.Sources[sourceName]
+	if !ok {
+		return fmt.Errorf("source %s not found in workspace", sourceName)
+	}
+	if !source.hasGit() {
+		return nil
+	}
+
 	sourceDir, err := w.GetSourcePath(sourceName)
 	if err != nil {
-		return err
+		return fmt.Errorf("error getting source path for %s: %w", sourceName, err)
 	}
 
 	if info, err := os.Stat(sourceDir); err == nil && info.IsDir() {

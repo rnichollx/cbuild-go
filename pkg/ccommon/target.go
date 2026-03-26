@@ -106,6 +106,7 @@ func (t *TargetContext) CMakeConfigureArgs(ctx context.Context, workspace *Works
 	args = append(args, "Ninja")
 
 	args = append(args, fmt.Sprintf("-DCMAKE_BUILD_TYPE=%s", bp.BuildType))
+	args = append(args, "-DCMAKE_EXPORT_COMPILE_COMMANDS=ON")
 
 	cxxStandard := ""
 	if t.Config.CxxStandard != nil {
@@ -192,6 +193,9 @@ func (t *TargetContext) CMakeConfigureArgs(ctx context.Context, workspace *Works
 			args = append(args, fmt.Sprintf("-D%s=%s", optName, opt.Value))
 		}
 	}
+
+	// Force CMake to disable compiler-specific C++ extensions regardless of user-provided args.
+	args = append(args, "-DCMAKE_CXX_EXTENSIONS=OFF")
 
 	return args, nil
 }
