@@ -138,6 +138,8 @@ func (t *TargetContext) CMakeConfigureArgs(ctx context.Context, workspace *Works
 	}
 
 	stagedPaths := []string{}
+	dependencyArgs := []string{}
+	visited := map[string]bool{}
 	for _, dep := range t.Config.Depends {
 		parts := strings.SplitN(dep, "/", 2)
 		targetName := parts[0]
@@ -147,16 +149,9 @@ func (t *TargetContext) CMakeConfigureArgs(ctx context.Context, workspace *Works
 			return nil, err
 		}
 
-		if depMod.Config.Staged != nil && *depMod.Config.Staged {
-			stagingPath, err := depMod.CMakeStagingPath(ctx, workspace, bp)
-			if err != nil {
-				return nil, err
-			}
-			stagingPath, err = filepath.Abs(stagingPath)
-			if err != nil {
-				return nil, err
-			}
-			stagedPaths = append(stagedPaths, stagingPath)
+		err = depMod.collectCMakeDependencyArgs(ctx, workspace, bp, visited, &stagedPaths, &dependencyArgs)
+		if err != nil {
+			return nil, err
 		}
 	}
 
@@ -164,25 +159,7 @@ func (t *TargetContext) CMakeConfigureArgs(ctx context.Context, workspace *Works
 	args = append(args, fmt.Sprintf("-DCMAKE_PREFIX_PATH=%s", paths))
 	args = append(args, fmt.Sprintf("-DCMAKE_MODULE_PATH=%s", paths))
 
-	for _, dep := range t.Config.Depends {
-		parts := strings.SplitN(dep, "/", 2)
-		targetName := parts[0]
-
-		mod, err := workspace.GetTarget(ctx, targetName)
-		if err != nil {
-			return nil, err
-		}
-
-		if mod.Config.Staged != nil && *mod.Config.Staged {
-			continue
-		}
-
-		mod_args, err := mod.CMakeDependencyArgs(ctx, workspace, bp)
-		if err != nil {
-			return nil, err
-		}
-		args = append(args, mod_args...)
-	}
+	args = append(args, dependencyArgs...)
 
 	args = append(args, t.Config.ExtraCMakeConfigureArgs...)
 
@@ -259,55 +236,97 @@ func (t *TargetContext) CMakeExportPath(ctx context.Context, workspace *Workspac
 
 // CMakeDependencyArgs returns the arguments to pass to cmake when configuring another module that depends on this module
 func (t *TargetContext) CMakeDependencyArgs(ctx context.Context, workspace *WorkspaceContext, bp TargetBuildParameters) ([]string, error) {
+	stagedPaths := []string{}
+	dependencyArgs := []string{}
+	visited := map[string]bool{}
+	if err := t.collectCMakeDependencyArgs(ctx, workspace, bp, visited, &stagedPaths, &dependencyArgs); err != nil {
+		return nil, err
+	}
+
 	args := []string{}
+	if len(stagedPaths) > 0 {
+		paths := strings.Join(stagedPaths, ";")
+		args = append(args, fmt.Sprintf("-DCMAKE_PREFIX_PATH=%s", paths))
+		args = append(args, fmt.Sprintf("-DCMAKE_MODULE_PATH=%s", paths))
+	}
+	args = append(args, dependencyArgs...)
+	return args, nil
+}
+
+func (t *TargetContext) collectCMakeDependencyArgs(ctx context.Context, workspace *WorkspaceContext, bp TargetBuildParameters, visited map[string]bool, stagedPaths *[]string, dependencyArgs *[]string) error {
+	if visited[t.Name] {
+		return nil
+	}
+	visited[t.Name] = true
 
 	if t.Config.Staged != nil && *t.Config.Staged {
 		stagingPath, err := t.CMakeStagingPath(ctx, workspace, bp)
 		if err != nil {
-			return nil, err
+			return err
 		}
 		stagingPath, err = filepath.Abs(stagingPath)
 		if err != nil {
-			return nil, err
+			return err
 		}
-		args = append(args, fmt.Sprintf("-DCMAKE_PREFIX_PATH=%s", stagingPath))
-		args = append(args, fmt.Sprintf("-DCMAKE_MODULE_PATH=%s", stagingPath))
-		return args, nil
+		appendUniqueString(stagedPaths, stagingPath)
+	} else {
+		packageName := t.Config.CMakePackageName
+		if packageName == "" {
+			packageName = t.Name
+		}
+
+		if packageName != "" {
+			dirname := packageName + "_DIR"
+
+			configPath, err := t.CMakeConfigPath(ctx, workspace, bp)
+			if err != nil {
+				return err
+			}
+			configPath, err = filepath.Abs(configPath)
+			if err != nil {
+				return err
+			}
+			appendUniqueString(dependencyArgs, fmt.Sprintf("-D%s=%s", dirname, configPath))
+		}
+
+		if t.Config.FindPackageRoot != nil {
+			dirname := *t.Config.FindPackageRoot + "_ROOT"
+
+			sourcePath, err := t.CMakeSourcePath(ctx, workspace)
+			if err != nil {
+				return err
+			}
+			sourcePath, err = filepath.Abs(sourcePath)
+			if err != nil {
+				return err
+			}
+
+			appendUniqueString(dependencyArgs, fmt.Sprintf("-D%s=%s", dirname, sourcePath))
+		}
 	}
 
-	packageName := t.Config.CMakePackageName
-	if packageName == "" {
-		packageName = t.Name
+	for _, dep := range t.Config.Depends {
+		parts := strings.SplitN(dep, "/", 2)
+		targetName := parts[0]
+
+		depMod, err := workspace.GetTarget(ctx, targetName)
+		if err != nil {
+			return err
+		}
+
+		if err := depMod.collectCMakeDependencyArgs(ctx, workspace, bp, visited, stagedPaths, dependencyArgs); err != nil {
+			return err
+		}
 	}
 
-	if packageName != "" {
-		dirname := packageName + "_DIR"
+	return nil
+}
 
-		configPath, err := t.CMakeConfigPath(ctx, workspace, bp)
-		if err != nil {
-			return nil, err
+func appendUniqueString(values *[]string, value string) {
+	for _, existing := range *values {
+		if existing == value {
+			return
 		}
-		configPath, err = filepath.Abs(configPath)
-		if err != nil {
-			return nil, err
-		}
-		args = append(args, fmt.Sprintf("-D%s=%s", dirname, configPath))
 	}
-
-	if t.Config.FindPackageRoot != nil {
-		dirname := *t.Config.FindPackageRoot + "_ROOT"
-
-		sourcePath, err := t.CMakeSourcePath(ctx, workspace)
-		if err != nil {
-			return nil, err
-		}
-		sourcePath, err = filepath.Abs(sourcePath)
-		if err != nil {
-			return nil, err
-		}
-
-		args = append(args, fmt.Sprintf("-D%s=%s", dirname, sourcePath))
-	}
-
-	return args, nil
+	*values = append(*values, value)
 }
