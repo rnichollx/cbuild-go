@@ -30,6 +30,7 @@ workspace/
 - **`build [target]`** (default): Build the specified target(s). If no target is specified, it builds all targets.
 - **`clean [target]`**: Remove build artifacts from `buildspaces` for the specified target(s).
 - **`build-deps <target>`**: Build only the dependencies for a specific target.
+- **`inspect-headers [target]`**: Analyze `compile_commands.json` and report high-impact project headers by line count × translation-unit usage.
 - **`help [subcommand]`**: Show general help or help for a specific subcommand.
 
 ### Global Flags
@@ -38,7 +39,7 @@ workspace/
 - `-d, --dry-run`: Show commands without executing them.
 - `-h, --help`: Show help message.
 
-### Common Flags (for build/clean/build-deps)
+### Common Flags (for build/clean/build-deps/inspect-headers)
 
 - `-c, --config <configs>`: Build configurations to use (e.g., `Debug,Release`), comma-separated.
 - `-T, --toolchain <toolchain>`: Specific toolchain to use (default: `all`).

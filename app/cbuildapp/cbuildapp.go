@@ -80,6 +80,15 @@ func init() {
 			return runTest(ctx, args)
 		},
 	}
+
+	CBuild.Subcommands["inspect-headers"] = &cli.Subcommand{
+		Description: "Inspect compile_commands headers and report highest-impact project headers",
+		Flags:       []cli.Flag{ccommon.ConfigFlag, ccommon.ToolchainFlag, ccommon.TargetFlag},
+		Arguments:   []cli.Argument{ccommon.TargetArg},
+		Exec: func(ctx context.Context, args []string) error {
+			return runInspectHeaders(ctx, args)
+		},
+	}
 }
 
 func runClean(ctx context.Context, args []string) error {
