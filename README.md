@@ -37,7 +37,7 @@ workspace/
 
 - `-w, --workspace <path>`: Path to the workspace directory (default: current directory or nearest parent with `cbuild_workspace.yml`).
 - `-d, --dry-run`: Show commands without executing them.
-- `-h, --help`: Show help message.
+- `-h, --help`: Show help for the current command. Prefer `cbuild help [subcommand]` or `csetup help [subcommand]` when you want command-specific help.
 
 ### Common Flags (for build/clean/build-deps/inspect-headers)
 

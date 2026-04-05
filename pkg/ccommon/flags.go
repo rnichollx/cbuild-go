@@ -61,7 +61,7 @@ var (
 	NoSetupParameter = cli.Parameter{Key: NoSetupKey, Type: cli.ParameterTypeBool, DefaultValue: cli.PBool(false), Description: "Don't run setup after downloading or cloning."}
 	NoSetupFlag      = cli.Flag{Short: "", Long: "no-setup", Parameter: NoSetupParameter}
 
-	HelpParameter = cli.Parameter{Key: HelpKey, Type: cli.ParameterTypeBool, DefaultValue: cli.PBool(false), Description: "Show this help message."}
+	HelpParameter = cli.Parameter{Key: HelpKey, Type: cli.ParameterTypeBool, DefaultValue: cli.PBool(false), Description: "Show help for the current command. Prefer the `help` subcommand for command-specific help."}
 	HelpFlag      = cli.Flag{Short: "h", Long: "help", Parameter: HelpParameter}
 
 	DebugParameter = cli.Parameter{Key: DebugKey, Type: cli.ParameterTypeBool, DefaultValue: cli.PBool(false), Description: "Show debug information."}

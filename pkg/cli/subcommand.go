@@ -218,6 +218,7 @@ func (r *Runner) PrintUsage(subcmdName string) {
 				fmt.Printf("%s%s%s  %s\n", indent, s, strings.Repeat(" ", maxFlagLen-len(s)), desc)
 			}
 		}
+		fmt.Printf("\nPrefer `%s help %s` for command-specific help.\n", r.Name, subcmdName)
 		return
 	}
 
@@ -371,6 +372,7 @@ func (r *Runner) PrintUsage(subcmdName string) {
 			}
 		}
 	}
+	fmt.Printf("\nPrefer `%s help` for general help, or `%s help <subcommand>` for a specific command.\n", r.Name, r.Name)
 }
 
 func (r *Runner) generateManpage(dir string) error {

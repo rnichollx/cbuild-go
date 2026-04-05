@@ -1,4 +1,4 @@
-.TH CSETUP 1 "2026-02-05" "" ""
+.TH CSETUP 1 "2026-04-05" "" ""
 .SH NAME
 csetup \- Workspace setup tool for cbuild
 .SH SYNOPSIS
@@ -12,7 +12,7 @@ Workspace setup tool for cbuild
 Path to the workspace directory.
 .TP
 .B \-h, \-\-help
-Show this help message.
+Show help for the current command. Prefer the `help` subcommand for command-specific help.
 .SH SUBCOMMANDS
 .SS add-config
 Add a build configuration
@@ -43,14 +43,18 @@ csetup add-testing-dependency <target> <dependency>
 Add git source information to the workspace without downloading
 
 .B Synopsis:
-csetup declare-git-source <url> [path]
+csetup declare-git-source <url> [source]
 
 .SS declare-local-source
 Add local source information to the workspace
 
 .B Synopsis:
-csetup declare-local-source <source> <path>
+csetup declare-local-source <source> <sourcepath>
 
+.B Options for declare-local-source:
+.TP
+.B \-\-sourcepath <value>
+path to the local source
 .SS detect-toolchains
 Detect system toolchains
 
@@ -65,7 +69,7 @@ Show debug information.
 Initialize a new workspace for development in the current directory
 
 .B Synopsis:
-csetup dev-init [path]
+csetup dev-init [workspace]
 
 .B Options for dev-init:
 .TP
@@ -148,7 +152,7 @@ Specific target to build/modify.
 Clone a git repository into the workspace
 
 .B Synopsis:
-csetup git-clone <url> [path]
+csetup git-clone <url> [source]
 
 .B Options for git-clone:
 .TP
@@ -169,11 +173,17 @@ Revision or tag to use.
 .TP
 .B \-\-no-track
 Do not track the cloned branch.
+.SS help
+Show help for csetup or a specific subcommand
+
+.B Synopsis:
+csetup help [subcommand]
+
 .SS init
 Initialize a new workspace
 
 .B Synopsis:
-csetup init [path]
+csetup init <workspace>
 
 .B Options for init:
 .TP
