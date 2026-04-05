@@ -89,6 +89,15 @@ func init() {
 			return runInspectHeaders(ctx, args)
 		},
 	}
+
+	CBuild.Subcommands["inspect-symbols"] = &cli.Subcommand{
+		Description: "Inspect object files and report symbols repeated across many translation units",
+		Flags:       []cli.Flag{ccommon.ConfigFlag, ccommon.ToolchainFlag, ccommon.TargetFlag},
+		Arguments:   []cli.Argument{ccommon.TargetArg},
+		Exec: func(ctx context.Context, args []string) error {
+			return runInspectSymbols(ctx, args)
+		},
+	}
 }
 
 func runClean(ctx context.Context, args []string) error {
