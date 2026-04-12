@@ -19,6 +19,8 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+var execLookPath = exec.LookPath
+
 type WorkspaceContext struct {
 	Config        WorkspaceConfig
 	WorkspacePath string
@@ -83,17 +85,59 @@ func (w *WorkspaceContext) Save(ctx context.Context) error {
 	return nil
 }
 
-func (w *WorkspaceContext) GenerateToolchainFile(ctx context.Context, opts *CMakeGenerateToolchainFileOptions, systemName system.Platform, systemProcessor system.Processor, targetPath string, buildConfig string) error {
+func ccacheAvailable() bool {
+	_, err := execLookPath("ccache")
+	return err == nil
+}
+
+func (w *WorkspaceContext) CCacheDir(toolchainName string) (string, error) {
+	return filepath.Abs(filepath.Join(w.WorkspacePath, "cache", toolchainName, "ccache"))
+}
+
+func (w *WorkspaceContext) CCacheLauncher(enabled bool) string {
+	if !enabled {
+		return ""
+	}
+	ccachePath, err := execLookPath("ccache")
+	if err != nil {
+		return ""
+	}
+	return ccachePath
+}
+
+func (w *WorkspaceContext) CCacheEnvironment(toolchainName string, enabled bool) ([]string, error) {
+	env := os.Environ()
+	if !enabled {
+		return env, nil
+	}
+
+	ccacheDir, err := w.CCacheDir(toolchainName)
+	if err != nil {
+		return nil, fmt.Errorf("failed to resolve ccache dir: %w", err)
+	}
+
+	if err := os.MkdirAll(ccacheDir, 0755); err != nil {
+		return nil, fmt.Errorf("failed to create ccache dir: %w", err)
+	}
+
+	env = append(env, "CCACHE_DIR="+ccacheDir)
+	env = append(env, "CCACHE_COMPILERCHECK=content")
+	env = append(env, "CCACHE_NODIRECT=1")
+	return env, nil
+}
+
+func (w *WorkspaceContext) GenerateToolchainFile(ctx context.Context, opts *CMakeGenerateToolchainFileOptions, systemName system.Platform, systemProcessor system.Processor, targetPath string, buildConfig string, enableCCache bool) error {
 	return cmake.GenerateToolchainFile(ctx, cmake.GenerateToolchainFileOptions{
-		CCompiler:       opts.CCompiler,
-		CXXCompiler:     opts.CXXCompiler,
-		Linker:          opts.Linker,
-		ExtraCXXFlags:   opts.ExtraCXXFlags,
-		SystemPlatform:  systemName,
-		SystemProcessor: systemProcessor,
-		WorkspaceDir:    w.WorkspacePath,
-		OutputFile:      targetPath,
-		BuildConfig:     buildConfig,
+		CCompiler:        opts.CCompiler,
+		CXXCompiler:      opts.CXXCompiler,
+		CompilerLauncher: w.CCacheLauncher(enableCCache),
+		Linker:           opts.Linker,
+		ExtraCXXFlags:    opts.ExtraCXXFlags,
+		SystemPlatform:   systemName,
+		SystemProcessor:  systemProcessor,
+		WorkspaceDir:     w.WorkspacePath,
+		OutputFile:       targetPath,
+		BuildConfig:      buildConfig,
 	})
 }
 
@@ -166,7 +210,7 @@ func (w *WorkspaceContext) Prebuild(ctx context.Context, bp TargetBuildParameter
 			if tcf.Generate.ToolchainPerBuildType {
 				generateBuildConfig = bp.BuildType
 			}
-			err := w.GenerateToolchainFile(ctx, tcf.Generate, tc.TargetSystem, tc.TargetArch, tcfPath, generateBuildConfig)
+			err := w.GenerateToolchainFile(ctx, tcf.Generate, tc.TargetSystem, tc.TargetArch, tcfPath, generateBuildConfig, tc.EnableCCache)
 			if err != nil {
 				return "", fmt.Errorf("failed to generate toolchain file: %w", err)
 			}
@@ -272,7 +316,7 @@ func (w *WorkspaceContext) CleanTarget(ctx context.Context, targetName string, b
 	return os.RemoveAll(buildPath)
 }
 
-func (w *WorkspaceContext) Exec(ctx context.Context, command string, args []string, dryRun bool) error {
+func (w *WorkspaceContext) Exec(ctx context.Context, toolchainName string, enableCCache bool, command string, args []string, dryRun bool) error {
 	fmt.Printf("Executing: %s", command)
 	for _, arg := range args {
 		fmt.Printf(" %s", arg)
@@ -284,12 +328,17 @@ func (w *WorkspaceContext) Exec(ctx context.Context, command string, args []stri
 	}
 
 	cmd := exec.CommandContext(ctx, command, args...)
+	env, err := w.CCacheEnvironment(toolchainName, enableCCache)
+	if err != nil {
+		return err
+	}
+	cmd.Env = env
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	return cmd.Run()
 }
 
-func (w *WorkspaceContext) ExecWithOutput(ctx context.Context, command string, args []string, dryRun bool) ([]byte, error) {
+func (w *WorkspaceContext) ExecWithOutput(ctx context.Context, toolchainName string, enableCCache bool, command string, args []string, dryRun bool) ([]byte, error) {
 	fmt.Printf("Executing (with output capture): %s", command)
 	for _, arg := range args {
 		fmt.Printf(" %s", arg)
@@ -301,6 +350,11 @@ func (w *WorkspaceContext) ExecWithOutput(ctx context.Context, command string, a
 	}
 
 	cmd := exec.CommandContext(ctx, command, args...)
+	env, err := w.CCacheEnvironment(toolchainName, enableCCache)
+	if err != nil {
+		return nil, err
+	}
+	cmd.Env = env
 	return cmd.CombinedOutput()
 }
 
@@ -354,12 +408,17 @@ func (w *WorkspaceContext) buildModule(ctx context.Context, mod *TargetContext, 
 		return fmt.Errorf("unsupported project type: %s", mod.Config.ProjectType)
 	}
 
+	tc, _, err := w.LoadToolchain(ctx, bp.Toolchain)
+	if err != nil {
+		return fmt.Errorf("failed to load toolchain: %w", err)
+	}
+
 	cMakeConfigureArgs, err := mod.CMakeConfigureArgs(ctx, w, bp)
 	if err != nil {
 		return fmt.Errorf("failed to get cmake configure args: %w", err)
 	}
 
-	err = w.Exec(ctx, cmakeBinary, cMakeConfigureArgs, bp.DryRun)
+	err = w.Exec(ctx, bp.Toolchain, tc.EnableCCache, cmakeBinary, cMakeConfigureArgs, bp.DryRun)
 	if err != nil {
 		return fmt.Errorf("failed to configure module %s: %w", modname, err)
 	}
@@ -376,7 +435,7 @@ func (w *WorkspaceContext) buildModule(ctx context.Context, mod *TargetContext, 
 	// Build the module
 	buildCmd := []string{"--build", buildPath, "--config", bp.BuildType}
 
-	err = w.Exec(ctx, cmakeBinary, buildCmd, bp.DryRun)
+	err = w.Exec(ctx, bp.Toolchain, tc.EnableCCache, cmakeBinary, buildCmd, bp.DryRun)
 	if err != nil {
 		return fmt.Errorf("failed to build module %s: %w", modname, err)
 	}
@@ -392,7 +451,7 @@ func (w *WorkspaceContext) buildModule(ctx context.Context, mod *TargetContext, 
 		}
 
 		installCmd := []string{"--install", buildPath, "--prefix", stagingPath, "--config", bp.BuildType}
-		err = w.Exec(ctx, cmakeBinary, installCmd, bp.DryRun)
+		err = w.Exec(ctx, bp.Toolchain, tc.EnableCCache, cmakeBinary, installCmd, bp.DryRun)
 		if err != nil {
 			return fmt.Errorf("failed to install module %s to staging: %w", modname, err)
 		}
@@ -1024,6 +1083,7 @@ func (ws *WorkspaceContext) DetectToolchains(ctx context.Context) error {
 			// Generate a temporary toolchain file for the test
 			tcFilePath := filepath.Join(testDir, "toolchain.cmake")
 			tc := Toolchain{
+				EnableCCache: ccacheAvailable(),
 				TargetArch:   targetArch,
 				TargetSystem: targetSystem,
 				CMakeToolchain: map[string]CMakeToolchainOptions{
@@ -1039,13 +1099,17 @@ func (ws *WorkspaceContext) DetectToolchains(ctx context.Context) error {
 			}
 
 			// We need a workspace to call GenerateToolchainFile, but we can call cmake.GenerateToolchainFile directly
-			err = ws.GenerateToolchainFile(ctx, tc.CMakeToolchain[hostKey].Generate, targetSystem, targetArch, tcFilePath, "")
+			err = ws.GenerateToolchainFile(ctx, tc.CMakeToolchain[hostKey].Generate, targetSystem, targetArch, tcFilePath, "", tc.EnableCCache)
 			if err != nil {
 				return fmt.Errorf("failed to generate test toolchain file: %w", err)
 			}
 
 			// Run CMake configure
 			cmd := exec.CommandContext(ctx, "cmake", "-S", testDir, "-B", filepath.Join(testDir, "build"), "-G", "Ninja", "-DCMAKE_TOOLCHAIN_FILE="+tcFilePath)
+			cmd.Env, err = ws.CCacheEnvironment(d.name, tc.EnableCCache)
+			if err != nil {
+				return fmt.Errorf("failed to prepare ccache environment: %w", err)
+			}
 			if IsDebug(ctx) {
 				cmd.Stdout = os.Stdout
 				cmd.Stderr = os.Stderr
@@ -1062,6 +1126,10 @@ func (ws *WorkspaceContext) DetectToolchains(ctx context.Context) error {
 			if err == nil {
 				// Run CMake build
 				cmd = exec.CommandContext(ctx, "cmake", "--build", filepath.Join(testDir, "build"))
+				cmd.Env, err = ws.CCacheEnvironment(d.name, tc.EnableCCache)
+				if err != nil {
+					return fmt.Errorf("failed to prepare ccache environment: %w", err)
+				}
 				if IsDebug(ctx) {
 					cmd.Stdout = os.Stdout
 					cmd.Stderr = os.Stderr
@@ -1079,6 +1147,7 @@ func (ws *WorkspaceContext) DetectToolchains(ctx context.Context) error {
 			fmt.Printf("Detected %s, creating toolchain...\n", d.name)
 
 			finalTc := Toolchain{
+				EnableCCache: ccacheAvailable(),
 				TargetArch:   targetArch,
 				TargetSystem: targetSystem,
 				CMakeToolchain: map[string]CMakeToolchainOptions{
@@ -1272,6 +1341,10 @@ type TestResult struct {
 
 func (w *WorkspaceContext) RunTests(ctx context.Context, bp TargetBuildParameters, targets []string) ([]TestResult, error) {
 	results := []TestResult{}
+	tc, _, err := w.LoadToolchain(ctx, bp.Toolchain)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load toolchain: %w", err)
+	}
 
 	for _, name := range targets {
 		mod, err := w.GetTarget(ctx, name)
@@ -1304,7 +1377,7 @@ func (w *WorkspaceContext) RunTests(ctx context.Context, bp TargetBuildParameter
 		}
 
 		args := []string{"--test-dir", buildPath, "-C", bp.BuildType, "--output-on-failure"}
-		output, err := w.ExecWithOutput(ctx, ctestBinary, args, bp.DryRun)
+		output, err := w.ExecWithOutput(ctx, bp.Toolchain, tc.EnableCCache, ctestBinary, args, bp.DryRun)
 
 		noTests := false
 		ctestFile := filepath.Join(buildPath, "CTestTestfile.cmake")

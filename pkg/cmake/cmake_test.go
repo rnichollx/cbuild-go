@@ -111,6 +111,40 @@ func TestGenerateToolchainFile(t *testing.T) {
 	}
 }
 
+func TestGenerateToolchainFileIncludesCompilerLauncher(t *testing.T) {
+	tmpDir := t.TempDir()
+	outputFile := filepath.Join(tmpDir, "toolchain.cmake")
+
+	opts := GenerateToolchainFileOptions{
+		CompilerType:     CompilerTypeGCC,
+		CCompiler:        "gcc",
+		CXXCompiler:      "g++",
+		CompilerLauncher: "/usr/bin/ccache",
+		SystemPlatform:   system.PlatformLinux,
+		SystemProcessor:  system.ProcessorX64,
+		WorkspaceDir:     ".",
+		OutputFile:       outputFile,
+	}
+
+	err := GenerateToolchainFile(nil, opts)
+	if err != nil {
+		t.Fatalf("GenerateToolchainFile failed: %v", err)
+	}
+
+	content, err := os.ReadFile(outputFile)
+	if err != nil {
+		t.Fatalf("Failed to read output file: %v", err)
+	}
+
+	sContent := string(content)
+	if !strings.Contains(sContent, "set(CMAKE_C_COMPILER_LAUNCHER \"/usr/bin/ccache\")") {
+		t.Fatalf("expected C compiler launcher in toolchain file:\n%s", sContent)
+	}
+	if !strings.Contains(sContent, "set(CMAKE_CXX_COMPILER_LAUNCHER \"/usr/bin/ccache\")") {
+		t.Fatalf("expected CXX compiler launcher in toolchain file:\n%s", sContent)
+	}
+}
+
 func TestGenerateToolchainFileNativeTarget(t *testing.T) {
 	hostPlatform := host.DetectHostPlatform()
 	hostProcessor := host.DetectHostProcessor()

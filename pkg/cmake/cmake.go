@@ -64,6 +64,7 @@ type GenerateToolchainFileOptions struct {
 	CompilerType       CompilerType
 	CCompiler          string
 	CXXCompiler        string
+	CompilerLauncher   string
 	Linker             string
 	ExtraCompilerFlags []string
 	ExtraCFlags        []string
@@ -235,6 +236,10 @@ func GenerateToolchainFile(ctx context.Context, opts GenerateToolchainFileOption
 	}
 	if cxxCompiler != "" {
 		sb.WriteString(fmt.Sprintf("set(CMAKE_CXX_COMPILER \"%s\")\n", cxxCompiler))
+	}
+	if opts.CompilerLauncher != "" {
+		sb.WriteString(fmt.Sprintf("set(CMAKE_C_COMPILER_LAUNCHER \"%s\")\n", opts.CompilerLauncher))
+		sb.WriteString(fmt.Sprintf("set(CMAKE_CXX_COMPILER_LAUNCHER \"%s\")\n", opts.CompilerLauncher))
 	}
 	if linker != "" {
 		sb.WriteString(fmt.Sprintf("set(CMAKE_LINKER \"%s\")\n", linker))

@@ -23,6 +23,7 @@ type CMakeGenerateToolchainFileOptions struct {
 
 type Toolchain struct {
 	CMakeToolchain map[string]CMakeToolchainOptions `yaml:"cmake_toolchain"`
+	EnableCCache   bool                             `yaml:"enable_ccache,omitempty"`
 	TargetArch     system.Processor                 `yaml:"target_arch"`
 	TargetSystem   system.Platform                  `yaml:"target_system"`
 }

@@ -11,7 +11,7 @@ import (
 
 func TestCMakeConfigureArgsForcesCMakeCxxExtensionsOff(t *testing.T) {
 	tmpDir := t.TempDir()
-	writeGeneratedToolchain(t, tmpDir, "tc", false)
+	writeGeneratedToolchain(t, tmpDir, "tc", false, false)
 
 	ws := &WorkspaceContext{
 		WorkspacePath: tmpDir,
@@ -67,7 +67,7 @@ func TestCMakeConfigureArgsForcesCMakeCxxExtensionsOff(t *testing.T) {
 
 func TestCMakeConfigureArgsIncludesCMakeCxxExtensionsOff(t *testing.T) {
 	tmpDir := t.TempDir()
-	writeGeneratedToolchain(t, tmpDir, "tc", false)
+	writeGeneratedToolchain(t, tmpDir, "tc", false, false)
 
 	ws := &WorkspaceContext{
 		WorkspacePath: tmpDir,
@@ -133,7 +133,7 @@ func stringPtr(value string) *string {
 
 func TestCMakeConfigureArgsWithAbsoluteSourcePath(t *testing.T) {
 	tmpDir := t.TempDir()
-	writeGeneratedToolchain(t, tmpDir, "tc", false)
+	writeGeneratedToolchain(t, tmpDir, "tc", false, false)
 
 	absSource := filepath.Join(tmpDir, "abs-src")
 	ws := &WorkspaceContext{
@@ -164,7 +164,7 @@ func TestCMakeConfigureArgsWithAbsoluteSourcePath(t *testing.T) {
 
 func TestCMakeConfigureArgsIncludesTransitiveDependencyDirs(t *testing.T) {
 	tmpDir := t.TempDir()
-	writeGeneratedToolchain(t, tmpDir, "tc", false)
+	writeGeneratedToolchain(t, tmpDir, "tc", false, false)
 
 	ws := &WorkspaceContext{
 		WorkspacePath: tmpDir,
@@ -212,7 +212,7 @@ func TestCMakeConfigureArgsIncludesTransitiveDependencyDirs(t *testing.T) {
 
 func TestCMakeConfigureArgsIncludesTransitiveStagedDependencyPaths(t *testing.T) {
 	tmpDir := t.TempDir()
-	writeGeneratedToolchain(t, tmpDir, "tc", false)
+	writeGeneratedToolchain(t, tmpDir, "tc", false, false)
 
 	staged := true
 	ws := &WorkspaceContext{

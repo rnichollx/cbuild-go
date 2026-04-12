@@ -171,6 +171,16 @@ func (t *TargetContext) CMakeConfigureArgs(ctx context.Context, workspace *Works
 		}
 	}
 
+	tc, _, err := workspace.LoadToolchain(ctx, bp.Toolchain)
+	if err != nil {
+		return nil, err
+	}
+
+	if ccacheLauncher := workspace.CCacheLauncher(tc.EnableCCache); ccacheLauncher != "" {
+		args = append(args, fmt.Sprintf("-DCMAKE_C_COMPILER_LAUNCHER=%s", ccacheLauncher))
+		args = append(args, fmt.Sprintf("-DCMAKE_CXX_COMPILER_LAUNCHER=%s", ccacheLauncher))
+	}
+
 	// Force CMake to disable compiler-specific C++ extensions regardless of user-provided args.
 	args = append(args, "-DCMAKE_CXX_EXTENSIONS=OFF")
 

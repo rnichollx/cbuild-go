@@ -11,7 +11,7 @@ import (
 	"gitlab.com/rpnx/cbuild-go/pkg/host"
 )
 
-func writeGeneratedToolchain(t *testing.T, workspaceDir string, toolchainName string, separateByBuildConfig bool) {
+func writeGeneratedToolchain(t *testing.T, workspaceDir string, toolchainName string, separateByBuildConfig bool, enableCCache bool) {
 	t.Helper()
 
 	hostKey := fmt.Sprintf("host-%s-%s", host.DetectHostPlatform().StringLower(), host.DetectHostProcessor().StringLower())
@@ -19,15 +19,19 @@ func writeGeneratedToolchain(t *testing.T, workspaceDir string, toolchainName st
 	if separateByBuildConfig {
 		separateLine = "      toolchain_per_buildtype: true\n"
 	}
+	enableCCacheLine := ""
+	if enableCCache {
+		enableCCacheLine = "enable_ccache: true\n"
+	}
 
-	content := fmt.Sprintf(`target_arch: "x64"
+	content := fmt.Sprintf(`%starget_arch: "x64"
 target_system: "linux"
 cmake_toolchain:
   %s:
     generate:
       c_compiler: "gcc"
       cxx_compiler: "g++"
-%s`, hostKey, separateLine)
+%s`, enableCCacheLine, hostKey, separateLine)
 
 	toolchainDir := filepath.Join(workspaceDir, "toolchains", toolchainName)
 	if err := os.MkdirAll(toolchainDir, 0755); err != nil {
@@ -40,7 +44,7 @@ cmake_toolchain:
 
 func TestToolchainFilePathGeneratedSharedByDefault(t *testing.T) {
 	tmpDir := t.TempDir()
-	writeGeneratedToolchain(t, tmpDir, "tc", false)
+	writeGeneratedToolchain(t, tmpDir, "tc", false, false)
 
 	ws := &WorkspaceContext{WorkspacePath: tmpDir}
 	p, err := ws.ToolchainFilePath(context.Background(), nil, TargetBuildParameters{
@@ -64,7 +68,7 @@ func TestToolchainFilePathGeneratedSharedByDefault(t *testing.T) {
 
 func TestToolchainFilePathGeneratedPerBuildConfig(t *testing.T) {
 	tmpDir := t.TempDir()
-	writeGeneratedToolchain(t, tmpDir, "tc", true)
+	writeGeneratedToolchain(t, tmpDir, "tc", true, false)
 
 	ws := &WorkspaceContext{WorkspacePath: tmpDir}
 	p, err := ws.ToolchainFilePath(context.Background(), nil, TargetBuildParameters{
@@ -88,7 +92,7 @@ func TestToolchainFilePathGeneratedPerBuildConfig(t *testing.T) {
 
 func TestPrebuildGeneratesSeparateToolchainPerBuildConfig(t *testing.T) {
 	tmpDir := t.TempDir()
-	writeGeneratedToolchain(t, tmpDir, "tc", true)
+	writeGeneratedToolchain(t, tmpDir, "tc", true, false)
 
 	ws := &WorkspaceContext{WorkspacePath: tmpDir}
 
@@ -137,7 +141,7 @@ func TestPrebuildGeneratesSeparateToolchainPerBuildConfig(t *testing.T) {
 
 func TestToolchainFilePathPerBuildConfigRequiresConfig(t *testing.T) {
 	tmpDir := t.TempDir()
-	writeGeneratedToolchain(t, tmpDir, "tc", true)
+	writeGeneratedToolchain(t, tmpDir, "tc", true, false)
 
 	ws := &WorkspaceContext{WorkspacePath: tmpDir}
 	_, err := ws.ToolchainFilePath(context.Background(), nil, TargetBuildParameters{
@@ -149,5 +153,20 @@ func TestToolchainFilePathPerBuildConfigRequiresConfig(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "requires a build config") {
 		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestLoadToolchainReadsEnableCCache(t *testing.T) {
+	tmpDir := t.TempDir()
+	writeGeneratedToolchain(t, tmpDir, "tc", false, true)
+
+	ws := &WorkspaceContext{WorkspacePath: tmpDir}
+	tc, _, err := ws.LoadToolchain(context.Background(), "tc")
+	if err != nil {
+		t.Fatalf("LoadToolchain failed: %v", err)
+	}
+
+	if !tc.EnableCCache {
+		t.Fatalf("expected toolchain to enable ccache")
 	}
 }
