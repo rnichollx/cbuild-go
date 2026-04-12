@@ -145,6 +145,8 @@ var clangRE = regexp.MustCompile("clang(\\+\\+)?(-\\d+)?$")
 var gccRE = regexp.MustCompile("(gcc|g\\+\\+)(-\\d+)?$")
 var msvcRE = regexp.MustCompile("(?i)^cl(\\.exe)?$")
 
+const clangConstexprStepsFlag = "-fconstexpr-steps=2147483647"
+
 func guessCompilerType(opts *GenerateToolchainFileOptions) CompilerType {
 
 	if opts.CCompiler != "" {
@@ -341,8 +343,14 @@ func GenerateToolchainFile(ctx context.Context, opts GenerateToolchainFileOption
 	var commonFlags []string
 	commonFlags = append(commonFlags, opts.ExtraCompilerFlags...)
 
-	cFlags := append(commonFlags, opts.ExtraCFlags...)
-	cxxFlags := append(commonFlags, opts.ExtraCXXFlags...)
+	cFlags := append([]string{}, commonFlags...)
+	cFlags = append(cFlags, opts.ExtraCFlags...)
+
+	cxxFlags := append([]string{}, commonFlags...)
+	if opts.CompilerType == CompilerTypeClang {
+		cxxFlags = append(cxxFlags, clangConstexprStepsFlag)
+	}
+	cxxFlags = append(cxxFlags, opts.ExtraCXXFlags...)
 
 	sb.WriteString(fmt.Sprintf("set(CMAKE_C_FLAGS_INIT %q)\n", strings.Join(cFlags, " ")))
 	sb.WriteString(fmt.Sprintf("set(CMAKE_CXX_FLAGS_INIT %q)\n", strings.Join(cxxFlags, " ")))

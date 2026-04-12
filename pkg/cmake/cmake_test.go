@@ -145,6 +145,40 @@ func TestGenerateToolchainFileIncludesCompilerLauncher(t *testing.T) {
 	}
 }
 
+func TestGenerateToolchainFileAddsClangConstexprStepsToCXXFlags(t *testing.T) {
+	tmpDir := t.TempDir()
+	outputFile := filepath.Join(tmpDir, "toolchain.cmake")
+
+	opts := GenerateToolchainFileOptions{
+		CompilerType:    CompilerTypeClang,
+		CCompiler:       "clang",
+		CXXCompiler:     "clang++",
+		ExtraCXXFlags:   []string{"-std=c++20"},
+		SystemPlatform:  system.PlatformLinux,
+		SystemProcessor: system.ProcessorX64,
+		WorkspaceDir:    ".",
+		OutputFile:      outputFile,
+	}
+
+	err := GenerateToolchainFile(nil, opts)
+	if err != nil {
+		t.Fatalf("GenerateToolchainFile failed: %v", err)
+	}
+
+	content, err := os.ReadFile(outputFile)
+	if err != nil {
+		t.Fatalf("Failed to read output file: %v", err)
+	}
+
+	sContent := string(content)
+	if !strings.Contains(sContent, "set(CMAKE_CXX_FLAGS_INIT \""+clangConstexprStepsFlag+" -std=c++20\")") {
+		t.Fatalf("expected Clang constexpr steps flag in CXX flags before extra CXX flags:\n%s", sContent)
+	}
+	if strings.Contains(sContent, "set(CMAKE_C_FLAGS_INIT \""+clangConstexprStepsFlag) {
+		t.Fatalf("expected Clang constexpr steps flag to stay out of C flags:\n%s", sContent)
+	}
+}
+
 func TestGenerateToolchainFileNativeTarget(t *testing.T) {
 	hostPlatform := host.DetectHostPlatform()
 	hostProcessor := host.DetectHostProcessor()
